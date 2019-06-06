@@ -1,6 +1,6 @@
 from obspy.clients.fdsn import Client as FDSN_Client
 from obspy.clients.earthworm import Client as EW_Client
-from obspy.clients.fdsn.header import FDSNException
+from obspy.clients.fdsn.header import FDSNException, FDSNNoDataException
 from obspy import Stream
 
 
@@ -13,7 +13,7 @@ def gather_waveforms(source, network, station, starttime, endtime,
                      watc_username=None, watc_password=None):
     """
     Gather infrasound waveforms from IRIS or WATC FDSN, or AVO Winston, and
-    output a Stream object.
+    output a Stream object with station/element coordinates attached.
 
     Args:
         source: Which source to gather waveforms from - options are:
@@ -33,7 +33,7 @@ def gather_waveforms(source, network, station, starttime, endtime,
     # IRIS FDSN
     if source == 'IRIS':
 
-        print('Reading data from IRIS FDSN.')
+        print('Reading data from IRIS FDSN...')
         st_out = iris_client.get_waveforms(network, station, '*', 'BDF,HDF',
                                            starttime, endtime)
 
@@ -46,18 +46,18 @@ def gather_waveforms(source, network, station, starttime, endtime,
                                       user=watc_username,
                                       password=watc_password)
         except FDSNException:
-            print('...issue connecting to WATC FDSN. Check your VPN '
+            print('Issue connecting to WATC FDSN. Check your VPN '
                   'connection and try again.')
             return
 
-        print('...successfully connected. Reading data from WATC FDSN.')
+        print('Successfully connected. Reading data from WATC FDSN...')
         st_out = watc_client.get_waveforms(network, station, '*', 'BDF,HDF',
                                            starttime, endtime)
 
     # AVO Winston
     elif source == 'AVO':
 
-        print('Reading data from AVO Winston.')
+        print('Reading data from AVO Winston...')
 
         # Array case
         if station in ['ADKI', 'AKS', 'DLL', 'OKIF', 'SDPI']:
@@ -94,6 +94,40 @@ def gather_waveforms(source, network, station, starttime, endtime,
               '\'AVO\'.')
         return
 
+    # Assign coordinates using IRIS FDSN regardless of data source
+    try:
+        inv = iris_client.get_stations(network=network, station=station,
+                                       starttime=starttime, endtime=endtime,
+                                       level='channel')
+    except FDSNNoDataException:
+        inv = []
+
+    for tr in st_out:
+        for nw in inv:
+            for sta in nw:
+                for cha in sta:
+                    # Being very thorough to check if everything matches!
+                    if (tr.stats.network == nw.code and
+                            tr.stats.station == sta.code and
+                            tr.stats.location == cha.location_code and
+                            tr.stats.channel == cha.code):
+
+                        tr.stats.longitude = cha.longitude
+                        tr.stats.latitude = cha.latitude
+
+    # Report if any Trace in the Stream did not get coordinates assigned
+    print('Traces without coordinates assigned:')
+    num_unassigned = 0
+    for tr in st_out:
+        try:
+            tr.stats.longitude, tr.stats.latitude
+        except AttributeError:
+            print('    ' + tr.id)
+            num_unassigned += 1
+    if num_unassigned == 0:
+        print('    None')
+
+    st_out.trim(starttime, endtime)
     st_out.sort()
 
     return st_out
