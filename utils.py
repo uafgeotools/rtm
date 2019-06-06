@@ -1,43 +1,65 @@
 from obspy.clients.fdsn import Client as FDSN_Client
 from obspy.clients.earthworm import Client as EW_Client
-from obspy.clients.fdsn.header import FDSNNoDataException
+from obspy.clients.fdsn.header import FDSNException
 from obspy import Stream
 
 
-# Define clients
+# Define IRIS and AVO clients (define WATC client within function)
 iris_client = FDSN_Client('IRIS')
 avo_client = EW_Client('pubavo1.wr.usgs.gov', port=16023)  # 16023 is long-term
 
 
-def gather_waveforms(network, station, starttime, endtime):
+def gather_waveforms(source, network, station, starttime, endtime,
+                     watc_username=None, watc_password=None):
     """
-    Gather waveforms from IRIS or AVO Winston and output a Stream object.
+    Gather infrasound waveforms from IRIS or WATC FDSN, or AVO Winston, and
+    output a Stream object.
 
     Args:
+        source: Which source to gather waveforms from - options are:
+                'IRIS' <-- IRIS FDSN
+                'WATC' <-- WATC FDSN
+                'AVO'  <-- AVO Winston
         network: SEED network code
-        station: SEED station code - no wildcards (?, *) allowed!
+        station: SEED station code
         starttime: Start time for data request (UTCDateTime)
         endtime: End time for data request (UTCDateTime)
+        watc_username: Username for WATC FDSN server
+        watc_password: Password for WATC FDSN server
     Returns:
         st_out: Stream containing gathered waveforms
     """
 
-    # ---------------------------------------------------------------------
-    # First, attempt to obtain data from IRIS...
-    # ---------------------------------------------------------------------
-    try:
+    # IRIS FDSN
+    if source == 'IRIS':
+
+        print('Reading data from IRIS FDSN.')
         st_out = iris_client.get_waveforms(network, station, '*', 'BDF,HDF',
                                            starttime, endtime)
 
-    # ---------------------------------------------------------------------
-    # ...if that fails, try AVO Winston
-    # ---------------------------------------------------------------------
-    except FDSNNoDataException:
-        print('No data found at IRIS. Trying AVO Winston...')
+    # WATC FDSN
+    elif source == 'WATC':
 
-        # ---------------------------------------------------------------------
+        print('Connecting to WATC FDSN...')
+        try:
+            watc_client = FDSN_Client('http://10.30.5.10:8080',
+                                      user=watc_username,
+                                      password=watc_password)
+        except FDSNException:
+            print('...issue connecting to WATC FDSN. Check your VPN '
+                  'connection and try again.')
+            return
+
+        print('...successfully connected. Reading data from WATC FDSN.')
+        st_out = watc_client.get_waveforms(network, station, '*', 'BDF,HDF',
+                                           starttime, endtime)
+
+    # AVO Winston
+    elif source == 'AVO':
+
+        print('Reading data from AVO Winston.')
+
         # Array case
-        # ---------------------------------------------------------------------
         if station in ['ADKI', 'AKS', 'DLL', 'OKIF', 'SDPI']:
 
             # Select the correct channel
@@ -61,12 +83,16 @@ def gather_waveforms(network, station, starttime, endtime):
                                                        location, channel,
                                                        starttime, endtime)
 
-        # ---------------------------------------------------------------------
         # Single station case
-        # ---------------------------------------------------------------------
         else:
             st_out = avo_client.get_waveforms(network, station, '', 'BDF',
                                               starttime, endtime)
+
+    else:
+
+        print('Unrecognized source. Valid options are \'IRIS\', \'WATC\', or '
+              '\'AVO\'.')
+        return
 
     st_out.sort()
 
