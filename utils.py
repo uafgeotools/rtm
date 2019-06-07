@@ -110,7 +110,7 @@ def gather_waveforms(source, network, station, starttime, endtime,
               '\'AVO\'.')
         return
 
-    st_out.trim(starttime, endtime)
+    st_out.trim(starttime, endtime,pad='true',fill_value=0) #add zeros to ensure all streams have same length
     st_out.sort()
 
     print(st_out)
@@ -163,7 +163,10 @@ def gather_waveforms(source, network, station, starttime, endtime,
         for tr in st_out:
             print(tr.id)
             try:
-                tr.remove_response()
+                #just removing sensitivity for now. remove_response() can lead to errors. This should be sufficient for now
+                #plus some IRIS-AVO responses are wonky
+                #tr.remove_response()
+                tr.remove_sensitivity() 
                 print('    Response removed.')
             except ValueError:
                 print(f'    No response information available.')
