@@ -87,10 +87,10 @@ def gather_waveforms(source, network, station, starttime, endtime,
             st_out = Stream()  # Make an empty Stream object to populate
 
             # Deal with funky channel naming convention for AKS (for all other
-            # arrays, six elements are assumed)
+            # arrays, six numbered elements are assumed)
             if station == 'AKS':
-                for channel in ['BDF', 'BDG', 'BDH', 'BDI']:
-                    st_out += avo_client.get_waveforms(network, station, '',
+                for channel in ['BDF', 'BDG', 'BDH', 'BDI', 'BDJ', 'BDK']:
+                    st_out += avo_client.get_waveforms(network, station, '--',
                                                        channel, starttime,
                                                        endtime)
             else:
@@ -101,8 +101,13 @@ def gather_waveforms(source, network, station, starttime, endtime,
 
         # Single station case
         else:
-            st_out = avo_client.get_waveforms(network, station, '', 'BDF',
+            st_out = avo_client.get_waveforms(network, station, '--', 'BDF',
                                               starttime, endtime)
+
+            # Special case for CLES1 and CLES2 which also have HDF channels
+            if station in ['CLES1', 'CLES2']:
+                st_out += avo_client.get_waveforms(network, station, '--',
+                                                   'HDF', starttime, endtime)
 
     else:
 
