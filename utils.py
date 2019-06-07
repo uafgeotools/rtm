@@ -1,8 +1,14 @@
+import json
 from obspy.clients.fdsn import Client as FDSN_Client
 from obspy.clients.earthworm import Client as EW_Client
 from obspy.clients.fdsn.header import FDSNException, FDSNNoDataException
 from obspy import Stream
 
+
+# Load AVO infrasound station calibration values (units are Pa/ct)
+AVO_INFRA_CALIB_FILE = 'avo_infra_calib_vals.json'
+with open(AVO_INFRA_CALIB_FILE) as f:
+    avo_calib_values = json.load(f)
 
 # Define IRIS and AVO clients (define WATC client within function)
 iris_client = FDSN_Client('IRIS')
@@ -10,10 +16,12 @@ avo_client = EW_Client('pubavo1.wr.usgs.gov', port=16023)  # 16023 is long-term
 
 
 def gather_waveforms(source, network, station, starttime, endtime,
-                     watc_username=None, watc_password=None):
+                     remove_response=False, watc_username=None,
+                     watc_password=None):
     """
     Gather infrasound waveforms from IRIS or WATC FDSN, or AVO Winston, and
     output a Stream object with station/element coordinates attached.
+    Optionally remove the response or sensitivity.
 
     Args:
         source: Which source to gather waveforms from - options are:
@@ -24,18 +32,25 @@ def gather_waveforms(source, network, station, starttime, endtime,
         station: SEED station code
         starttime: Start time for data request (UTCDateTime)
         endtime: End time for data request (UTCDateTime)
+        remove_response: Toggle conversion to Pa via remove_response() if
+                         available, else just do a simple scalar multiplication
         watc_username: Username for WATC FDSN server
         watc_password: Password for WATC FDSN server
     Returns:
         st_out: Stream containing gathered waveforms
     """
 
+    print('--------------')
+    print('GATHERING DATA')
+    print('--------------')
+
     # IRIS FDSN
     if source == 'IRIS':
 
         print('Reading data from IRIS FDSN...')
         st_out = iris_client.get_waveforms(network, station, '*', 'BDF,HDF',
-                                           starttime, endtime)
+                                           starttime, endtime,
+                                           attach_response=remove_response)
 
     # WATC FDSN
     elif source == 'WATC':
@@ -52,7 +67,8 @@ def gather_waveforms(source, network, station, starttime, endtime,
 
         print('Successfully connected. Reading data from WATC FDSN...')
         st_out = watc_client.get_waveforms(network, station, '*', 'BDF,HDF',
-                                           starttime, endtime)
+                                           starttime, endtime,
+                                           attach_response=remove_response)
 
     # AVO Winston
     elif source == 'AVO':
@@ -94,6 +110,15 @@ def gather_waveforms(source, network, station, starttime, endtime,
               '\'AVO\'.')
         return
 
+    st_out.trim(starttime, endtime)
+    st_out.sort()
+
+    print(st_out)
+
+    print('---------------------')
+    print('ASSIGNING COORDINATES')
+    print('---------------------')
+
     # Assign coordinates using IRIS FDSN regardless of data source
     try:
         inv = iris_client.get_stations(network=network, station=station,
@@ -115,8 +140,8 @@ def gather_waveforms(source, network, station, starttime, endtime,
                         tr.stats.longitude = cha.longitude
                         tr.stats.latitude = cha.latitude
 
-    # Report if any Trace in the Stream did not get coordinates assigned
-    print('Traces without coordinates assigned:')
+    # Report if any Trace did NOT get coordinates assigned
+    print('Traces WITHOUT coordinates assigned:')
     num_unassigned = 0
     for tr in st_out:
         try:
@@ -127,7 +152,37 @@ def gather_waveforms(source, network, station, starttime, endtime,
     if num_unassigned == 0:
         print('    None')
 
-    st_out.trim(starttime, endtime)
-    st_out.sort()
+    # Remove response/sensitivity
+    if remove_response:
+
+        print('-----------------------------')
+        print('REMOVING RESPONSE/SENSITIVITY')
+        print('-----------------------------')
+
+        unremoved_ids = []
+        for tr in st_out:
+            print(tr.id)
+            try:
+                tr.remove_response()
+                print('    Response removed.')
+            except ValueError:
+                print(f'    No response information available.')
+                try:
+                    calib = avo_calib_values[tr.stats.station]
+                    tr.data = tr.data * calib
+                    tr.stats.processing.append('Data multiplied by '
+                                               f'calibration value of {calib} '
+                                               'Pa/ct')
+                    print('    Sensitivity removed using calibration value of '
+                          f'{calib} Pa/ct.')
+                except KeyError:
+                    print(f'    No calibration value available.')
+                    unremoved_ids.append(tr.id)
+
+        # Report if any Trace did NOT get response/sensitivity removed
+        print('Traces WITHOUT response/sensitivity removed:')
+        [print('    ' + tr_id) for tr_id in unremoved_ids]
+        if not unremoved_ids:
+            print('    None')
 
     return st_out

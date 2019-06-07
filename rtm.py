@@ -9,6 +9,6 @@ with open('watc_credentials.json') as f:
 t1 = UTCDateTime('2018-08-22T07:58')
 t2 = t1 + 60
 
-st = gather_waveforms('AVO', 'AV', 'SDPI', t1, t2, watc_username,
-                      watc_password)
-print(st)
+st = gather_waveforms(source='AVO', network='AV', station='SDPI',
+                      starttime=t1, endtime=t2, remove_response=True,
+                      watc_username=watc_username, watc_password=watc_password)
