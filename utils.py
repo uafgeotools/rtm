@@ -63,7 +63,7 @@ def gather_waveforms(source, network, station, starttime, endtime,
         except FDSNException:
             print('Issue connecting to WATC FDSN. Check your VPN '
                   'connection and try again.')
-            return
+            return Stream()
 
         print('Successfully connected. Reading data from WATC FDSN...')
         st_out = watc_client.get_waveforms(network, station, '*', 'BDF,HDF',
@@ -108,7 +108,7 @@ def gather_waveforms(source, network, station, starttime, endtime,
 
         print('Unrecognized source. Valid options are \'IRIS\', \'WATC\', or '
               '\'AVO\'.')
-        return
+        return Stream()
 
     st_out.trim(starttime, endtime)
     st_out.sort()
@@ -166,7 +166,7 @@ def gather_waveforms(source, network, station, starttime, endtime,
                 tr.remove_response()
                 print('    Response removed.')
             except ValueError:
-                print(f'    No response information available.')
+                print('    No response information available.')
                 try:
                     calib = avo_calib_values[tr.stats.station]
                     tr.data = tr.data * calib
@@ -176,13 +176,13 @@ def gather_waveforms(source, network, station, starttime, endtime,
                     print('    Sensitivity removed using calibration value of '
                           f'{calib} Pa/ct.')
                 except KeyError:
-                    print(f'    No calibration value available.')
+                    print('    No calibration value available.')
                     unremoved_ids.append(tr.id)
 
         # Report if any Trace did NOT get response/sensitivity removed
         print('Traces WITHOUT response/sensitivity removed:')
         [print('    ' + tr_id) for tr_id in unremoved_ids]
-        if not unremoved_ids:
+        if len(unremoved_ids) == 0:
             print('    None')
 
     return st_out
