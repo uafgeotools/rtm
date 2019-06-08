@@ -21,7 +21,7 @@ def gather_waveforms(source, network, station, starttime, endtime,
     """
     Gather infrasound waveforms from IRIS or WATC FDSN, or AVO Winston, and
     output a Stream object with station/element coordinates attached.
-    Optionally remove the response or sensitivity.
+    Optionally remove the sensitivity.
 
     Args:
         source: Which source to gather waveforms from - options are:
@@ -32,7 +32,7 @@ def gather_waveforms(source, network, station, starttime, endtime,
         station: SEED station code
         starttime: Start time for data request (UTCDateTime)
         endtime: End time for data request (UTCDateTime)
-        remove_response: Toggle conversion to Pa via remove_response() if
+        remove_response: Toggle conversion to Pa via remove_sensitivity() if
                          available, else just do a simple scalar multiplication
         watc_username: Username for WATC FDSN server
         watc_password: Password for WATC FDSN server
@@ -115,7 +115,9 @@ def gather_waveforms(source, network, station, starttime, endtime,
               '\'AVO\'.')
         return Stream()
 
-    st_out.trim(starttime, endtime,pad='true',fill_value=0) #add zeros to ensure all streams have same length
+    # Add zeros to ensure all Traces have same length
+    st_out.trim(starttime, endtime, pad=True, fill_value=0)
+
     st_out.sort()
 
     print(st_out)
@@ -157,22 +159,22 @@ def gather_waveforms(source, network, station, starttime, endtime,
     if num_unassigned == 0:
         print('    None')
 
-    # Remove response/sensitivity
+    # Remove sensitivity
     if remove_response:
 
-        print('-----------------------------')
-        print('REMOVING RESPONSE/SENSITIVITY')
-        print('-----------------------------')
+        print('--------------------')
+        print('REMOVING SENSITIVITY')
+        print('--------------------')
 
         unremoved_ids = []
         for tr in st_out:
             print(tr.id)
             try:
-                #just removing sensitivity for now. remove_response() can lead to errors. This should be sufficient for now
-                #plus some IRIS-AVO responses are wonky
-                #tr.remove_response()
-                tr.remove_sensitivity() 
-                print('    Response removed.')
+                # Just removing sensitivity for now. remove_response() can lead
+                # to errors. This should be sufficient for now. Plus some
+                # IRIS-AVO responses are wonky.
+                tr.remove_sensitivity()
+                print('    Sensitivity removed using attached response.')
             except ValueError:
                 print('    No response information available.')
                 try:
@@ -187,8 +189,8 @@ def gather_waveforms(source, network, station, starttime, endtime,
                     print('    No calibration value available.')
                     unremoved_ids.append(tr.id)
 
-        # Report if any Trace did NOT get response/sensitivity removed
-        print('Traces WITHOUT response/sensitivity removed:')
+        # Report if any Trace did NOT get sensitivity removed
+        print('Traces WITHOUT sensitivity removed:')
         [print('    ' + tr_id) for tr_id in unremoved_ids]
         if len(unremoved_ids) == 0:
             print('    None')
