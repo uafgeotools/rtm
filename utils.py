@@ -204,7 +204,7 @@ def gather_waveforms(source, network, station, starttime, endtime,
     return st_out
 
 
-def process_waveforms(st, interp_rate, freqmin, freqmax, agc_params=None,
+def process_waveforms(st, interp_rate, freqmin, freqmax, envelope=True,agc_params=None,
                       normalize=False, plot_steps=False):
     """
     Process infrasound waveforms. By default, the input Stream is detrended,
@@ -214,9 +214,10 @@ def process_waveforms(st, interp_rate, freqmin, freqmax, agc_params=None,
 
     Args:
         st: Stream from gather_waveforms()
-        interp_rate: [Hz] New sample rate to interpolate to
+        interp_rate: [Hz] New sample rate to interpolate to, 0 if keep same
         freqmin: [Hz] Lower corner for zero-phase bandpass filter
         freqmax: [Hz] Upper corner for zero-phase bandpass filter
+        envelope: Take envelope of waveforms (default: True)
         agc_params: Dictionary of keyword arguments to be passed on to _agc().
                     Example: dict(win_sec=500, method='gismo')
                     If set to None, no AGC is applied. For details, see the
@@ -240,30 +241,32 @@ def process_waveforms(st, interp_rate, freqmin, freqmax, agc_params=None,
     st_f.filter(type='bandpass', freqmin=freqmin, freqmax=freqmax,
                 zerophase=True)
 
-    print('Enveloping...')
-    st_e = st_f.copy()
-    for tr in st_e:
-        npts = tr.count()
-        # The below line is much faster than using obspy.signal.envelope()
-        # See https://github.com/scipy/scipy/issues/6324#issuecomment-425752155
-        tr.data = np.abs(hilbert(tr.data, N=next_fast_len(npts))[:npts])
-        tr.stats.processing.append('Enveloped via np.abs(hilbert())')
-
-    print('Interpolating...')
-    st_i = st_e.copy()
-    st_i.interpolate(sampling_rate=interp_rate, method='lanczos', a=20)
-
     # Gather default processed Streams into dictionary
     streams = OrderedDict(input=st,
                           detrended=st_d,
                           tapered=st_t,
-                          filtered=st_f,
-                          enveloped=st_e,
-                          interpolated=st_i)
+                          filtered=st_f)
 
+    if envelope:
+        print('Enveloping...')
+        st_e = list(streams.values())[-1].copy()
+        for tr in st_e:
+            npts = tr.count()
+            # The below line is much faster than using obspy.signal.envelope()
+            # See https://github.com/scipy/scipy/issues/6324#issuecomment-425752155
+            tr.data = np.abs(hilbert(tr.data, N=next_fast_len(npts))[:npts])
+            tr.stats.processing.append('Enveloped via np.abs(hilbert())')
+
+    if interp_rate:
+        print('Interpolating...')
+        st_i = list(streams.values())[-1].copy() # Copy the "newest" Stream
+        st_i.interpolate(sampling_rate=interp_rate, method='lanczos', a=20)
+        streams['interpolated'] = st_i
+    
     if agc_params:
         print('Applying AGC...')
-        st_a = _agc(st_i, **agc_params)
+        st_last = list(streams.values())[-1].copy()
+        st_a = _agc(st_last, **agc_params)
         streams['agc'] = st_a
 
     if normalize:

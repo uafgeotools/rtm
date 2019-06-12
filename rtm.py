@@ -24,10 +24,10 @@ FREQ_MIN = 0.5        # [Hz] Lower bandpass corner
 FREQ_MAX = 2          # [Hz] Upper bandpass corner
 
 AGC_WIN = 250         # [s] Window for AGC
-AGC_METHOD = 'gismo'  # Method to use for AGC
+AGC_METHOD = 'gismo'  # Method to use for AGC, 'gismo' or 'walker'
 
 agc_params = dict(win_sec=AGC_WIN, method=AGC_METHOD)
 
-st_proc = process_waveforms(st, interp_rate=INTERP_RATE, freqmin=FREQ_MIN,
+st_proc = process_waveforms(st, interp_rate=INTERP_RATE, envelope=True,freqmin=FREQ_MIN,
                             freqmax=FREQ_MAX, agc_params=agc_params,
                             normalize=True, plot_steps=True)
