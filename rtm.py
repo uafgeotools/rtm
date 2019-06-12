@@ -18,16 +18,17 @@ st = gather_waveforms(source='IRIS', network='AK,TA',
 
 #%% (2) Process the data
 
-INTERP_RATE = 0.05    # [Hz] New sampling rate to interpolate to
-
 FREQ_MIN = 0.5        # [Hz] Lower bandpass corner
 FREQ_MAX = 2          # [Hz] Upper bandpass corner
 
+INTERP_RATE = 0.05    # [Hz] New sampling rate to interpolate to
+
 AGC_WIN = 250         # [s] Window for AGC
-AGC_METHOD = 'gismo'  # Method to use for AGC, 'gismo' or 'walker'
+AGC_METHOD = 'gismo'  # Method to use for AGC, specify 'gismo' or 'walker'
 
 agc_params = dict(win_sec=AGC_WIN, method=AGC_METHOD)
 
-st_proc = process_waveforms(st, interp_rate=INTERP_RATE, envelope=True,freqmin=FREQ_MIN,
-                            freqmax=FREQ_MAX, agc_params=agc_params,
-                            normalize=True, plot_steps=True)
+st_proc = process_waveforms(st, freqmin=FREQ_MIN, freqmax=FREQ_MAX,
+                            envelope=True, interp_rate=INTERP_RATE,
+                            agc_params=agc_params, normalize=True,
+                            plot_steps=True)
