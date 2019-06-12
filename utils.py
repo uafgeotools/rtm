@@ -3,6 +3,11 @@ from obspy.clients.fdsn import Client as FDSN_Client
 from obspy.clients.earthworm import Client as EW_Client
 from obspy.clients.fdsn.header import FDSNException, FDSNNoDataException
 from obspy import Stream
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.signal import hilbert
+from scipy.fftpack import next_fast_len
+from collections import OrderedDict
 
 
 # Load AVO infrasound station calibration values (units are Pa/ct)
@@ -34,8 +39,9 @@ def gather_waveforms(source, network, station, starttime, endtime,
         endtime: End time for data request (UTCDateTime)
         remove_response: Toggle conversion to Pa via remove_sensitivity() if
                          available, else just do a simple scalar multiplication
-        watc_username: Username for WATC FDSN server
-        watc_password: Password for WATC FDSN server
+                         (default: False)
+        watc_username: Username for WATC FDSN server (default: None)
+        watc_password: Password for WATC FDSN server (default: None)
     Returns:
         st_out: Stream containing gathered waveforms
     """
@@ -154,10 +160,10 @@ def gather_waveforms(source, network, station, starttime, endtime,
         try:
             tr.stats.longitude, tr.stats.latitude
         except AttributeError:
-            print('    ' + tr.id)
+            print('\t' + tr.id)
             num_unassigned += 1
     if num_unassigned == 0:
-        print('    None')
+        print('\tNone')
 
     # Remove sensitivity
     if remove_response:
@@ -174,25 +180,201 @@ def gather_waveforms(source, network, station, starttime, endtime,
                 # to errors. This should be sufficient for now. Plus some
                 # IRIS-AVO responses are wonky.
                 tr.remove_sensitivity()
-                print('    Sensitivity removed using attached response.')
+                print('\tSensitivity removed using attached response.')
             except ValueError:
-                print('    No response information available.')
+                print('\tNo response information available.')
                 try:
                     calib = avo_calib_values[tr.stats.station]
                     tr.data = tr.data * calib
                     tr.stats.processing.append('Data multiplied by '
                                                f'calibration value of {calib} '
                                                'Pa/ct')
-                    print('    Sensitivity removed using calibration value of '
+                    print('\tSensitivity removed using calibration value of '
                           f'{calib} Pa/ct.')
                 except KeyError:
-                    print('    No calibration value available.')
+                    print('\tNo calibration value available.')
                     unremoved_ids.append(tr.id)
 
         # Report if any Trace did NOT get sensitivity removed
         print('Traces WITHOUT sensitivity removed:')
-        [print('    ' + tr_id) for tr_id in unremoved_ids]
+        [print('\t' + tr_id) for tr_id in unremoved_ids]
         if len(unremoved_ids) == 0:
-            print('    None')
+            print('\tNone')
+
+    return st_out
+
+
+def process_waveforms(st, interp_rate, freqmin, freqmax, agc_params=None,
+                      normalize=False, plot_steps=False):
+    """
+    Process infrasound waveforms. By default, the input Stream is detrended,
+    tapered, filtered, enveloped, and interpolated (decimated). Optional:
+    Automatic gain control (AGC) and normalization. Optionally plots the Stream
+    after each processing step has been applied for troubleshooting.
+
+    Args:
+        st: Stream from gather_waveforms()
+        interp_rate: [Hz] New sample rate to interpolate to
+        freqmin: [Hz] Lower corner for zero-phase bandpass filter
+        freqmax: [Hz] Upper corner for zero-phase bandpass filter
+        agc_params: Dictionary of keyword arguments to be passed on to _agc().
+                    Example: dict(win_sec=500, method='gismo')
+                    If set to None, no AGC is applied. For details, see the
+                    docstring for _agc() (default: None)
+        normalize: Apply normalization to Stream (default: False)
+        plot_steps: Toggle plotting each processing step (default: False)
+    Returns:
+        st_out: Stream containing processed waveforms
+    """
+
+    print('Detrending...')
+    st_d = st.copy()
+    st_d.detrend(type='linear')
+
+    print('Tapering...')
+    st_t = st_d.copy()
+    st_t.taper(max_percentage=0.05)
+
+    print('Filtering...')
+    st_f = st_t.copy()
+    st_f.filter(type='bandpass', freqmin=freqmin, freqmax=freqmax,
+                zerophase=True)
+
+    print('Enveloping...')
+    st_e = st_f.copy()
+    for tr in st_e:
+        npts = tr.count()
+        # The below line is much faster than using obspy.signal.envelope()
+        # See https://github.com/scipy/scipy/issues/6324#issuecomment-425752155
+        tr.data = np.abs(hilbert(tr.data, N=next_fast_len(npts))[:npts])
+        tr.stats.processing.append('Enveloped via np.abs(hilbert())')
+
+    print('Interpolating...')
+    st_i = st_e.copy()
+    st_i.interpolate(sampling_rate=interp_rate, method='lanczos', a=20)
+
+    # Gather default processed Streams into dictionary
+    streams = OrderedDict(input=st,
+                          detrended=st_d,
+                          tapered=st_t,
+                          filtered=st_f,
+                          enveloped=st_e,
+                          interpolated=st_i)
+
+    if agc_params:
+        print('Applying AGC...')
+        st_a = _agc(st_i, **agc_params)
+        streams['agc'] = st_a
+
+    if normalize:
+        print('Normalizing...')
+        st_n = list(streams.values())[-1].copy()  # Copy the "newest" Stream
+                                                  # which could be AGC'd or not
+        st_n.normalize()
+        streams['normalized'] = st_n
+
+    print('\tDone')
+
+    if plot_steps:
+        print('Generating processing plots...')
+        for title, st in streams.items():
+            fig = plt.figure(figsize=(8, 8))
+            st.plot(fig=fig, equal_scale=False)
+            fig.axes[0].set_title(title)
+            fig.tight_layout()
+            fig.show()
+        print('\tDone')
+
+    st_out = list(streams.values())[-1]  # Final entry in dictionary
+
+    return st_out
+
+
+def _agc(st, win_sec, method='gismo'):
+    """
+    Apply automatic gain correction (AGC) to a collection of waveforms stored
+    in an ObsPy Stream object. This function is designed to be used as part of
+    process_waveforms() though it can be used on its own as well.
+
+    Args:
+        st: Stream containing waveforms to be processed
+        win_sec: [s] AGC window. A shorter time window results in a more
+                     aggressive AGC effect (i.e., increased gain for quieter
+                     signals)
+        method: One of 'gismo' or 'walker' (default: 'gismo')
+
+                'gismo' A Python implementation of agc.m from the GISMO suite:
+                            https://github.com/geoscience-community-codes/GISMO/blob/master/core/%40correlation/agc.m
+                        It preserves the relative amplitudes of traces (i.e.
+                        doesn't normalize) but is limited in how much in can
+                        boost quiet sections of waveform.
+
+               'walker' An implementation of the AGC algorithm described in
+                        Walker et al. (2010), paragraph 22:
+                            https://doi.org/10.1029/2010JB007863
+                        (The code is adopted from Richard Sanderson's version.)
+                        This method scales the amplitudes of the resulting
+                        traces between [-1, 1] (or [0, 1] for envelopes) so
+                        inter-trace amplitudes are not preserved. However, the
+                        method produces a stronger AGC effect which may be
+                        desirable depending upon the context.
+    Returns:
+        st_out: Copy of input Stream with AGC applied
+    """
+
+    st_out = st.copy()
+
+    if method == 'gismo':
+
+        for tr in st_out:
+
+            win_samp = int(tr.stats.sampling_rate * win_sec)
+
+            scale = np.zeros(tr.count() - 2 * win_samp)
+            for i in range(-1 * win_samp, win_samp + 1):
+                scale = scale + np.abs(tr.data[win_samp + i:
+                                               win_samp + i + scale.size])
+
+            scale = scale / scale.mean()  # Using max() here may better
+                                          # preserve inter-trace amplitudes
+
+            # Fill out the ends of scale with its first/last values
+            scale = np.hstack((np.ones(win_samp) * scale[0],
+                               scale,
+                               np.ones(win_samp) * scale[-1]))
+
+            tr.data = tr.data / scale  # "Scale" the data, sample-by-sample
+
+            tr.stats.processing.append(f'_agc(win_sec={win_sec}, '
+                                       f'method=\'{method}\')')
+
+    elif method == 'walker':
+
+        st_out.detrend('demean')  # NOTE: Causes envelopes to go negative...
+
+        for tr in st_out:
+
+            half_win_samp = int(tr.stats.sampling_rate * win_sec / 2)
+
+            scale = []
+            for i in range(half_win_samp, tr.count() - half_win_samp):
+                # The window is centered on index i
+                scale_max = np.abs(tr.data[i - half_win_samp:
+                                           i + half_win_samp]).max()
+                scale.append(scale_max)
+
+            # Fill out the ends of scale with its first/last values
+            scale = np.hstack((np.ones(half_win_samp) * scale[0],
+                               scale,
+                               np.ones(half_win_samp) * scale[-1]))
+
+            tr.data = tr.data / scale  # "Scale" the data, sample-by-sample
+
+            tr.stats.processing.append(f'_agc(win_sec={win_sec}, '
+                                       f'method=\'{method}\')')
+
+    else:
+        raise ValueError(f'AGC method \'{method}\' not recognized. Method '
+                         'must be either \'gismo\' or \'walker\'.')
 
     return st_out

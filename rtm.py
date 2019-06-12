@@ -1,97 +1,33 @@
+#%% (1) Grab the data
+
 import json
 from obspy import UTCDateTime
-from utils import gather_waveforms
+from utils import gather_waveforms, process_waveforms
 
 # watc_credentials.json contains a single line with format ["user", "password"]
 with open('watc_credentials.json') as f:
     watc_username, watc_password = json.load(f)
 
-t1 = UTCDateTime('2016-05-22T07:50:00')
-t2 = t1 + 20*60
+t1 = UTCDateTime('2016-05-22T07:45:00')
+t2 = t1 + 40*60
 
-st = gather_waveforms(source='IRIS', network='TA', station='O20K',
-                      starttime=t1, endtime=t2, remove_response=True,
+st = gather_waveforms(source='IRIS', network='AK,TA',
+                      station='HOM,M19K,M22K,O20K,O22K,RC01', starttime=t1,
+                      endtime=t2, remove_response=True,
                       watc_username=watc_username, watc_password=watc_password)
 
-#%% Scratch work for now... trying out pre-processing workflow
+#%% (2) Process the data
 
-import matplotlib.pyplot as plt
-from obspy.signal.filter import envelope
+INTERP_RATE = 0.05    # [Hz] New sampling rate to interpolate to
 
-def plot_st(st, is_downsampled=False):
-    fig = plt.figure()
-    st.plot(fig=fig)
-    fig.axes[0].set_title(st[0].stats.processing[-1], fontsize=8)
-    if is_downsampled:
-        waveform = fig.axes[0].get_children()[0]
-        waveform.set_color('red')
-        waveform.set_linewidth(2)
-    fig.show()
-    return fig
+FREQ_MIN = 0.5        # [Hz] Lower bandpass corner
+FREQ_MAX = 2          # [Hz] Upper bandpass corner
 
-# RAW (with conversion to Pa from data gathering step)
+AGC_WIN = 250         # [s] Window for AGC
+AGC_METHOD = 'gismo'  # Method to use for AGC
 
-plot_st(st);
+agc_params = dict(win_sec=AGC_WIN, method=AGC_METHOD)
 
-# DETREND
-
-std = st.copy()
-std.detrend(type='linear')
-plot_st(std);
-
-# TAPER
-
-stt = std.copy()
-stt.taper(max_percentage=0.05)
-plot_st(stt);
-
-# FILTER
-
-FREQ_MIN = 0.5  # [Hz]
-FREQ_MAX = 2    # [Hz]
-stf = stt.copy()
-stf.filter(type='bandpass', freqmin=FREQ_MIN, freqmax=FREQ_MAX, zerophase=True)
-plot_st(stf);
-
-# ENVELOPE
-ste = stf.copy()
-ste[0].data = envelope(ste[0].data)
-ste[0].stats.processing.append('obspy.signal.filter.envelope()')
-plot_st(ste);
-
-# THREE OPTIONS FOR REDUCING SAMPLING RATE:
-# Should we use an anti-aliasing low-pass filter for downsampling?
-
-NEW_SAMPLE_RATE = 0.01  # [Hz]
-
-# (1) RESAMPLE
-
-str1 = ste.copy()
-
-str1.resample(sampling_rate=NEW_SAMPLE_RATE)
-
-fig = plot_st(str1, is_downsampled=True)
-ste.plot(fig=fig)
-fig.axes[0].set_ylim(top=ste[0].data.max())
-
-# (2) DECIMATE
-
-str2 = ste.copy()
-
-fs = str2[0].stats.sampling_rate
-factor = int(fs/NEW_SAMPLE_RATE)
-str2.decimate(factor=factor, no_filter=True)  # Fails with no_filter=False
-
-fig = plot_st(str2, is_downsampled=True)
-ste.plot(fig=fig)
-fig.axes[0].set_ylim(top=ste[0].data.max())
-
-# (3) INTERPOLATE
-
-str3 = ste.copy()
-
-str3.interpolate(sampling_rate=NEW_SAMPLE_RATE)
-
-fig = plot_st(str3, is_downsampled=True)
-ste.plot(fig=fig)
-fig.axes[0].set_ylim(top=ste[0].data.max())
+st_proc = process_waveforms(st, interp_rate=INTERP_RATE, freqmin=FREQ_MIN,
+                            freqmax=FREQ_MAX, agc_params=agc_params,
+                            normalize=True, plot_steps=True)
