@@ -186,7 +186,7 @@ def gather_waveforms(source, network, station, starttime, endtime,
                 try:
                     calib = avo_calib_values[tr.stats.station]
                     tr.data = tr.data * calib
-                    tr.stats.processing.append('Data multiplied by '
+                    tr.stats.processing.append('RTM: Data multiplied by '
                                                f'calibration value of {calib} '
                                                'Pa/ct')
                     print('\tSensitivity removed using calibration value of '
@@ -209,8 +209,8 @@ def process_waveforms(st, freqmin, freqmax, envelope=False, interp_rate=None,
     """
     Process infrasound waveforms. By default, the input Stream is detrended,
     tapered, and filtered. Optional: Enveloping, interpolation (decimation),
-    automatic gain control (AGC) and normalization. Optionally plots the Stream
-    after each processing step has been applied for troubleshooting.
+    automatic gain control (AGC), and normalization. Optionally plots the
+    Stream after each processing step has been applied for troubleshooting.
 
     Args:
         st: Stream from gather_waveforms()
@@ -256,7 +256,7 @@ def process_waveforms(st, freqmin, freqmax, envelope=False, interp_rate=None,
             # The below line is much faster than using obspy.signal.envelope()
             # See https://github.com/scipy/scipy/issues/6324#issuecomment-425752155
             tr.data = np.abs(hilbert(tr.data, N=next_fast_len(npts))[:npts])
-            tr.stats.processing.append('Enveloped via np.abs(hilbert())')
+            tr.stats.processing.append('RTM: Enveloped via np.abs(hilbert())')
         streams['enveloped'] = st_e
 
     if interp_rate:
@@ -349,7 +349,8 @@ def _agc(st, win_sec, method='gismo'):
 
             tr.data = tr.data / scale  # "Scale" the data, sample-by-sample
 
-            tr.stats.processing.append(f'_agc(win_sec={win_sec}, '
+            tr.stats.processing.append('RTM: AGC applied via '
+                                       f'_agc(win_sec={win_sec}, '
                                        f'method=\'{method}\')')
 
     elif method == 'walker':
@@ -374,7 +375,8 @@ def _agc(st, win_sec, method='gismo'):
 
             tr.data = tr.data / scale  # "Scale" the data, sample-by-sample
 
-            tr.stats.processing.append(f'_agc(win_sec={win_sec}, '
+            tr.stats.processing.append('RTM: AGC applied via '
+                                       f'_agc(win_sec={win_sec}, '
                                        f'method=\'{method}\')')
 
     else:
