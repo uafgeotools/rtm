@@ -110,6 +110,23 @@ def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
     if not (x_0 in x and y_0 in y):
         warnings.warn('(x_0, y_0) is not located in grid. Check for numerical '
                       'precision problems (i.e., rounding error).')
+    if projected:
+        # Create list of grid corners
+        corners = dict(SW=(x.min(), y.min()),
+                       NW=(x.min(), y.max()),
+                       NE=(x.max(), y.max()),
+                       SE=(x.max(), y.min()))
+        for label, corner in corners.items():
+            # "Un-project" back to latitude/longitude
+            lat, lon = utm.to_latlon(*corner, zone_number, northern=lat_0 >= 0,
+                                     strict=False)
+            # "Re-project" to UTM
+            _, _, new_zone_number, _ = utm.from_latlon(lat, lon)
+            if new_zone_number != zone_number:
+                warnings.warn(f'{label} grid corner locates to UTM zone '
+                              f'{new_zone_number} instead of origin UTM zone '
+                              f'{zone_number}. Consider reducing grid extent '
+                              'or using an unprojected grid.')
 
     # Create grid
     data = np.full((y.size, x.size), np.nan)  # Initialize an array of NaNs
