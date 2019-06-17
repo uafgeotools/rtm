@@ -21,19 +21,19 @@ st = gather_waveforms(source='IRIS', network='AK,TA',
 FREQ_MIN = 0.5        # [Hz] Lower bandpass corner
 FREQ_MAX = 2          # [Hz] Upper bandpass corner
 
-INTERP_RATE = 1    # [Hz] New sampling rate to use for interpolation
+INTERP_RATE = 0.05    # [Hz] New sampling rate to use for interpolation
 
-SMOOTH_WIN = 20     # [s] Smoothing window duration
+SMOOTH_WIN = 120      # [s] Smoothing window duration
 
-AGC_WIN = 250         # [s] Window for AGC
+AGC_WIN = 250         # [s] AGC window duration
 AGC_METHOD = 'gismo'  # Method to use for AGC, specify 'gismo' or 'walker'
 
 agc_params = dict(win_sec=AGC_WIN, method=AGC_METHOD)
 
 st_proc = process_waveforms(st, freqmin=FREQ_MIN, freqmax=FREQ_MAX,
-                            envelope=True, smooth_win=SMOOTH_WIN,interp_rate=INTERP_RATE,
-                            agc_params=agc_params, normalize=True,
-                            plot_steps=True)
+                            envelope=True, smooth_win=SMOOTH_WIN,
+                            interp_rate=INTERP_RATE, agc_params=agc_params,
+                            normalize=True, plot_steps=True)
 
 #%% (3) Grid search
 
@@ -172,4 +172,3 @@ def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
 grid = define_grid(lon_0=LON_0, lat_0=LAT_0, x_radius=X_RADIUS,
                    y_radius=Y_RADIUS, spacing=SPACING, projected=PROJECTED,
                    plot=PLOT)
-
