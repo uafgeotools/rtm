@@ -219,7 +219,7 @@ def process_waveforms(st, freqmin, freqmax, envelope=False, interp_rate=None,
         envelope: Take envelope of waveforms (default: False)
         interp_rate: [Hz] New sample rate to interpolate to. If None, does not
                      perform interpolation (default: None)
-        smooth_win: [s]
+        smooth_win: [s] Smoothing window duration. If none, does not smooth (default: None)
         agc_params: Dictionary of keyword arguments to be passed on to _agc().
                     Example: dict(win_sec=500, method='gismo')
                     If set to None, no AGC is applied. For details, see the
@@ -277,7 +277,6 @@ def process_waveforms(st, freqmin, freqmax, envelope=False, interp_rate=None,
             tr.data = convolve(tr.data, win, mode='same') / sum(win)
         streams['smoothed'] = st_s
 
-        
     if agc_params:
         print('Applying AGC...')
         # Using the "newest" Stream below (copied within the AGC function)
