@@ -5,7 +5,7 @@ from obspy.clients.fdsn.header import FDSNException, FDSNNoDataException
 from obspy import Stream
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.signal import hilbert
+from scipy.signal import hilbert,hann,convolve
 from scipy.fftpack import next_fast_len
 from collections import OrderedDict
 
@@ -205,7 +205,7 @@ def gather_waveforms(source, network, station, starttime, endtime,
 
 
 def process_waveforms(st, freqmin, freqmax, envelope=False, interp_rate=None,
-                      agc_params=None, normalize=False, plot_steps=False):
+                      smooth_win=None, agc_params=None, normalize=False, plot_steps=False):
     """
     Process infrasound waveforms. By default, the input Stream is detrended,
     tapered, and filtered. Optional: Enveloping, interpolation (decimation),
@@ -219,6 +219,7 @@ def process_waveforms(st, freqmin, freqmax, envelope=False, interp_rate=None,
         envelope: Take envelope of waveforms (default: False)
         interp_rate: [Hz] New sample rate to interpolate to. If None, does not
                      perform interpolation (default: None)
+        smooth_win: [s]
         agc_params: Dictionary of keyword arguments to be passed on to _agc().
                     Example: dict(win_sec=500, method='gismo')
                     If set to None, no AGC is applied. For details, see the
@@ -265,6 +266,18 @@ def process_waveforms(st, freqmin, freqmax, envelope=False, interp_rate=None,
         st_i.interpolate(sampling_rate=interp_rate, method='lanczos', a=20)
         streams['interpolated'] = st_i
 
+    if smooth_win:
+        print('Smoothing...')
+        st_s = list(streams.values())[-1].copy()  # Copy the "newest" Stream
+        nsmooth=int(smooth_win*st_s[0].stats.sampling_rate) # number of samples to smooth 
+        if nsmooth<1:
+            raise ValueError('Smoothing window too short')
+        win = hann(nsmooth)  #hanning smoothing window
+        for tr in st_s:
+            tr.data = convolve(tr.data, win, mode='same') / sum(win)
+        streams['smoothed'] = st_s
+
+        
     if agc_params:
         print('Applying AGC...')
         # Using the "newest" Stream below (copied within the AGC function)
