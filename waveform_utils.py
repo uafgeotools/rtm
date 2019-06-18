@@ -152,13 +152,14 @@ def gather_waveforms(source, network, station, starttime, endtime,
 
                         tr.stats.longitude = cha.longitude
                         tr.stats.latitude = cha.latitude
+                        tr.stats.elevation = cha.elevation
 
     # Report if any Trace did NOT get coordinates assigned
     print('Traces WITHOUT coordinates assigned:')
     num_unassigned = 0
     for tr in st_out:
         try:
-            tr.stats.longitude, tr.stats.latitude
+            tr.stats.longitude, tr.stats.latitude, tr.stats.elevation
         except AttributeError:
             print('\t' + tr.id)
             num_unassigned += 1
