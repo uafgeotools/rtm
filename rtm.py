@@ -151,6 +151,7 @@ ax.background_patch.set_facecolor(cfeature.COLORS['water'])
 
 stack_array.sel(time=t_max).plot.pcolormesh(ax=ax, alpha=0.5,
                                             transform=ccrs.PlateCarree())
+ax.scatter(LON_0, LAT_0, color='red', transform=ccrs.Geodetic())
 fig.show()
 
 # Processed (input) Stream
