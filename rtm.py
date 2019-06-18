@@ -64,6 +64,7 @@ from obspy.geodetics import gps2dist_azimuth
 import numpy as np
 import utm
 import warnings
+import time
 
 STACK_METHOD = 'sum'  # Choose either 'sum' or 'product'
 
@@ -87,6 +88,7 @@ shifted_streams = np.empty(shape=grid.shape, dtype=object)
 
 num_cells = grid.size
 cell = 0
+tic = time.process_time()
 for i, y in enumerate(stack_array['y']):
 
     for j, x in enumerate(stack_array['x']):
@@ -145,7 +147,8 @@ for i, y in enumerate(stack_array['y']):
         cell += 1
         print('{:.1f}%'.format((cell / num_cells) * 100))
 
-print('Done')
+toc = time.process_time()
+print(f'Done (elapsed time = {toc-tic:.1f} s)')
 
 #%% (4) Plot
 
