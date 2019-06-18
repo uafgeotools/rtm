@@ -1,22 +1,12 @@
-#%% (1) Grab the data
+#%% (1) Grab and process the data
 
-import json
 from obspy import UTCDateTime
+import json
 from waveform_utils import gather_waveforms, process_waveforms
 
-# watc_credentials.json contains a single line with format ["user", "password"]
-with open('watc_credentials.json') as f:
-    watc_username, watc_password = json.load(f)
-
-t1 = UTCDateTime('2016-05-22T07:45:00')
-t2 = t1 + 40*60
-
-st = gather_waveforms(source='IRIS', network='AK,TA',
-                      station='HOM,M19K,M22K,O20K,O22K,RC01', starttime=t1,
-                      endtime=t2, remove_response=True,
-                      watc_username=watc_username, watc_password=watc_password)
-
-#%% (2) Process the data
+# Start and end of time window containing (suspected) events
+STARTTIME = UTCDateTime('2016-05-22T07:45:00')
+ENDTIME = STARTTIME + 30*60
 
 FREQ_MIN = 0.5          # [Hz] Lower bandpass corner
 FREQ_MAX = 2            # [Hz] Upper bandpass corner
@@ -28,6 +18,16 @@ SMOOTH_WIN = 120        # [s] Smoothing window duration
 AGC_WIN = 250           # [s] AGC window duration
 AGC_METHOD = 'gismo'    # Method to use for AGC, specify 'gismo' or 'walker'
 
+# watc_credentials.json contains a single line with format ["user", "password"]
+with open('watc_credentials.json') as f:
+    watc_username, watc_password = json.load(f)
+
+st = gather_waveforms(source='IRIS', network='AK,TA',
+                      station='HOM,M19K,M22K,O20K,O22K,RC01',
+                      starttime=STARTTIME, endtime=ENDTIME,
+                      remove_response=True, watc_username=watc_username,
+                      watc_password=watc_password)
+
 agc_params = dict(win_sec=AGC_WIN, method=AGC_METHOD)
 
 st_proc = process_waveforms(st, freqmin=FREQ_MIN, freqmax=FREQ_MAX,
@@ -35,7 +35,7 @@ st_proc = process_waveforms(st, freqmin=FREQ_MIN, freqmax=FREQ_MAX,
                             decimation_rate=DECIMATION_RATE, agc_params=None,
                             normalize=True, plot_steps=False)
 
-#%% (3) Define grid
+#%% (2) Define grid
 
 from grid_utils import define_grid
 
@@ -58,11 +58,10 @@ grid = define_grid(lon_0=LON_0, lat_0=LAT_0, x_radius=X_RADIUS,
                    y_radius=Y_RADIUS, spacing=SPACING, projected=PROJECTED,
                    plot=False)
 
-#%% (4) Grid search
+#%% (3) Grid search
 
 from obspy.geodetics import gps2dist_azimuth
 import numpy as np
-
 
 STACK_METHOD = 'sum'  # Choose either 'sum' or 'product'
 
@@ -98,9 +97,6 @@ for i, lat in enumerate(stack_array['lat']):
             tr.stats.processing.append(f'RTM: Shifted by -{time_shift:.2f} s')
         st.trim(times[0], times[-1], pad=True, fill_value=0)
 
-        #start_times = [tr.stats.starttime for tr in st]
-        #print(np.max(start_times) - np.min(start_times))
-
         if STACK_METHOD == 'sum':
             stack = np.sum([tr.data for tr in st], axis=0)
 
@@ -122,7 +118,7 @@ for i, lat in enumerate(stack_array['lat']):
         cell += 1
         print('{:.1f}%'.format((cell / num_cells) * 100))
 
-#%% (5) Plot
+#%% (4) Plot
 
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
