@@ -143,26 +143,26 @@ def rtm_stack(st,stack_type):
     Returns:
         tr: trace containing stacked data
     """
-        
+
     tr=st[0].copy()    #copy first trace over for stack trace
     tr.stats.station=stack_type     #define station name as stack type?
     tr.stats.processing.append(stack_type)  #append stack type to processing
-    
+
     #how do we want to fill in station stats for the trace? perhaps fill in lat/long with grid info
-    
+
     if stack_type=='linear':
         print('Peforming linear stack...')
-        
+
         #Progresively sum data
         for tr_tmp in st[1:]:
             tr.data=tr.data+tr_tmp.data
 
     elif stack_type=='product':
         print('Peforming product stack...')
-        
+
         #Progresively multipy data
         for tr_tmp in st[1:]:
             tr.data=tr.data*tr_tmp.data
-             
-    print('done')        
-    return tr        
+
+    print('done')
+    return tr
