@@ -148,6 +148,11 @@ ax.background_patch.set_facecolor(cfeature.COLORS['water'])
 stack_array.sel(time=t_max).plot.pcolormesh(ax=ax, alpha=0.5,
                                             transform=ccrs.PlateCarree())
 ax.scatter(LON_0, LAT_0, color='red', transform=ccrs.Geodetic())
+
+for tr in st_proc:
+    ax.plot(tr.stats.longitude,tr.stats.latitude,'o',color='k',ms=6,transform=ccrs.Geodetic())
+    ax.text(tr.stats.longitude,tr.stats.latitude,tr.stats.station,color='k',verticalalignment='bottom',horizontalalignment='left',transform=ccrs.Geodetic())
+ 
 fig.show()
 
 # Processed (input) Stream
