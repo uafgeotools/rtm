@@ -70,20 +70,13 @@ STACK_METHOD = 'sum'  # Choose either 'sum' or 'product'
 
 CELERITY = 295  # [m/s]
 
-# from obspy import UTCDateTime
-# import pandas as pd
-# MIN_TIME = UTCDateTime('2016-05-22T07:00')
-# MAX_TIME = UTCDateTime('2016-05-22T09:00')
-#
-# delta = st_proc[0].stats.delta  # [s] These should all be the same now!
-# times = pd.date_range(start=MIN_TIME.datetime, end=MAX_TIME.datetime,
-#                      freq=f'{delta}S')
-
 # Define global time axis using the first Trace of the input Stream
 times = st_proc[0].times(type='utcdatetime')
 
-stack_array = grid.expand_dims(dim=dict(time=[t.datetime for t in times])).copy()
+# Add this time dimension to the grid
+stack_array = grid.expand_dims(dict(time=times.astype('datetime64[ns]'))).copy()
 
+# Pre-allocate array to store Streams for each grid point
 shifted_streams = np.empty(shape=grid.shape, dtype=object)
 
 num_cells = grid.size
@@ -124,6 +117,8 @@ for i, y in enumerate(stack_array['y']):
             time_shift = distance / CELERITY  # [s]
             tr.stats.starttime = tr.stats.starttime - time_shift
             tr.stats.processing.append(f'RTM: Shifted by -{time_shift:.2f} s')
+
+        # Trim to time limits of input Stream
         st.trim(times[0], times[-1], pad=True, fill_value=0)
 
         if STACK_METHOD == 'sum':
