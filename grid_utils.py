@@ -74,17 +74,11 @@ def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
     # Create grid
     data = np.full((y.size, x.size), np.nan)  # Initialize an array of NaNs
     if projected:
-        coords = [('northing', y), ('easting', x)]
         # Add the projection information to the grid metadata
-        proj_string = f'+proj=utm +zone={zone_number} +ellps=WGS84 +units=m ' \
-                      '+no_defs'
-        if lat_0 < 0:
-            proj_string += ' +south'
-        attrs = dict(proj=proj_string)
+        attrs = dict(utm_zone_number=zone_number)
     else:
-        coords = [('lat', y), ('lon', x)]
-        attrs = dict(proj=None)
-    grid_out = xr.DataArray(data, coords=coords, attrs=attrs)
+        attrs = dict(utm_zone_number=None)
+    grid_out = xr.DataArray(data, coords=[('y', y), ('x', x)], attrs=attrs)
 
     # Plot grid preview, if specified
     if plot:

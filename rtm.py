@@ -42,12 +42,12 @@ from grid_utils import define_grid
 LON_0 = -152.9902  # [deg] Longitude of grid center
 LAT_0 = 60.0183    # [deg] Latitude of grid center
 
-PROJECTED = False
+PROJECTED = True
 
 if PROJECTED:
-    X_RADIUS = 10000  # [m] E-W grid radius (half of grid "width")
-    Y_RADIUS = 10000  # [m] N-S grid radius (half of grid "height")
-    SPACING = 500     # [m] Grid spacing
+    X_RADIUS = 50000  # [m] E-W grid radius (half of grid "width")
+    Y_RADIUS = 50000  # [m] N-S grid radius (half of grid "height")
+    SPACING = 5000    # [m] Grid spacing
 
 else:
     X_RADIUS = 5   # [deg] E-W grid radius (half of grid "width")
@@ -62,6 +62,8 @@ grid = define_grid(lon_0=LON_0, lat_0=LAT_0, x_radius=X_RADIUS,
 
 from obspy.geodetics import gps2dist_azimuth
 import numpy as np
+import utm
+import warnings
 
 STACK_METHOD = 'sum'  # Choose either 'sum' or 'product'
 
@@ -85,13 +87,38 @@ shifted_streams = np.empty(shape=grid.shape, dtype=object)
 
 num_cells = grid.size
 cell = 0
-for i, lat in enumerate(stack_array['lat']):
-    for j, lon in enumerate(stack_array['lon']):
+for i, y in enumerate(stack_array['y']):
+
+    for j, x in enumerate(stack_array['x']):
+
         st = st_proc.copy()
+
         for tr in st:
-            # Distance is in meters
-            distance, _, _ = gps2dist_azimuth(lat, lon, tr.stats.latitude,
-                                              tr.stats.longitude)
+
+            if grid.attrs['utm_zone_number']:
+                grid_zone_number = grid.attrs['utm_zone_number']
+                *station_utm, _, _ = utm.from_latlon(tr.stats.latitude,
+                                                     tr.stats.longitude,
+                                                     force_zone_number=grid_zone_number)
+
+                # Check if station is outside of grid UTM zone
+                _, _, station_zone_number, _ = utm.from_latlon(tr.stats.latitude,
+                                                               tr.stats.longitude)
+                if station_zone_number != grid_zone_number:
+                    warnings.warn(f'{tr.id} locates to UTM zone '
+                                  f'{station_zone_number} instead of grid UTM '
+                                  f'zone {grid_zone_number}. Consider '
+                                  'reducing station search extent or using an '
+                                  'unprojected grid.')
+
+                # Distance is in meters
+                distance = np.linalg.norm(np.array(station_utm) - np.array([x, y]))
+
+            else:
+                # Distance is in meters
+                distance, _, _ = gps2dist_azimuth(y, x, tr.stats.latitude,
+                                                  tr.stats.longitude)
+
             time_shift = distance / CELERITY  # [s]
             tr.stats.starttime = tr.stats.starttime - time_shift
             tr.stats.processing.append(f'RTM: Shifted by -{time_shift:.2f} s')
@@ -109,7 +136,7 @@ for i, lat in enumerate(stack_array['lat']):
                              '\'product\'.')
 
         # Assign the stacked time series to this latitude/longitude point
-        stack_array.loc[dict(lat=lat, lon=lon)] = stack
+        stack_array.loc[dict(y=y, x=x)] = stack
 
         # Save the time-shifted stream
         shifted_streams[i, j] = st
@@ -118,36 +145,59 @@ for i, lat in enumerate(stack_array['lat']):
         cell += 1
         print('{:.1f}%'.format((cell / num_cells) * 100))
 
+print('Done')
+
 #%% (4) Plot
 
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
-
+from cartopy.io.img_tiles import Stamen
 
 # Get coordinates of peak
 max_coords = stack_array.where(stack_array == stack_array.max(),
                                drop=True).squeeze()
 t_max = max_coords['time'].values
-lat_max = max_coords['lat'].values
-lon_max = max_coords['lon'].values
+y_max = max_coords['y'].values
+x_max = max_coords['x'].values
 
-# Time slice corresponding to peak stack
-proj = ccrs.AlbersEqualArea(central_longitude=LON_0, central_latitude=LAT_0,
-                            standard_parallels=(stack_array['lat'].values.min(),
-                                                stack_array['lat'].values.max()))
+if stack_array.attrs['utm_zone_number']:
+    proj = ccrs.UTM(zone=stack_array.attrs['utm_zone_number'],
+                    southern_hemisphere=LAT_0 < 0)
+    transform = proj
+else:
+    # This is a good projection to use since it preserves area
+    proj = ccrs.AlbersEqualArea(central_longitude=LON_0,
+                                central_latitude=LAT_0,
+                                standard_parallels=(
+                                    stack_array['y'].values.min(),
+                                    stack_array['y'].values.max())
+                                )
+    transform = ccrs.PlateCarree()
+
 fig, ax = plt.subplots(figsize=(10, 10),
                        subplot_kw=dict(projection=proj))
 
-scale = '50m'
-feature = cfeature.LAND.with_scale(scale)
-ax.add_feature(feature, facecolor=cfeature.COLORS['land'],
-               edgecolor='black')
-ax.background_patch.set_facecolor(cfeature.COLORS['water'])
+# Since projected grids cover less area and may not include coastlines,
+# use a background image to provide geographical context (can be slow)
+if stack_array.attrs['utm_zone_number']:
+    zoom_level = 8
+    ax.add_image(Stamen(style='terrain-background'), zoom_level)
+
+# Since unprojected grids have regional/global extent, just show the
+# coastlines
+else:
+    scale = '50m'
+    feature = cfeature.LAND.with_scale(scale)
+    ax.add_feature(feature, facecolor=cfeature.COLORS['land'],
+                   edgecolor='black')
+    ax.background_patch.set_facecolor(cfeature.COLORS['water'])
 
 stack_array.sel(time=t_max).plot.pcolormesh(ax=ax, alpha=0.5,
-                                            transform=ccrs.PlateCarree())
+                                            transform=transform)
+
 ax.scatter(LON_0, LAT_0, color='red', transform=ccrs.Geodetic())
+
 fig.show()
 
 # Processed (input) Stream
@@ -164,5 +214,5 @@ fig.show()
 
 # Stack function
 fig, ax = plt.subplots()
-stack_array.sel(lat=lat_max, lon=lon_max).plot(ax=ax)
+stack_array.sel(y=y_max, x=x_max).plot(ax=ax)
 fig.show()
