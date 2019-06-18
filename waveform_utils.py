@@ -204,22 +204,26 @@ def gather_waveforms(source, network, station, starttime, endtime,
     return st_out
 
 
-def process_waveforms(st, freqmin, freqmax, envelope=False, interp_rate=None,
-                      smooth_win=None, agc_params=None, normalize=False,
-                      plot_steps=False):
+def process_waveforms(st, freqmin, freqmax, envelope=False,
+                      decimation_rate=None, smooth_win=None, agc_params=None,
+                      normalize=False, plot_steps=False):
     """
     Process infrasound waveforms. By default, the input Stream is detrended,
-    tapered, and filtered. Optional: Enveloping, interpolation (decimation),
-    automatic gain control (AGC), and normalization. Optionally plots the
-    Stream after each processing step has been applied for troubleshooting.
+    tapered, and filtered. Optional: Enveloping, decimation (via
+    interpolation), automatic gain control (AGC), and normalization. If no
+    decimation rate is specified, Traces are simply interpolated to the lowest
+    sample rate present in the Stream. Optionally plots the Stream after each
+    processing step has been applied for troubleshooting.
 
     Args:
         st: Stream from gather_waveforms()
         freqmin: [Hz] Lower corner for zero-phase bandpass filter
         freqmax: [Hz] Upper corner for zero-phase bandpass filter
         envelope: Take envelope of waveforms (default: False)
-        interp_rate: [Hz] New sample rate to interpolate to. If None, does not
-                     perform interpolation (default: None)
+        decimation_rate: [Hz] New sample rate to decimate to (via
+                         interpolation). If None, just interpolates to the
+                         lowest sample rate present in the Stream (default:
+                         None)
         smooth_win: [s] Smoothing window duration. If None, does not perform
                     smoothing (default: None)
         agc_params: Dictionary of keyword arguments to be passed on to _agc().
@@ -253,7 +257,7 @@ def process_waveforms(st, freqmin, freqmax, envelope=False, interp_rate=None,
 
     if envelope:
         print('Enveloping...')
-        st_e = list(streams.values())[-1].copy()  # Copy the "newest" Stream
+        st_e = st_f.copy()  # Copy filtered Stream from previous step
         for tr in st_e:
             npts = tr.count()
             # The below line is much faster than using obspy.signal.envelope()
@@ -262,21 +266,30 @@ def process_waveforms(st, freqmin, freqmax, envelope=False, interp_rate=None,
             tr.stats.processing.append('RTM: Enveloped via np.abs(hilbert())')
         streams['enveloped'] = st_e
 
-    if interp_rate:
-        print('Interpolating...')
-        st_i = list(streams.values())[-1].copy()  # Copy the "newest" Stream
-        st_i.interpolate(sampling_rate=interp_rate, method='lanczos', a=20)
-        streams['interpolated'] = st_i
+    # The below step is mandatory - either we decimate or simply equalize fs
+    st_i = list(streams.values())[-1].copy()  # Copy the "newest" Stream
+    a_param = 20  # This is required for the 'lanczos' method; may affect speed
+    if decimation_rate:
+        print('Decimating...')
+        st_i.interpolate(sampling_rate=decimation_rate, method='lanczos',
+                         a=a_param)
+        streams['decimated'] = st_i
+    else:
+        print('Equalizing sampling rates...')
+        lowest_fs = np.min([tr.stats.sampling_rate for tr in st_i])
+        st_i.interpolate(sampling_rate=lowest_fs, method='lanczos', a=a_param)
+        streams['sample_rate_equalized'] = st_i
+    # After this step, all Traces in the Stream have the same sampling rate!
 
     if smooth_win:
         print('Smoothing...')
-        st_s = list(streams.values())[-1].copy()  # Copy the "newest" Stream
+        st_s = st_i.copy()  # Copy interpolated Stream from previous step
+        # Calculate number of samples to use in window
+        smooth_win_samp = int(st_s[0].stats.sampling_rate * smooth_win)
+        if smooth_win_samp < 1:
+            raise ValueError('Smoothing window too short.')
+        win = windows.hann(smooth_win_samp)  # Use Hann window
         for tr in st_s:
-            # Calculate number of samples to use in window
-            smooth_win_samp = int(tr.stats.sampling_rate * smooth_win)
-            if smooth_win_samp < 1:
-                raise ValueError('Smoothing window too short.')
-            win = windows.hann(smooth_win_samp)  # Use Hann window
             tr.data = convolve(tr.data, win, mode='same') / sum(win)
             tr.stats.processing.append(f'RTM: Smoothed with {smooth_win} s '
                                        'Hann window')
@@ -285,7 +298,7 @@ def process_waveforms(st, freqmin, freqmax, envelope=False, interp_rate=None,
     if agc_params:
         print('Applying AGC...')
         # Using the "newest" Stream below (copied within the AGC function)
-        st_a = _agc(list(streams.values())[-1].copy(), **agc_params)
+        st_a = _agc(list(streams.values())[-1], **agc_params)
         streams['agc'] = st_a
 
     if normalize:

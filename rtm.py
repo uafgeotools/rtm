@@ -18,21 +18,21 @@ st = gather_waveforms(source='IRIS', network='AK,TA',
 
 #%% (2) Process the data
 
-FREQ_MIN = 0.5        # [Hz] Lower bandpass corner
-FREQ_MAX = 2          # [Hz] Upper bandpass corner
+FREQ_MIN = 0.5          # [Hz] Lower bandpass corner
+FREQ_MAX = 2            # [Hz] Upper bandpass corner
 
-INTERP_RATE = 0.05    # [Hz] New sampling rate to use for interpolation
+DECIMATION_RATE = 0.05  # [Hz] New sampling rate to use for decimation
 
-SMOOTH_WIN = 120      # [s] Smoothing window duration
+SMOOTH_WIN = 120        # [s] Smoothing window duration
 
-AGC_WIN = 250         # [s] AGC window duration
-AGC_METHOD = 'gismo'  # Method to use for AGC, specify 'gismo' or 'walker'
+AGC_WIN = 250           # [s] AGC window duration
+AGC_METHOD = 'gismo'    # Method to use for AGC, specify 'gismo' or 'walker'
 
 agc_params = dict(win_sec=AGC_WIN, method=AGC_METHOD)
 
 st_proc = process_waveforms(st, freqmin=FREQ_MIN, freqmax=FREQ_MAX,
                             envelope=True, smooth_win=SMOOTH_WIN,
-                            interp_rate=INTERP_RATE, agc_params=None,
+                            decimation_rate=DECIMATION_RATE, agc_params=None,
                             normalize=True, plot_steps=False)
 
 #%% (3) Define grid
