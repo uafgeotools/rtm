@@ -196,11 +196,18 @@ else:
 stack_array.sel(time=t_max).plot.pcolormesh(ax=ax, alpha=0.5,
                                             transform=transform)
 
-ax.scatter(LON_0, LAT_0, color='red', transform=ccrs.Geodetic())
+# Plot center of grid
+ax.scatter(LON_0, LAT_0, s=100, color='red', marker='*',
+           transform=ccrs.Geodetic())
 
+# Plot stations
 for tr in st_proc:
-    ax.plot(tr.stats.longitude,tr.stats.latitude,'o',color='k',ms=6,transform=ccrs.Geodetic())
-    ax.text(tr.stats.longitude,tr.stats.latitude,tr.stats.station,color='k',verticalalignment='bottom',horizontalalignment='left',transform=ccrs.Geodetic())
+    ax.scatter(tr.stats.longitude,  tr.stats.latitude, color='black',
+               transform=ccrs.Geodetic())
+    ax.text(tr.stats.longitude, tr.stats.latitude,
+            '  {}.{}'.format(tr.stats.network, tr.stats.station),
+            verticalalignment='center_baseline', horizontalalignment='left',
+            transform=ccrs.Geodetic())
 
 fig.show()
 
