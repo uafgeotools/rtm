@@ -104,13 +104,13 @@ def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
         # Since projected grids cover less area and may not include coastlines,
         # use a background image to provide geographical context (can be slow)
         if projected:
-            zoom_level = 12
+            zoom_level = 8
             ax.add_image(Stamen(style='terrain-background'), zoom_level)
 
         # Since unprojected grids have regional/global extent, just show the
         # coastlines
         else:
-            scale = '10m'
+            scale = '50m'
             feature = cfeature.LAND.with_scale(scale)
             ax.add_feature(feature, facecolor=cfeature.COLORS['land'],
                            edgecolor='black')
