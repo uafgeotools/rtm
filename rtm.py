@@ -68,79 +68,84 @@ import time
 
 STACK_METHOD = 'sum'  # Choose either 'sum' or 'product'
 
-CELERITY = 295  # [m/s]
+CELERITY_LIST = [295, 300, 305, 310]  # [m/s]
 
 # Define global time axis using the first Trace of the input Stream
 times = st_proc[0].times(type='utcdatetime')
 
-# Add this time dimension to the grid
-stack_array = grid.expand_dims(dict(time=times.astype('datetime64[ns]'))).copy()
+# Expand grid dimensions in celerity and time
+stack_array = grid.expand_dims(dict(celerity=np.float64(CELERITY_LIST))).copy()
+stack_array = stack_array.expand_dims(dict(time=times.astype('datetime64[ns]'))).copy()
 
-# Pre-allocate array to store Streams for each grid point
-shifted_streams = np.empty(shape=grid.shape, dtype=object)
+# Pre-allocate NumPy array to store Streams for each grid point
+shifted_streams = np.empty(shape=stack_array.shape[1:], dtype=object)
 
-num_cells = grid.size
-cell = 0
+total_its = np.product(stack_array.shape[1:])  # Don't count the time dimension
+counter = 0
 tic = time.process_time()
-for i, y in enumerate(stack_array['y']):
+for i, celerity in enumerate(stack_array['celerity'].values):
 
-    for j, x in enumerate(stack_array['x']):
+    for j, y_coord in enumerate(stack_array['y']):
 
-        st = st_proc.copy()
+        for k, x_coord in enumerate(stack_array['x']):
 
-        for tr in st:
+            st = st_proc.copy()
 
-            if grid.attrs['utm_zone_number']:
-                grid_zone_number = grid.attrs['utm_zone_number']
-                *station_utm, _, _ = utm.from_latlon(tr.stats.latitude,
-                                                     tr.stats.longitude,
-                                                     force_zone_number=grid_zone_number)
+            for tr in st:
 
-                # Check if station is outside of grid UTM zone
-                _, _, station_zone_number, _ = utm.from_latlon(tr.stats.latitude,
-                                                               tr.stats.longitude)
-                if station_zone_number != grid_zone_number:
-                    warnings.warn(f'{tr.id} locates to UTM zone '
-                                  f'{station_zone_number} instead of grid UTM '
-                                  f'zone {grid_zone_number}. Consider '
-                                  'reducing station search extent or using an '
-                                  'unprojected grid.')
+                if grid.attrs['utm_zone_number']:
+                    grid_zone_number = grid.attrs['utm_zone_number']
+                    *station_utm, _, _ = utm.from_latlon(tr.stats.latitude,
+                                                         tr.stats.longitude,
+                                                         force_zone_number=grid_zone_number)
 
-                # Distance is in meters
-                distance = np.linalg.norm(np.array(station_utm) - np.array([x, y]))
+                    # Check if station is outside of grid UTM zone
+                    _, _, station_zone_number, _ = utm.from_latlon(tr.stats.latitude,
+                                                                   tr.stats.longitude)
+                    if station_zone_number != grid_zone_number:
+                        warnings.warn(f'{tr.id} locates to UTM zone '
+                                      f'{station_zone_number} instead of grid UTM '
+                                      f'zone {grid_zone_number}. Consider '
+                                      'reducing station search extent or using an '
+                                      'unprojected grid.')
+
+                    # Distance is in meters
+                    distance = np.linalg.norm(np.array(station_utm) - np.array([x_coord, y_coord]))
+
+                else:
+                    # Distance is in meters
+                    distance, _, _ = gps2dist_azimuth(y_coord, x_coord,
+                                                      tr.stats.latitude,
+                                                      tr.stats.longitude)
+
+                time_shift = distance / celerity  # [s]
+                tr.stats.starttime = tr.stats.starttime - time_shift
+                tr.stats.processing.append(f'RTM: Shifted by -{time_shift:.2f} s')
+
+            # Trim to time limits of input Stream
+            st.trim(times[0], times[-1], pad=True, fill_value=0)
+
+            if STACK_METHOD == 'sum':
+                stack = np.sum([tr.data for tr in st], axis=0)
+
+            elif STACK_METHOD == 'product':
+                stack = np.product([tr.data for tr in st], axis=0)
 
             else:
-                # Distance is in meters
-                distance, _, _ = gps2dist_azimuth(y, x, tr.stats.latitude,
-                                                  tr.stats.longitude)
+                raise ValueError(f'Stack method \'{STACK_METHOD}\' not '
+                                 'recognized. Method must be either \'sum\' or '
+                                 '\'product\'.')
 
-            time_shift = distance / CELERITY  # [s]
-            tr.stats.starttime = tr.stats.starttime - time_shift
-            tr.stats.processing.append(f'RTM: Shifted by -{time_shift:.2f} s')
+            # Assign the stacked time series to this latitude/longitude point
+            stack_array.loc[dict(x=x_coord, y=y_coord,
+                                 celerity=celerity)] = stack
 
-        # Trim to time limits of input Stream
-        st.trim(times[0], times[-1], pad=True, fill_value=0)
+            # Save the time-shifted Stream
+            shifted_streams[i, j, k] = st
 
-        if STACK_METHOD == 'sum':
-            stack = np.sum([tr.data for tr in st], axis=0)
-
-        elif STACK_METHOD == 'product':
-            stack = np.product([tr.data for tr in st], axis=0)
-
-        else:
-            raise ValueError(f'Stack method \'{STACK_METHOD}\' not '
-                             'recognized. Method must be either \'sum\' or '
-                             '\'product\'.')
-
-        # Assign the stacked time series to this latitude/longitude point
-        stack_array.loc[dict(y=y, x=x)] = stack
-
-        # Save the time-shifted stream
-        shifted_streams[i, j] = st
-
-        # Print grid search progress
-        cell += 1
-        print('{:.1f}%'.format((cell / num_cells) * 100))
+            # Print grid search progress
+            counter += 1
+            print('{:.1f}%'.format((counter / total_its) * 100))
 
 toc = time.process_time()
 print(f'Done (elapsed time = {toc-tic:.1f} s)')
@@ -156,6 +161,7 @@ from cartopy.io.img_tiles import Stamen
 max_coords = stack_array.where(stack_array == stack_array.max(),
                                drop=True).squeeze()
 t_max = max_coords['time'].values
+c_max = max_coords['celerity'].values
 y_max = max_coords['y'].values
 x_max = max_coords['x'].values
 
@@ -191,8 +197,8 @@ else:
                    edgecolor='black')
     ax.background_patch.set_facecolor(cfeature.COLORS['water'])
 
-stack_array.sel(time=t_max).plot.pcolormesh(ax=ax, alpha=0.5,
-                                            transform=transform)
+stack_array.sel(time=t_max, celerity=c_max).plot.pcolormesh(ax=ax, alpha=0.5,
+                                                            transform=transform)
 
 # Plot center of grid
 ax.scatter(LON_0, LAT_0, s=100, color='red', marker='*',
@@ -223,5 +229,5 @@ fig.show()
 
 # Stack function
 fig, ax = plt.subplots()
-stack_array.sel(y=y_max, x=x_max).plot(ax=ax)
+stack_array.sel(y=y_max, x=x_max, celerity=c_max).plot(ax=ax)
 fig.show()
