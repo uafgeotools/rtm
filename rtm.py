@@ -68,82 +68,8 @@ S, shifted_streams = grid_search(processed_st=st_proc, grid=grid,
 
 #%% (3) Plot
 
-import matplotlib.pyplot as plt
-import cartopy.crs as ccrs
-import cartopy.feature as cfeature
-from cartopy.io.img_tiles import Stamen
-import numpy as np
-import warnings
+from plotting_utils import plot_time_slice
 
-# Get coordinates of stack maximum
-stack_maximum = S.where(S == S.max(), drop=True)
-if stack_maximum.shape != (1, 1, 1, 1):
-    warnings.warn('Multiple maxima present in S. Using first occurrence.')
-max_coords = stack_maximum[0, 0, 0, 0].coords
-time_max = max_coords['time'].values
-celerity_max = max_coords['celerity'].values
-y_max = max_coords['y'].values
-x_max = max_coords['x'].values
+fig = plot_time_slice(S, st_proc, time_slice=None, celerity_slice=None)
 
-if S.attrs['UTM']:
-    proj = ccrs.UTM(**S.attrs['UTM'])
-    transform = proj
-else:
-    # This is a good projection to use since it preserves area
-    proj = ccrs.AlbersEqualArea(central_longitude=LON_0,
-                                central_latitude=LAT_0,
-                                standard_parallels=(S['y'].values.min(),
-                                                    S['y'].values.max()))
-    transform = ccrs.PlateCarree()
-
-fig, ax = plt.subplots(figsize=(10, 10),
-                       subplot_kw=dict(projection=proj))
-
-# Since projected grids cover less area and may not include coastlines, use a
-# background image to provide geographical context (can be slow)
-if S.attrs['UTM']:
-    zoom_level = 8
-    ax.add_image(Stamen(style='terrain-background'), zoom_level)
-
-# Since unprojected grids have regional/global extent, just show the coastlines
-else:
-    scale = '50m'
-    feature = cfeature.LAND.with_scale(scale)
-    ax.add_feature(feature, facecolor=cfeature.COLORS['land'],
-                   edgecolor='black')
-    ax.background_patch.set_facecolor(cfeature.COLORS['water'])
-
-S.sel(time=time_max,
-      celerity=celerity_max,
-      method='nearest').plot.pcolormesh(ax=ax, alpha=0.5, transform=transform)
-
-# Plot center of grid
-ax.scatter(LON_0, LAT_0, s=100, color='red', marker='*',
-           transform=ccrs.Geodetic())
-
-# Plot stations
-for tr in st_proc:
-    ax.scatter(tr.stats.longitude,  tr.stats.latitude, color='black',
-               transform=ccrs.Geodetic())
-    ax.text(tr.stats.longitude, tr.stats.latitude,
-            '  {}.{}'.format(tr.stats.network, tr.stats.station),
-            verticalalignment='center_baseline', horizontalalignment='left',
-            transform=ccrs.Geodetic())
-
-fig.show()
-
-# Processed (input) Stream
-fig = plt.figure()
-st_proc.plot(fig=fig)
-fig.show()
-
-# Time-shifted (output) Stream
-st = shifted_streams[np.unravel_index(S.argmax(), S.shape)[1:]]
-fig = plt.figure()
-st.plot(fig=fig)
-fig.show()
-
-# Stack function
-fig, ax = plt.subplots()
-S.sel(y=y_max, x=x_max, celerity=celerity_max).plot(ax=ax)
 fig.show()
