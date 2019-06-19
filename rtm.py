@@ -73,11 +73,15 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from cartopy.io.img_tiles import Stamen
 import numpy as np
+import warnings
 
-# Get coordinates of peak
-max_coords = S.where(S == S.max(), drop=True).squeeze()#[0][0][0]
-t_max = max_coords['time'].values
-c_max = max_coords['celerity'].values
+# Get coordinates of stack maximum
+stack_maximum = S.where(S == S.max(), drop=True)
+if stack_maximum.shape != (1, 1, 1, 1):
+    warnings.warn('Multiple maxima present in S. Using first occurrence.')
+max_coords = stack_maximum[0, 0, 0, 0].coords
+time_max = max_coords['time'].values
+celerity_max = max_coords['celerity'].values
 y_max = max_coords['y'].values
 x_max = max_coords['x'].values
 
@@ -95,14 +99,13 @@ else:
 fig, ax = plt.subplots(figsize=(10, 10),
                        subplot_kw=dict(projection=proj))
 
-# Since projected grids cover less area and may not include coastlines,
-# use a background image to provide geographical context (can be slow)
+# Since projected grids cover less area and may not include coastlines, use a
+# background image to provide geographical context (can be slow)
 if S.attrs['UTM']:
     zoom_level = 8
     ax.add_image(Stamen(style='terrain-background'), zoom_level)
 
-# Since unprojected grids have regional/global extent, just show the
-# coastlines
+# Since unprojected grids have regional/global extent, just show the coastlines
 else:
     scale = '50m'
     feature = cfeature.LAND.with_scale(scale)
@@ -110,8 +113,9 @@ else:
                    edgecolor='black')
     ax.background_patch.set_facecolor(cfeature.COLORS['water'])
 
-S.sel(time=t_max, celerity=c_max).plot.pcolormesh(ax=ax, alpha=0.5,
-                                                  transform=transform)
+S.sel(time=time_max,
+      celerity=celerity_max,
+      method='nearest').plot.pcolormesh(ax=ax, alpha=0.5, transform=transform)
 
 # Plot center of grid
 ax.scatter(LON_0, LAT_0, s=100, color='red', marker='*',
@@ -142,5 +146,5 @@ fig.show()
 
 # Stack function
 fig, ax = plt.subplots()
-S.sel(y=y_max, x=x_max, celerity=c_max).plot(ax=ax)
+S.sel(y=y_max, x=x_max, celerity=celerity_max).plot(ax=ax)
 fig.show()
