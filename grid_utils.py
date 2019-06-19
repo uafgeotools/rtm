@@ -115,10 +115,13 @@ def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
         # coastlines
         else:
             scale = '50m'
-            feature = cfeature.LAND.with_scale(scale)
-            ax.add_feature(feature, facecolor=cfeature.COLORS['land'],
+            land = cfeature.LAND.with_scale(scale)
+            ax.add_feature(land, facecolor=cfeature.COLORS['land'],
                            edgecolor='black')
             ax.background_patch.set_facecolor(cfeature.COLORS['water'])
+            lakes = cfeature.LAKES.with_scale(scale)
+            ax.add_feature(lakes, facecolor=cfeature.COLORS['water'],
+                           edgecolor='black', zorder=0)
 
         # Note that trial source locations are at the CENTER of each plotted
         # grid box
