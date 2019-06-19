@@ -93,8 +93,8 @@ for i, celerity in enumerate(stack_array['celerity'].values):
 
             for tr in st:
 
-                if grid.attrs['utm_zone_number']:
-                    grid_zone_number = grid.attrs['utm_zone_number']
+                if grid.attrs['UTM']:
+                    grid_zone_number = grid.attrs['UTM']['zone']
                     *station_utm, _, _ = utm.from_latlon(tr.stats.latitude,
                                                          tr.stats.longitude,
                                                          force_zone_number=grid_zone_number)
@@ -165,9 +165,8 @@ c_max = max_coords['celerity'].values
 y_max = max_coords['y'].values
 x_max = max_coords['x'].values
 
-if stack_array.attrs['utm_zone_number']:
-    proj = ccrs.UTM(zone=stack_array.attrs['utm_zone_number'],
-                    southern_hemisphere=LAT_0 < 0)
+if stack_array.attrs['UTM']:
+    proj = ccrs.UTM(**stack_array.attrs['UTM'])
     transform = proj
 else:
     # This is a good projection to use since it preserves area
@@ -184,7 +183,7 @@ fig, ax = plt.subplots(figsize=(10, 10),
 
 # Since projected grids cover less area and may not include coastlines,
 # use a background image to provide geographical context (can be slow)
-if stack_array.attrs['utm_zone_number']:
+if stack_array.attrs['UTM']:
     zoom_level = 8
     ax.add_image(Stamen(style='terrain-background'), zoom_level)
 

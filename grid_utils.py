@@ -75,15 +75,15 @@ def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
     data = np.full((y.size, x.size), np.nan)  # Initialize an array of NaNs
     if projected:
         # Add the projection information to the grid metadata
-        attrs = dict(utm_zone_number=zone_number)
+        attrs = dict(UTM=dict(zone=zone_number, southern_hemisphere=lat_0 < 0))
     else:
-        attrs = dict(utm_zone_number=None)
+        attrs = dict(UTM=None)
     grid_out = xr.DataArray(data, coords=[('y', y), ('x', x)], attrs=attrs)
 
     # Plot grid preview, if specified
     if plot:
         if projected:
-            proj = ccrs.UTM(zone=zone_number, southern_hemisphere=lat_0 < 0)
+            proj = ccrs.UTM(**grid_out.attrs['UTM'])
             transform = proj
         else:
             # This is a good projection to use since it preserves area
