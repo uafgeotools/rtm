@@ -34,6 +34,10 @@ def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
                   metadata
     """
 
+    print('-------------')
+    print('DEFINING GRID')
+    print('-------------')
+
     # Make coordinate vectors
     if projected:
         x_0, y_0, zone_number, _ = utm.from_latlon(lat_0, lon_0)
@@ -82,8 +86,11 @@ def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
         attrs = dict(UTM=None)
     grid_out = xr.DataArray(data, coords=[('y', y), ('x', x)], attrs=attrs)
 
+    print('Done')
+
     # Plot grid preview, if specified
     if plot:
+        print('Generating grid preview plot...')
         if projected:
             proj = ccrs.UTM(**grid_out.attrs['UTM'])
             transform = proj
@@ -122,6 +129,8 @@ def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
 
         fig.show()
 
+        print('Done')
+
     return grid_out
 
 
@@ -148,6 +157,10 @@ def grid_search(processed_st, grid, celerity_list, stack_method='sum'):
         shifted_streams: NumPy array with dimensions (c, y, x) containing the
                          time-shifted Streams
     """
+
+    print('--------------------')
+    print('STARTING GRID SEARCH')
+    print('--------------------')
 
     # Define global time axis using the first Trace of the input Stream
     times = processed_st[0].times(type='utcdatetime')

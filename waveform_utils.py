@@ -202,6 +202,8 @@ def gather_waveforms(source, network, station, starttime, endtime,
         if len(unremoved_ids) == 0:
             print('\tNone')
 
+    print('Done')
+
     return st_out
 
 
@@ -236,6 +238,10 @@ def process_waveforms(st, freqmin, freqmax, envelope=False,
     Returns:
         st_out: Stream containing processed waveforms
     """
+
+    print('---------------')
+    print('PROCESSING DATA')
+    print('---------------')
 
     print('Detrending...')
     st_d = st.copy()
@@ -308,7 +314,7 @@ def process_waveforms(st, freqmin, freqmax, envelope=False,
         st_n.normalize()
         streams['normalized'] = st_n
 
-    print('\tDone')
+    print('Done')
 
     if plot_steps:
         print('Generating processing plots...')
@@ -318,7 +324,7 @@ def process_waveforms(st, freqmin, freqmax, envelope=False,
             fig.axes[0].set_title(title)
             fig.tight_layout()
             fig.show()
-        print('\tDone')
+        print('Done')
 
     st_out = list(streams.values())[-1]  # Final entry in Stream dictionary
 
