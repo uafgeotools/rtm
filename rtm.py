@@ -138,8 +138,7 @@ st_proc.plot(fig=fig)
 fig.show()
 
 # Time-shifted (output) Stream
-inds = np.argwhere(S.data == S.data.max())[0]
-st = shifted_streams[tuple(inds[1:])]
+st = shifted_streams[np.unravel_index(S.argmax(), S.shape)[1:]]
 fig = plt.figure()
 st.plot(fig=fig)
 fig.show()
