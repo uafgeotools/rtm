@@ -30,14 +30,14 @@ st = gather_waveforms(source='IRIS', network='AK,TA',
 
 agc_params = dict(win_sec=AGC_WIN, method=AGC_METHOD)
 
-st_proc = process_waveforms(st, freqmin=FREQ_MIN, freqmax=FREQ_MAX,
+st_proc = process_waveforms(st=st, freqmin=FREQ_MIN, freqmax=FREQ_MAX,
                             envelope=True, smooth_win=SMOOTH_WIN,
                             decimation_rate=DECIMATION_RATE, agc_params=None,
                             normalize=True, plot_steps=False)
 
-#%% (2) Define grid
+#%% (2) Define grid and perform grid search
 
-from grid_utils import define_grid
+from grid_utils import define_grid, grid_search
 
 LON_0 = -152.9902  # [deg] Longitude of grid center
 LAT_0 = 60.0183    # [deg] Latitude of grid center
@@ -54,128 +54,42 @@ else:
     Y_RADIUS = 5   # [deg] N-S grid radius (half of grid "height")
     SPACING = 0.5  # [deg] Grid spacing
 
+STACK_METHOD = 'sum'  # Choose either 'sum' or 'product'
+
+CELERITY_LIST = [300, 310, 320]  # [m/s]
+
 grid = define_grid(lon_0=LON_0, lat_0=LAT_0, x_radius=X_RADIUS,
                    y_radius=Y_RADIUS, spacing=SPACING, projected=PROJECTED,
                    plot=False)
 
-#%% (3) Grid search
+S, shifted_streams = grid_search(processed_st=st_proc, grid=grid,
+                                 celerity_list=CELERITY_LIST,
+                                 stack_method=STACK_METHOD)
 
-from obspy.geodetics import gps2dist_azimuth
-import numpy as np
-import utm
-import warnings
-import time
-
-STACK_METHOD = 'sum'  # Choose either 'sum' or 'product'
-
-CELERITY_LIST = [295, 300, 305, 310]  # [m/s]
-
-# Define global time axis using the first Trace of the input Stream
-times = st_proc[0].times(type='utcdatetime')
-
-# Expand grid dimensions in celerity and time
-stack_array = grid.expand_dims(dict(celerity=np.float64(CELERITY_LIST))).copy()
-stack_array = stack_array.expand_dims(dict(time=times.astype('datetime64[ns]'))).copy()
-
-# Pre-allocate NumPy array to store Streams for each grid point
-shifted_streams = np.empty(shape=stack_array.shape[1:], dtype=object)
-
-total_its = np.product(stack_array.shape[1:])  # Don't count the time dimension
-counter = 0
-tic = time.process_time()
-for i, celerity in enumerate(stack_array['celerity'].values):
-
-    for j, y_coord in enumerate(stack_array['y']):
-
-        for k, x_coord in enumerate(stack_array['x']):
-
-            st = st_proc.copy()
-
-            for tr in st:
-
-                if grid.attrs['UTM']:
-                    grid_zone_number = grid.attrs['UTM']['zone']
-                    *station_utm, _, _ = utm.from_latlon(tr.stats.latitude,
-                                                         tr.stats.longitude,
-                                                         force_zone_number=grid_zone_number)
-
-                    # Check if station is outside of grid UTM zone
-                    _, _, station_zone_number, _ = utm.from_latlon(tr.stats.latitude,
-                                                                   tr.stats.longitude)
-                    if station_zone_number != grid_zone_number:
-                        warnings.warn(f'{tr.id} locates to UTM zone '
-                                      f'{station_zone_number} instead of grid UTM '
-                                      f'zone {grid_zone_number}. Consider '
-                                      'reducing station search extent or using an '
-                                      'unprojected grid.')
-
-                    # Distance is in meters
-                    distance = np.linalg.norm(np.array(station_utm) - np.array([x_coord, y_coord]))
-
-                else:
-                    # Distance is in meters
-                    distance, _, _ = gps2dist_azimuth(y_coord, x_coord,
-                                                      tr.stats.latitude,
-                                                      tr.stats.longitude)
-
-                time_shift = distance / celerity  # [s]
-                tr.stats.starttime = tr.stats.starttime - time_shift
-                tr.stats.processing.append(f'RTM: Shifted by -{time_shift:.2f} s')
-
-            # Trim to time limits of input Stream
-            st.trim(times[0], times[-1], pad=True, fill_value=0)
-
-            if STACK_METHOD == 'sum':
-                stack = np.sum([tr.data for tr in st], axis=0)
-
-            elif STACK_METHOD == 'product':
-                stack = np.product([tr.data for tr in st], axis=0)
-
-            else:
-                raise ValueError(f'Stack method \'{STACK_METHOD}\' not '
-                                 'recognized. Method must be either \'sum\' or '
-                                 '\'product\'.')
-
-            # Assign the stacked time series to this latitude/longitude point
-            stack_array.loc[dict(x=x_coord, y=y_coord,
-                                 celerity=celerity)] = stack
-
-            # Save the time-shifted Stream
-            shifted_streams[i, j, k] = st
-
-            # Print grid search progress
-            counter += 1
-            print('{:.1f}%'.format((counter / total_its) * 100))
-
-toc = time.process_time()
-print(f'Done (elapsed time = {toc-tic:.1f} s)')
-
-#%% (4) Plot
+#%% (3) Plot
 
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from cartopy.io.img_tiles import Stamen
+import numpy as np
 
 # Get coordinates of peak
-max_coords = stack_array.where(stack_array == stack_array.max(),
-                               drop=True).squeeze()
+max_coords = S.where(S == S.max(), drop=True).squeeze()[0][0][0]
 t_max = max_coords['time'].values
 c_max = max_coords['celerity'].values
 y_max = max_coords['y'].values
 x_max = max_coords['x'].values
 
-if stack_array.attrs['UTM']:
-    proj = ccrs.UTM(**stack_array.attrs['UTM'])
+if S.attrs['UTM']:
+    proj = ccrs.UTM(**S.attrs['UTM'])
     transform = proj
 else:
     # This is a good projection to use since it preserves area
     proj = ccrs.AlbersEqualArea(central_longitude=LON_0,
                                 central_latitude=LAT_0,
-                                standard_parallels=(
-                                    stack_array['y'].values.min(),
-                                    stack_array['y'].values.max())
-                                )
+                                standard_parallels=(S['y'].values.min(),
+                                                    S['y'].values.max()))
     transform = ccrs.PlateCarree()
 
 fig, ax = plt.subplots(figsize=(10, 10),
@@ -183,7 +97,7 @@ fig, ax = plt.subplots(figsize=(10, 10),
 
 # Since projected grids cover less area and may not include coastlines,
 # use a background image to provide geographical context (can be slow)
-if stack_array.attrs['UTM']:
+if S.attrs['UTM']:
     zoom_level = 8
     ax.add_image(Stamen(style='terrain-background'), zoom_level)
 
@@ -196,8 +110,8 @@ else:
                    edgecolor='black')
     ax.background_patch.set_facecolor(cfeature.COLORS['water'])
 
-stack_array.sel(time=t_max, celerity=c_max).plot.pcolormesh(ax=ax, alpha=0.5,
-                                                            transform=transform)
+S.sel(time=t_max, celerity=c_max).plot.pcolormesh(ax=ax, alpha=0.5,
+                                                  transform=transform)
 
 # Plot center of grid
 ax.scatter(LON_0, LAT_0, s=100, color='red', marker='*',
@@ -220,7 +134,7 @@ st_proc.plot(fig=fig)
 fig.show()
 
 # Time-shifted (output) Stream
-inds = np.argwhere(stack_array.data == stack_array.data.max())[0]
+inds = np.argwhere(S.data == S.data.max())[0]
 st = shifted_streams[tuple(inds[1:])]
 fig = plt.figure()
 st.plot(fig=fig)
@@ -228,5 +142,5 @@ fig.show()
 
 # Stack function
 fig, ax = plt.subplots()
-stack_array.sel(y=y_max, x=x_max, celerity=c_max).plot(ax=ax)
+S.sel(y=y_max, x=x_max, celerity=c_max).plot(ax=ax)
 fig.show()
