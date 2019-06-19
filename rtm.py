@@ -60,7 +60,7 @@ CELERITY_LIST = [300, 310, 320]  # [m/s]
 
 grid = define_grid(lon_0=LON_0, lat_0=LAT_0, x_radius=X_RADIUS,
                    y_radius=Y_RADIUS, spacing=SPACING, projected=PROJECTED,
-                   plot=False)
+                   plot_preview=False)
 
 S, shifted_streams = grid_search(processed_st=st_proc, grid=grid,
                                  celerity_list=CELERITY_LIST,

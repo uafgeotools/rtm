@@ -11,7 +11,7 @@ import warnings
 
 
 def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
-                plot=False):
+                plot_preview=False):
     """
     Define the spatial grid of trial source locations. Grid can be defined in
     either a latitude/longitude or projected UTM (i.e., Cartesian) coordinate
@@ -27,8 +27,8 @@ def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
                    is used. If True, a UTM grid is used and the units of
                    x_radius, y_radius, and spacing are interpreted in meters
                    instead of in degrees (default: False)
-        plot: Toggle plotting a preview of the grid for reference and
-              troubleshooting (default: False)
+        plot_preview: Toggle plotting a preview of the grid for reference and
+                      troubleshooting (default: False)
     Returns:
         grid_out: xarray.DataArray object containing the grid coordinates and
                   metadata
@@ -89,7 +89,7 @@ def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
     print('Done')
 
     # Plot grid preview, if specified
-    if plot:
+    if plot_preview:
         print('Generating grid preview plot...')
         if projected:
             proj = ccrs.UTM(**grid_out.attrs['UTM'])
