@@ -173,20 +173,7 @@ def grid_search(processed_st, grid, celerity_list, stack_method='sum'):
                 for tr in st:
 
                     if grid.attrs['UTM']:
-                        grid_zone_number = grid.attrs['UTM']['zone']
-                        *station_utm, _, _ = utm.from_latlon(tr.stats.latitude,
-                                                             tr.stats.longitude,
-                                                             force_zone_number=grid_zone_number)
-
-                        # Check if station is outside of grid UTM zone
-                        _, _, station_zone_number, _ = utm.from_latlon(tr.stats.latitude,
-                                                                       tr.stats.longitude)
-                        if station_zone_number != grid_zone_number:
-                            warnings.warn(f'{tr.id} locates to UTM zone '
-                                          f'{station_zone_number} instead of grid UTM '
-                                          f'zone {grid_zone_number}. Consider '
-                                          'reducing station search extent or using an '
-                                          'unprojected grid.')
+                        station_utm = _project_station_to_utm(tr, grid)
 
                         # Distance is in meters
                         distance = np.linalg.norm(np.array(station_utm) -
@@ -231,3 +218,34 @@ def grid_search(processed_st, grid, celerity_list, stack_method='sum'):
     print(f'Done (elapsed time = {toc-tic:.1f} s)')
 
     return S, shifted_streams
+
+
+def _project_station_to_utm(tr, grid):
+    """
+    Projects tr.latitude, tr.longitude into the UTM zone of the input grid.
+    Issues a warning if the coordinates of the Trace would locate to another
+    UTM grid instead. (The implication here is that the user is trying to use
+    an oversized UTM grid and is better off using an unprojected grid instead.)
+
+    Args:
+        tr: A Trace containing station coordinates
+        grid: Projected x, y grid <-- output of define_grid(projected=True)
+    Returns:
+        station_utm: [utm_x, utm_y] coordinates for station associated with tr
+    """
+
+    grid_zone_number = grid.attrs['UTM']['zone']
+    *station_utm, _, _ = utm.from_latlon(tr.stats.latitude,
+                                         tr.stats.longitude,
+                                         force_zone_number=grid_zone_number)
+
+    # Check if station is outside of grid UTM zone
+    _, _, station_zone_number, _ = utm.from_latlon(tr.stats.latitude,
+                                                   tr.stats.longitude)
+    if station_zone_number != grid_zone_number:
+        warnings.warn(f'{tr.id} locates to UTM zone {station_zone_number} '
+                      f'instead of grid UTM zone {grid_zone_number}. Consider '
+                      'reducing station search extent or using an unprojected '
+                      'grid.')
+
+    return station_utm

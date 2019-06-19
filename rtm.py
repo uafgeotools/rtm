@@ -75,7 +75,7 @@ from cartopy.io.img_tiles import Stamen
 import numpy as np
 
 # Get coordinates of peak
-max_coords = S.where(S == S.max(), drop=True).squeeze()[0][0][0]
+max_coords = S.where(S == S.max(), drop=True).squeeze()#[0][0][0]
 t_max = max_coords['time'].values
 c_max = max_coords['celerity'].values
 y_max = max_coords['y'].values
