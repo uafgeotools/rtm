@@ -79,11 +79,12 @@ def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
 
     # Create grid
     data = np.full((y.size, x.size), np.nan)  # Initialize an array of NaNs
+    attrs = dict(grid_center=(lon_0, lat_0))
     if projected:
         # Add the projection information to the grid metadata
-        attrs = dict(UTM=dict(zone=zone_number, southern_hemisphere=lat_0 < 0))
+        attrs['UTM'] = dict(zone=zone_number, southern_hemisphere=lat_0 < 0)
     else:
-        attrs = dict(UTM=None)
+        attrs['UTM'] = None
     grid_out = xr.DataArray(data, coords=[('y', y), ('x', x)], attrs=attrs)
 
     print('Done')
