@@ -396,8 +396,6 @@ def _agc(st, win_sec, method='gismo'):
 
     elif method == 'walker':
 
-        st_out.detrend('demean')  # NOTE: Causes envelopes to go negative...
-
         for tr in st_out:
 
             half_win_samp = int(tr.stats.sampling_rate * win_sec / 2)
