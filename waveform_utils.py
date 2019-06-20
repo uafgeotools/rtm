@@ -57,8 +57,8 @@ def gather_waveforms(source, network, station, starttime, endtime,
     if source == 'IRIS':
 
         print('Reading data from IRIS FDSN...')
-        st_out = iris_client.get_waveforms(network, station, '*', 'BDF,HDF',
-                                           starttime, endtime,
+        st_out = iris_client.get_waveforms(network, station, '*',
+                                           'BDF,HDF,DDF', starttime, endtime,
                                            attach_response=remove_response)
 
     # WATC FDSN
@@ -75,8 +75,8 @@ def gather_waveforms(source, network, station, starttime, endtime,
             return Stream()
 
         print('Successfully connected. Reading data from WATC FDSN...')
-        st_out = watc_client.get_waveforms(network, station, '*', 'BDF,HDF',
-                                           starttime, endtime,
+        st_out = watc_client.get_waveforms(network, station, '*',
+                                           'BDF,HDF,DDF', starttime, endtime,
                                            attach_response=remove_response)
 
     # AVO Winston
