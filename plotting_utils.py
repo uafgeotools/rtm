@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
+from cartopy.io.img_tiles import Stamen
 import numpy as np
 import warnings
 
@@ -62,14 +63,7 @@ def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None):
     fig, ax = plt.subplots(figsize=(10, 10),
                            subplot_kw=dict(projection=proj))
 
-    scale = '50m'
-    land = cfeature.LAND.with_scale(scale)
-    ax.add_feature(land, facecolor=cfeature.COLORS['land'],
-                   edgecolor='black')
-    ax.background_patch.set_facecolor(cfeature.COLORS['water'])
-    lakes = cfeature.LAKES.with_scale(scale)
-    ax.add_feature(lakes, facecolor=cfeature.COLORS['water'],
-                   edgecolor='black', zorder=0)
+    _plot_geographic_context(ax=ax, utm=S.attrs['UTM'])
 
     if time_slice:
         time_to_plot = np.datetime64(time_slice)
@@ -119,3 +113,32 @@ def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None):
     fig.show()
 
     return fig
+
+
+def _plot_geographic_context(ax, utm):
+    """
+    Plot geographic basemap information on a map axis. Plots a background image
+    for UTM-projected plots and simple coastlines for unprojected plots.
+
+    Args:
+        ax: Existing GeoAxes to plot into
+        utm: Flag specifying if the axis is projected to UTM or not
+    """
+
+    # Since projected grids cover less area and may not include coastlines,
+    # use a background image to provide geographical context (can be slow)
+    if utm:
+        zoom_level = 8
+        ax.add_image(Stamen(style='terrain-background'), zoom_level)
+
+    # Since unprojected grids have regional/global extent, just show the
+    # coastlines
+    else:
+        scale = '50m'
+        land = cfeature.LAND.with_scale(scale)
+        ax.add_feature(land, facecolor=cfeature.COLORS['land'],
+                       edgecolor='black')
+        ax.background_patch.set_facecolor(cfeature.COLORS['water'])
+        lakes = cfeature.LAKES.with_scale(scale)
+        ax.add_feature(lakes, facecolor=cfeature.COLORS['water'],
+                       edgecolor='black', zorder=0)

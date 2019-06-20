@@ -2,12 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import xarray as xr
 import cartopy.crs as ccrs
-import cartopy.feature as cfeature
-from cartopy.io.img_tiles import Stamen
 from obspy.geodetics import gps2dist_azimuth
 import utm
 import time
 import warnings
+from plotting_utils import _plot_geographic_context
 
 
 plt.ioff()  # Don't show the figure unless fig.show() is explicitly called
@@ -108,23 +107,7 @@ def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
         fig, ax = plt.subplots(figsize=(10, 10),
                                subplot_kw=dict(projection=proj))
 
-        # Since projected grids cover less area and may not include coastlines,
-        # use a background image to provide geographical context (can be slow)
-        if projected:
-            zoom_level = 8
-            ax.add_image(Stamen(style='terrain-background'), zoom_level)
-
-        # Since unprojected grids have regional/global extent, just show the
-        # coastlines
-        else:
-            scale = '50m'
-            land = cfeature.LAND.with_scale(scale)
-            ax.add_feature(land, facecolor=cfeature.COLORS['land'],
-                           edgecolor='black')
-            ax.background_patch.set_facecolor(cfeature.COLORS['water'])
-            lakes = cfeature.LAKES.with_scale(scale)
-            ax.add_feature(lakes, facecolor=cfeature.COLORS['water'],
-                           edgecolor='black', zorder=0)
+        _plot_geographic_context(ax=ax, utm=projected)
 
         # Note that trial source locations are at the CENTER of each plotted
         # grid box
