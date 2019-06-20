@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from cartopy.io.img_tiles import Stamen
+from obspy.geodetics import gps2dist_azimuth
 import numpy as np
 import warnings
 
@@ -107,6 +108,85 @@ def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None):
         title = 'GLOBAL MAXIMUM\n\n' + title
 
     ax.set_title(title, pad=20)
+
+    fig.canvas.draw()
+    fig.tight_layout()
+    fig.show()
+
+    return fig
+
+
+def plot_record_section(st, origin_time, source_location, plot_celerity=None):
+    """
+    Plot a record section based upon user-provided source location and origin
+    time. Optionally plot celerity for reference, with two plotting options.
+
+    Args:
+        st: Any Stream object with tr.stats.latitude, tr.stats.longitude data
+        origin_time: UTCDateTime specifying the origin time
+        source_location: Tuple of (lat, lon) specifying source location
+        plot_celerity: Can be either 'range' or a list of celerities. If
+                       'range', plots a continuous swatch of celerities from
+                       260-380 m/s. If a list, plots these specific celerities.
+                       If None, does not plot any celerities (default: None)
+    Returns:
+        fig: Output figure
+    """
+
+    st_edit = st.copy()
+
+    for tr in st_edit:
+        tr.stats.distance, _, _ = gps2dist_azimuth(*source_location,
+                                                   tr.stats.latitude,
+                                                   tr.stats.longitude)
+
+    st_edit.trim(origin_time)
+
+    fig = plt.figure(figsize=(12, 8))
+
+    st_edit.plot(fig=fig, type='section', orientation='horizontal',
+                 fillcolors=('black', 'black'))
+
+    ax = fig.axes[0]
+
+    if plot_celerity:
+
+        # Check if user requested a continuous range of celerities
+        if plot_celerity == 'range':
+            celerity_list = np.arange(260, 380 + 1, 1)
+            zorder = -1
+
+        # Otherwise, they provided a list of discrete celerities
+        else:
+            celerity_list = plot_celerity
+            celerity_list.sort()
+            zorder = None
+
+        # Create colormap of appropriate length
+        cmap = plt.cm.get_cmap('rainbow', len(celerity_list))
+        colors = [cmap(i) for i in range(cmap.N)]
+
+        xlim = np.array(ax.get_xlim())
+
+        for celerity, color in zip(celerity_list, colors):
+            ax.plot(xlim, xlim * celerity / 1000, label=celerity, color=color,
+                    zorder=zorder)
+
+        # If plotting a continuous range, add a colorbar
+        if plot_celerity == 'range':
+            mapper = plt.cm.ScalarMappable(cmap=cmap)
+            mapper.set_array(celerity_list)
+            fig.colorbar(mapper, label='Celerity (m/s)')
+
+        # If plotting discrete celerities, just add a legend
+        else:
+            ax.legend(title='Celerity (m/s)', loc='lower right')
+
+    ax.set_ylim(bottom=0)  # Show all the way to zero offset
+
+    ax.set_xlabel(f'Time (s) from {origin_time.datetime}')
+    ax.set_ylabel('Distance (km) from '
+                  '({:.4f}, {:.4f})'.format(*source_location))
 
     fig.canvas.draw()
     fig.tight_layout()

@@ -68,8 +68,26 @@ S, shifted_streams = grid_search(processed_st=st_proc, grid=grid,
 
 #%% (3) Plot
 
-from plotting_utils import plot_time_slice
+from plotting_utils import plot_time_slice, plot_record_section
+from obspy import UTCDateTime
+import utm
 
 fig = plot_time_slice(S, st_proc, time_slice=None, celerity_slice=None)
 
-fig.show()
+max_coords = S.where(S == S.max(), drop=True)[0, 0, 0, 0].coords
+
+max_x = max_coords['x'].values
+max_y = max_coords['y'].values
+max_time = max_coords['time'].values
+max_celerity = max_coords['celerity'].values
+
+# Projected case
+if S.attrs['UTM']:
+    max_loc = utm.to_latlon(max_x, max_y, zone_number=S.attrs['UTM']['zone'],
+                            northern=not S.attrs['UTM']['southern_hemisphere'])
+# Unprojected case
+else:
+    max_loc = max_y, max_x
+
+fig = plot_record_section(st_proc, UTCDateTime(str(max_time)), max_loc,
+                          plot_celerity=[max_celerity])
