@@ -10,6 +10,9 @@ from scipy.fftpack import next_fast_len
 from collections import OrderedDict
 
 
+plt.ioff()  # Don't show the figure unless fig.show() is explicitly called
+
+
 # Load AVO infrasound station calibration values (units are Pa/ct)
 AVO_INFRA_CALIB_FILE = 'avo_infra_calib_vals.json'
 with open(AVO_INFRA_CALIB_FILE) as f:
@@ -322,6 +325,7 @@ def process_waveforms(st, freqmin, freqmax, envelope=False,
             fig = plt.figure(figsize=(8, 8))
             st.plot(fig=fig, equal_scale=False)
             fig.axes[0].set_title(title)
+            fig.canvas.draw()
             fig.tight_layout()
             fig.show()
         print('Done')

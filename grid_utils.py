@@ -10,6 +10,9 @@ import time
 import warnings
 
 
+plt.ioff()  # Don't show the figure unless fig.show() is explicitly called
+
+
 def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
                 plot_preview=False):
     """
@@ -131,6 +134,8 @@ def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
         # Plot the center of the grid
         ax.scatter(lon_0, lat_0, color='red', transform=ccrs.Geodetic())
 
+        fig.canvas.draw()
+        fig.tight_layout()
         fig.show()
 
         print('Done')

@@ -5,6 +5,8 @@ import numpy as np
 import warnings
 
 
+plt.ioff()  # Don't show the figure unless fig.show() is explicitly called
+
 FONT_SIZE = 14
 plt.rcParams.update({'font.size': FONT_SIZE})
 
@@ -83,6 +85,7 @@ def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None):
 
     slice = S.sel(time=time_to_plot, celerity=celerity_to_plot,
                   method='nearest')
+
     qm = slice.plot.pcolormesh(ax=ax, alpha=0.5, cmap='inferno',
                                add_colorbar=False, transform=transform)
 
@@ -103,20 +106,16 @@ def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None):
                 horizontalalignment='left',
                 transform=ccrs.Geodetic())
 
-    # If time slice corresponds to max(S), label as such
-    if slice['time'].values == time_max:
-        is_max_time = r' $\bf[MAX]$'
-    else:
-        is_max_time = ''
+    title = f'Time: {slice.time.values}\nCelerity: {slice.celerity.values} m/s'
 
-    # If celerity slice corresponds to max(S), label as such
-    if slice['celerity'].values == celerity_max:
-        is_max_celerity = r' $\bf[MAX]$'
-    else:
-        is_max_celerity = ''
+    # Label global maximum if applicable
+    if slice.time.values == time_max and slice.celerity.values == celerity_max:
+        title = 'GLOBAL MAXIMUM\n\n' + title
 
-    title = f'Time: {slice.time.values}{is_max_time}\n' \
-            f'Celerity: {slice.celerity.values} m/s{is_max_celerity}'
     ax.set_title(title, pad=20)
+
+    fig.canvas.draw()
+    fig.tight_layout()
+    fig.show()
 
     return fig
