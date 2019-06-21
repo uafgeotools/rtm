@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import matplotlib.transforms as transforms
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from cartopy.io.img_tiles import Stamen
@@ -149,6 +150,13 @@ def plot_record_section(st, origin_time, source_location, plot_celerity=None):
 
     ax = fig.axes[0]
 
+    trans = transforms.blended_transform_factory(ax.transAxes, ax.transData)
+
+    for tr in st_edit:
+        ax.text(1.01, tr.stats.distance / 1000,
+                f'{tr.stats.network}.{tr.stats.station}',
+                verticalalignment='center', transform=trans)
+
     if plot_celerity:
 
         # Check if user requested a continuous range of celerities
@@ -167,20 +175,24 @@ def plot_record_section(st, origin_time, source_location, plot_celerity=None):
         colors = [cmap(i) for i in range(cmap.N)]
 
         xlim = np.array(ax.get_xlim())
+        y_max = ax.get_ylim()[1]  # Save this for re-scaling axis
 
         for celerity, color in zip(celerity_list, colors):
             ax.plot(xlim, xlim * celerity / 1000, label=celerity, color=color,
                     zorder=zorder)
 
+        ax.set_ylim(top=y_max)  # Scale y-axis to pre-plotting extent
+
         # If plotting a continuous range, add a colorbar
         if plot_celerity == 'range':
             mapper = plt.cm.ScalarMappable(cmap=cmap)
             mapper.set_array(celerity_list)
-            fig.colorbar(mapper, label='Celerity (m/s)')
+            fig.colorbar(mapper, label='Celerity (m/s)', pad=0.1)
 
         # If plotting discrete celerities, just add a legend
         else:
-            ax.legend(title='Celerity (m/s)', loc='lower right')
+            ax.legend(title='Celerity (m/s)', loc='lower right', framealpha=1,
+                      edgecolor='inherit')
 
     ax.set_ylim(bottom=0)  # Show all the way to zero offset
 
