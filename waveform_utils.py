@@ -184,8 +184,7 @@ def gather_waveforms(source, network, station, starttime, endtime,
                     tr.stats.elevation = avo_coords[tr.stats.station]
                 warnings.warn(f'Using coordinates from JSON file for {tr.id}.')
             except KeyError:
-                raise SystemExit('No calibration value available for '
-                                 f'{tr.id}.')
+                raise SystemExit(f'No coordinates available for {tr.id}.')
 
     # Remove sensitivity
     if remove_response:
