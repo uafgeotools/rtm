@@ -8,6 +8,8 @@ import numpy as np
 from scipy.signal import hilbert, windows, convolve
 from scipy.fftpack import next_fast_len
 from collections import OrderedDict
+import fnmatch
+import warnings
 
 
 plt.ioff()  # Don't show the figure unless fig.show() is explicitly called
@@ -17,6 +19,11 @@ plt.ioff()  # Don't show the figure unless fig.show() is explicitly called
 AVO_INFRA_CALIB_FILE = 'avo_infra_calib_vals.json'
 with open(AVO_INFRA_CALIB_FILE) as f:
     avo_calib_values = json.load(f)
+
+# Load AVO infrasound station coordinates (elevation units are meters)
+AVO_INFRA_COORD_FILE = 'avo_infra_coords.json'
+with open(AVO_INFRA_COORD_FILE) as f:
+    avo_coords = json.load(f)
 
 # Define IRIS and AVO clients (define WATC client within function)
 iris_client = FDSN_Client('IRIS')
@@ -131,9 +138,18 @@ def gather_waveforms(source, network, station, starttime, endtime,
 
     print(st_out)
 
-    print('---------------------')
-    print('ASSIGNING COORDINATES')
-    print('---------------------')
+    # Check that all requested stations are present in Stream
+    requested_stations = station.split(',')
+    downloaded_stations = [tr.stats.station for tr in st_out]
+    for pattern in requested_stations:
+        # The below check works with wildcards, but obviously cannot detect if
+        # ALL stations corresponding to a given wildcard (e.g., O??K) were
+        # downloaded. Thus, if careful station selection is desired, specify
+        # each station explicitly and the below check will then be effective.
+        if not fnmatch.filter(downloaded_stations, pattern):
+            warnings.warn(f'Station {pattern} requested but not downloaded.')
+
+    print('Assigning coordinates...')
 
     # Assign coordinates using IRIS FDSN regardless of data source
     try:
@@ -157,53 +173,43 @@ def gather_waveforms(source, network, station, starttime, endtime,
                         tr.stats.latitude = cha.latitude
                         tr.stats.elevation = cha.elevation
 
-    # Report if any Trace did NOT get coordinates assigned
-    print('Traces WITHOUT coordinates assigned:')
-    num_unassigned = 0
+    # Check if any Trace did NOT get coordinates assigned, and try to use JSON
+    # coordinates if available
     for tr in st_out:
         try:
             tr.stats.longitude, tr.stats.latitude, tr.stats.elevation
         except AttributeError:
-            print('\t' + tr.id)
-            num_unassigned += 1
-    if num_unassigned == 0:
-        print('\tNone')
+            try:
+                tr.stats.latitude, tr.stats.longitude,\
+                    tr.stats.elevation = avo_coords[tr.stats.station]
+                warnings.warn(f'Using coordinates from JSON file for {tr.id}.')
+            except KeyError:
+                raise SystemExit('No calibration value available for '
+                                 f'{tr.id}.')
 
     # Remove sensitivity
     if remove_response:
 
-        print('--------------------')
-        print('REMOVING SENSITIVITY')
-        print('--------------------')
+        print('Removing sensitivity...')
 
-        unremoved_ids = []
         for tr in st_out:
-            print(tr.id)
             try:
                 # Just removing sensitivity for now. remove_response() can lead
                 # to errors. This should be sufficient for now. Plus some
                 # IRIS-AVO responses are wonky.
                 tr.remove_sensitivity()
-                print('\tSensitivity removed using attached response.')
             except ValueError:
-                print('\tNo response information available.')
                 try:
                     calib = avo_calib_values[tr.stats.station]
                     tr.data = tr.data * calib
                     tr.stats.processing.append('RTM: Data multiplied by '
                                                f'calibration value of {calib} '
                                                'Pa/ct')
-                    print('\tSensitivity removed using calibration value of '
-                          f'{calib} Pa/ct.')
+                    warnings.warn('Using calibration value from JSON file for '
+                                  f'{tr.id}.')
                 except KeyError:
-                    print('\tNo calibration value available.')
-                    unremoved_ids.append(tr.id)
-
-        # Report if any Trace did NOT get sensitivity removed
-        print('Traces WITHOUT sensitivity removed:')
-        [print('\t' + tr_id) for tr_id in unremoved_ids]
-        if len(unremoved_ids) == 0:
-            print('\tNone')
+                    raise SystemExit('No calibration value available for '
+                                     f'{tr.id}.')
 
     print('Done')
 
