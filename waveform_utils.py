@@ -429,31 +429,3 @@ def _agc(st, win_sec, method='gismo'):
                          'must be either \'gismo\' or \'walker\'.')
 
     return st_out
-
-
-def _find_winston_avo_stations_not_on_iris():
-    """
-    Simple utility function to find all AVO stations which exist on the
-    Winston server but not on the IRIS server. Such stations need to have their
-    coordinates appended manually.
-
-    Returns:
-        winston_avo_stations_not_in_iris: List of AVO stations which are on
-                                          Winston but not IRIS
-    """
-
-    # Find ALL unique stations on IRIS with network code = AV
-    stations = iris_client.get_stations(network='AV').networks[0].stations
-    iris_stations = np.unique([station.code for station in stations]).tolist()
-
-    # Find ALL unique stations on Winston with network code = AV
-    stations = avo_client.get_availability(network='AV')
-    winston_stations = np.unique([station[1] for station in stations]).tolist()
-
-    # Make a list of ALL stations on Winston which aren't on IRIS
-    winston_avo_stations_not_in_iris = []
-    for winston_station in winston_stations:
-        if winston_station not in iris_stations:
-            winston_avo_stations_not_in_iris.append(winston_station)
-
-    return winston_avo_stations_not_in_iris
