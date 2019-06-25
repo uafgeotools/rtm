@@ -14,7 +14,8 @@ FONT_SIZE = 14
 plt.rcParams.update({'font.size': FONT_SIZE})
 
 
-def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None):
+def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None,
+                    hires=False):
     """
     Plot a time slice through S to produce a map-view plot. If time and
     celerity are not specified, then the slice corresponds to the maximum of S
@@ -32,6 +33,8 @@ def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None):
                         error if the specified celerity is not in S. If None,
                         the celerity corresponding to max(S) is used (default:
                         None)
+        hires: If True, use higher-resolution background image/coastlines,
+               which looks better but can be slow (default: False)
     Returns:
         fig: Output figure
     """
@@ -47,6 +50,8 @@ def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None):
     max_coords = stack_maximum[0, 0, 0, 0].coords
     time_max = max_coords['time'].values
     celerity_max = max_coords['celerity'].values
+    x_max = max_coords['x'].values
+    y_max = max_coords['y'].values
 
     # Gather coordinates of grid center
     lon_0, lat_0 = S.attrs['grid_center']
@@ -54,6 +59,8 @@ def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None):
     if S.attrs['UTM']:
         proj = ccrs.UTM(**S.attrs['UTM'])
         transform = proj
+        # For UTM, label as (x, y)
+        max_label = '({:.1f}, {:.1f})'.format(x_max, y_max)
     else:
         # This is a good projection to use since it preserves area
         proj = ccrs.AlbersEqualArea(central_longitude=lon_0,
@@ -61,11 +68,13 @@ def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None):
                                     standard_parallels=(S['y'].values.min(),
                                                         S['y'].values.max()))
         transform = ccrs.PlateCarree()
+        # For lat/lon, label as (lat, lon)
+        max_label = '({:.4f}, {:.4f})'.format(y_max, x_max)
 
     fig, ax = plt.subplots(figsize=(10, 10),
                            subplot_kw=dict(projection=proj))
 
-    _plot_geographic_context(ax=ax, utm=S.attrs['UTM'])
+    _plot_geographic_context(ax=ax, utm=S.attrs['UTM'], hires=hires)
 
     if time_slice:
         time_to_plot = np.datetime64(time_slice)
@@ -89,8 +98,14 @@ def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None):
     cbar.solids.set_alpha(1)
 
     # Plot center of grid
-    ax.scatter(lon_0, lat_0, s=100, color='red', marker='*',
-               transform=ccrs.Geodetic())
+    ax.scatter(lon_0, lat_0, s=50, color='green', edgecolor='black',
+               label='Grid center', transform=ccrs.Geodetic())
+
+    # Plot stack maximum
+    ax.scatter(x_max, y_max, s=100, color='red', marker='*', edgecolor='black',
+               label='Stack maximum\n' + max_label, transform=transform)
+
+    ax.legend(loc='best')
 
     # Plot stations
     for tr in processed_st:
@@ -207,7 +222,7 @@ def plot_record_section(st, origin_time, source_location, plot_celerity=None):
     return fig
 
 
-def _plot_geographic_context(ax, utm):
+def _plot_geographic_context(ax, utm, hires=False):
     """
     Plot geographic basemap information on a map axis. Plots a background image
     for UTM-projected plots and simple coastlines for unprojected plots.
@@ -215,18 +230,26 @@ def _plot_geographic_context(ax, utm):
     Args:
         ax: Existing GeoAxes to plot into
         utm: Flag specifying if the axis is projected to UTM or not
+        hires: If True, use higher-resolution images/coastlines (default:
+               False)
     """
 
     # Since projected grids cover less area and may not include coastlines,
     # use a background image to provide geographical context (can be slow)
     if utm:
-        zoom_level = 8
+        if hires:
+            zoom_level = 12
+        else:
+            zoom_level = 8
         ax.add_image(Stamen(style='terrain-background'), zoom_level)
 
     # Since unprojected grids have regional/global extent, just show the
     # coastlines
     else:
-        scale = '50m'
+        if hires:
+            scale = '10m'
+        else:
+            scale = '50m'
         land = cfeature.LAND.with_scale(scale)
         ax.add_feature(land, facecolor=cfeature.COLORS['land'],
                        edgecolor='black')
