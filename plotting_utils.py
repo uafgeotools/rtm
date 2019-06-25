@@ -60,7 +60,7 @@ def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None,
         proj = ccrs.UTM(**S.attrs['UTM'])
         transform = proj
         # For UTM, label as (x, y)
-        max_label = '({:.1f}, {:.1f})'.format(x_max, y_max)
+        max_label = '({:.1f} m E, {:.1f} m N)'.format(x_max, y_max)
     else:
         # This is a good projection to use since it preserves area
         proj = ccrs.AlbersEqualArea(central_longitude=lon_0,
