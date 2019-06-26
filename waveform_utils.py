@@ -161,7 +161,7 @@ def gather_waveforms(source, network, station, starttime, endtime,
                 # If we're not returning the failed stations, then show this
                 # warning message to alert the user
                 warnings.warn(f'Station {sta} not available on {source} '
-                              'server.')
+                              'server for this time period.')
             failed_stations.append(sta)
 
     # If the Stream is empty, then we can stop here
