@@ -2,6 +2,7 @@ import json
 from obspy.clients.fdsn import Client as FDSN_Client
 from obspy.clients.earthworm import Client as EW_Client
 from obspy.clients.fdsn.header import FDSNNoDataException
+from obspy.geodetics import gps2dist_azimuth
 from obspy import Stream
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,7 +14,6 @@ import warnings
 
 
 plt.ioff()  # Don't show the figure unless fig.show() is explicitly called
-
 
 # Load AVO infrasound station calibration values (units are Pa/ct)
 AVO_INFRA_CALIB_FILE = 'avo_infra_calib_vals.json'
@@ -31,6 +31,8 @@ avo_client = EW_Client('pubavo1.wr.usgs.gov', port=16023)  # 16023 is long-term
 
 # Channels to use in data requests - covering all the bases here!
 CHANNELS = 'BDF,BDG,BDH,BDI,BDJ,BDK,HDF,DDF'
+
+KM2M = 1000  # [m/km]
 
 
 def gather_waveforms(source, network, station, starttime, endtime,
@@ -247,6 +249,136 @@ def gather_waveforms(source, network, station, starttime, endtime,
         return st_out, failed_stations
     else:
         return st_out
+
+
+def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
+                          remove_response=False, watc_username=None,
+                          watc_password=None):
+    """
+    Bulk gather infrasound waveforms within a specified maximum radius of a
+    specified location. Waveforms are gathered from IRIS (and optionally WATC)
+    FDSN, and AVO Winston. Outputs a Stream object with station/element
+    coordinates attached. Optionally removes the sensitivity. [Output Stream
+    has the same properties as output Stream from gather_waveforms().] NOTE:
+    WATC database will NOT be used for station search NOR data download unless
+    BOTH watc_username and watc_password are set.
+
+    Args:
+        lon_0: [deg] Longitude of search center
+        lat_0: [deg] Latitude of search center
+        max_radius: [km] Maximum radius to search for stations within
+        starttime: Start time for data request (UTCDateTime)
+        endtime: End time for data request (UTCDateTime)
+        remove_response: Toggle conversion to Pa via remove_sensitivity() if
+                         available, else just do a simple scalar multiplication
+                         (default: False)
+        watc_username: Username for WATC FDSN server (default: None)
+        watc_password: Password for WATC FDSN server (default: None)
+    Returns:
+        st_out: Stream containing bulk gathered waveforms
+    """
+
+    print('-------------------')
+    print('BULK GATHERING DATA')
+    print('-------------------')
+
+    print('Creating station list...')
+
+    # Grab IRIS inventory
+    iris_inv = iris_client.get_stations(starttime=starttime, endtime=endtime,
+                                        channel=CHANNELS, level='channel')
+
+    inventories = [iris_inv]  # Add IRIS inventory to list
+
+    # If the user supplied both a WATC password and WATC username, then search
+    # through WATC database
+    if watc_username and watc_password:
+
+        print('Connecting to WATC FDSN...')
+        watc_client = FDSN_Client('http://10.30.5.10:8080', user=watc_username,
+                                  password=watc_password)
+        print('Successfully connected.')
+
+        # Grab WATC inventory
+        watc_inv = watc_client.get_stations(starttime=starttime,
+                                            endtime=endtime, channel=CHANNELS,
+                                            level='channel')
+
+        inventories.append(watc_inv)  # Add WATC inventory to list
+
+    requested_station_list = []  # Initialize list of stations to request
+
+    # Big loop through all channels in all inventories!
+    for inv in inventories:
+        for nw in inv:
+            for stn in nw:
+                for cha in stn:
+                    dist, _, _ = gps2dist_azimuth(lat_0, lon_0, cha.latitude,
+                                                  cha.longitude)  # [m]
+                    if dist <= max_radius * KM2M:
+                        requested_station_list.append(stn.code)
+
+    # Loop through each entry in AVO infrasound station coordinates JSON file
+    for sta, coord in avo_coords.items():
+        dist, _, _ = gps2dist_azimuth(lat_0, lon_0, *coord[0:2])  # [m]
+        if dist <= max_radius * KM2M:
+            requested_station_list.append(sta)
+
+    if not requested_station_list:
+        raise ValueError('Station list is empty. Expand the station search '
+                         'and try again.')
+
+    # Put into the correct format for ObsPy (e.g., 'HOM,O22K,DLL')
+    requested_stations = ','.join(np.unique(requested_station_list))
+
+    print('Done. Making calls to gather_waveforms()...')
+
+    st_out = Stream()  # Initialize empty Stream to populate
+
+    # Gather waveforms from IRIS
+    iris_st, iris_failed = gather_waveforms(source='IRIS', network='*',
+                                            station=requested_stations,
+                                            starttime=starttime,
+                                            endtime=endtime,
+                                            remove_response=remove_response,
+                                            return_failed_stations=True)
+    st_out += iris_st
+
+    # If IRIS couldn't grab all stations in requested station list, try WATC
+    # (if the user set username and password)
+    if iris_failed:
+
+        if watc_username and watc_password:
+            # Gather waveforms from WATC
+            watc_st, watc_failed = gather_waveforms(source='WATC', network='*',
+                                                    station=','.join(iris_failed),
+                                                    starttime=starttime,
+                                                    endtime=endtime,
+                                                    remove_response=remove_response,
+                                                    return_failed_stations=True,
+                                                    watc_username=watc_username,
+                                                    watc_password=watc_password)
+        else:
+            # Return an empty Stream and same failed stations
+            watc_st, watc_failed = Stream(), iris_failed
+
+        st_out += watc_st
+
+        # If WATC couldn't grab all stations missed by IRIS, try AVO
+        if watc_failed:
+
+            # Gather waveforms from AVO
+            for sta in watc_failed:
+                st_out += gather_waveforms(source='AVO', network='AV',
+                                           station=sta, starttime=starttime,
+                                           endtime=endtime,
+                                           remove_response=remove_response)
+
+    print('--------------')
+    print('Finishing gathering waveforms from station list. Check warnings '
+          'above for any missed stations.')
+
+    return st_out
 
 
 def process_waveforms(st, freqmin, freqmax, envelope=False,
