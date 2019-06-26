@@ -170,7 +170,7 @@ def plot_record_section(st, origin_time, source_location, plot_celerity=None):
     for tr in st_edit:
         ax.text(1.01, tr.stats.distance / 1000,
                 f'{tr.stats.network}.{tr.stats.station}',
-                verticalalignment='center', transform=trans)
+                verticalalignment='center', transform=trans, fontsize=10)
 
     if plot_celerity:
 
@@ -202,7 +202,7 @@ def plot_record_section(st, origin_time, source_location, plot_celerity=None):
         if plot_celerity == 'range':
             mapper = plt.cm.ScalarMappable(cmap=cmap)
             mapper.set_array(celerity_list)
-            fig.colorbar(mapper, label='Celerity (m/s)', pad=0.1)
+            fig.colorbar(mapper, label='Celerity (m/s)', pad=0.1, aspect=30)
 
         # If plotting discrete celerities, just add a legend
         else:
