@@ -1,7 +1,7 @@
 import json
 from obspy.clients.fdsn import Client as FDSN_Client
 from obspy.clients.earthworm import Client as EW_Client
-from obspy.clients.fdsn.header import FDSNException, FDSNNoDataException
+from obspy.clients.fdsn.header import FDSNNoDataException
 from obspy import Stream
 import matplotlib.pyplot as plt
 import numpy as np
@@ -31,8 +31,8 @@ avo_client = EW_Client('pubavo1.wr.usgs.gov', port=16023)  # 16023 is long-term
 
 
 def gather_waveforms(source, network, station, starttime, endtime,
-                     remove_response=False, watc_username=None,
-                     watc_password=None):
+                     remove_response=False, return_failed_stations=False,
+                     watc_username=None, watc_password=None):
     """
     Gather infrasound waveforms from IRIS or WATC FDSN, or AVO Winston, and
     output a Stream object with station/element coordinates attached.
@@ -50,10 +50,16 @@ def gather_waveforms(source, network, station, starttime, endtime,
         remove_response: Toggle conversion to Pa via remove_sensitivity() if
                          available, else just do a simple scalar multiplication
                          (default: False)
+        return_failed_stations: If True, returns a list of station codes that
+                                were requested but not downloaded. This
+                                disables the standard failed station warning
+                                message (default: False)
         watc_username: Username for WATC FDSN server (default: None)
         watc_password: Password for WATC FDSN server (default: None)
     Returns:
         st_out: Stream containing gathered waveforms
+        failed_stations: (Optional) List containing station codes that were
+                         requested but not downloaded
     """
 
     print('--------------')
@@ -64,90 +70,112 @@ def gather_waveforms(source, network, station, starttime, endtime,
     if source == 'IRIS':
 
         print('Reading data from IRIS FDSN...')
-        st_out = iris_client.get_waveforms(network, station, '*',
-                                           'BDF,HDF,DDF', starttime, endtime,
-                                           attach_response=remove_response)
+        try:
+            st_out = iris_client.get_waveforms(network, station, '*',
+                                               'BDF,HDF,DDF', starttime,
+                                               endtime,
+                                               attach_response=remove_response)
+        except FDSNNoDataException:
+            st_out = Stream()  # Just create an empty Stream object
 
     # WATC FDSN
     elif source == 'WATC':
 
         print('Connecting to WATC FDSN...')
-        try:
-            watc_client = FDSN_Client('http://10.30.5.10:8080',
-                                      user=watc_username,
-                                      password=watc_password)
-        except FDSNException:
-            print('Issue connecting to WATC FDSN. Check your VPN '
-                  'connection and try again.')
-            return Stream()
+        watc_client = FDSN_Client('http://10.30.5.10:8080',
+                                  user=watc_username,
+                                  password=watc_password)
 
         print('Successfully connected. Reading data from WATC FDSN...')
-        st_out = watc_client.get_waveforms(network, station, '*',
-                                           'BDF,HDF,DDF', starttime, endtime,
-                                           attach_response=remove_response)
+        try:
+            st_out = watc_client.get_waveforms(network, station, '*',
+                                               'BDF,HDF,DDF', starttime,
+                                               endtime,
+                                               attach_response=remove_response)
+        except FDSNNoDataException:
+            st_out = Stream()  # Just create an empty Stream object
 
     # AVO Winston
     elif source == 'AVO':
 
         print('Reading data from AVO Winston...')
+        try:
+            # Array case
+            if station in ['ADKI', 'AKS', 'DLL', 'OKIF', 'SDPI']:
 
-        # Array case
-        if station in ['ADKI', 'AKS', 'DLL', 'OKIF', 'SDPI']:
+                # Select the correct channel
+                if station in ['DLL', 'OKIF']:
+                    channel = 'HDF'
+                else:
+                    channel = 'BDF'
 
-            # Select the correct channel
-            if station in ['DLL', 'OKIF']:
-                channel = 'HDF'
+                st_out = Stream()  # Make an empty Stream object to populate
+
+                # Deal with funky channel naming convention for AKS (for all
+                # other arrays, six numbered elements are assumed)
+                if station == 'AKS':
+                    for channel in ['BDF', 'BDG', 'BDH', 'BDI', 'BDJ', 'BDK']:
+                        st_out += avo_client.get_waveforms(network, station,
+                                                           '--', channel,
+                                                           starttime, endtime)
+                else:
+                    for location in ['01', '02', '03', '04', '05', '06']:
+                        st_out += avo_client.get_waveforms(network, station,
+                                                           location, channel,
+                                                           starttime, endtime)
+
+            # Single station case
             else:
-                channel = 'BDF'
+                st_out = avo_client.get_waveforms(network, station, '--',
+                                                  'BDF', starttime, endtime)
 
-            st_out = Stream()  # Make an empty Stream object to populate
-
-            # Deal with funky channel naming convention for AKS (for all other
-            # arrays, six numbered elements are assumed)
-            if station == 'AKS':
-                for channel in ['BDF', 'BDG', 'BDH', 'BDI', 'BDJ', 'BDK']:
+                # Special case for CLES1 and CLES2 which also have HDF channels
+                if station in ['CLES1', 'CLES2']:
                     st_out += avo_client.get_waveforms(network, station, '--',
-                                                       channel, starttime,
+                                                       'HDF', starttime,
                                                        endtime)
-            else:
-                for location in ['01', '02', '03', '04', '05', '06']:
-                    st_out += avo_client.get_waveforms(network, station,
-                                                       location, channel,
-                                                       starttime, endtime)
 
-        # Single station case
-        else:
-            st_out = avo_client.get_waveforms(network, station, '--', 'BDF',
-                                              starttime, endtime)
-
-            # Special case for CLES1 and CLES2 which also have HDF channels
-            if station in ['CLES1', 'CLES2']:
-                st_out += avo_client.get_waveforms(network, station, '--',
-                                                   'HDF', starttime, endtime)
+        # KeyError means that the station is not on AVO Winston for ANY time
+        # period
+        except KeyError:
+            st_out = Stream()  # Just create an empty Stream object
 
     else:
-
-        print('Unrecognized source. Valid options are \'IRIS\', \'WATC\', or '
-              '\'AVO\'.')
-        return Stream()
-
-    # Add zeros to ensure all Traces have same length
-    st_out.trim(starttime, endtime, pad=True, fill_value=0)
+        raise ValueError('Unrecognized source. Valid options are \'IRIS\', '
+                         '\'WATC\', or \'AVO\'.')
 
     st_out.sort()
-
-    print(st_out)
 
     # Check that all requested stations are present in Stream
     requested_stations = station.split(',')
     downloaded_stations = [tr.stats.station for tr in st_out]
-    for pattern in requested_stations:
+    failed_stations = []
+    for sta in requested_stations:
         # The below check works with wildcards, but obviously cannot detect if
         # ALL stations corresponding to a given wildcard (e.g., O??K) were
         # downloaded. Thus, if careful station selection is desired, specify
         # each station explicitly and the below check will then be effective.
-        if not fnmatch.filter(downloaded_stations, pattern):
-            warnings.warn(f'Station {pattern} requested but not downloaded.')
+        if not fnmatch.filter(downloaded_stations, sta):
+            if not return_failed_stations:
+                # If we're not returning the failed stations, then show this
+                # warning message to alert the user
+                warnings.warn(f'Station {sta} not available on {source} '
+                              'server.')
+            failed_stations.append(sta)
+
+    # If the Stream is empty, then we can stop here
+    if st_out.count() == 0:
+        print('No data found.')
+        if return_failed_stations:
+            return st_out, failed_stations
+        else:
+            return st_out
+
+    # Otherwise, show what the Stream contains
+    print(st_out)
+
+    # Add zeros to ensure all Traces have same length
+    st_out.trim(starttime, endtime, pad=True, fill_value=0)
 
     print('Assigning coordinates...')
 
@@ -184,7 +212,7 @@ def gather_waveforms(source, network, station, starttime, endtime,
                     tr.stats.elevation = avo_coords[tr.stats.station]
                 warnings.warn(f'Using coordinates from JSON file for {tr.id}.')
             except KeyError:
-                raise SystemExit(f'No coordinates available for {tr.id}.')
+                raise KeyError(f'No coordinates available for {tr.id}.')
 
     # Remove sensitivity
     if remove_response:
@@ -207,12 +235,17 @@ def gather_waveforms(source, network, station, starttime, endtime,
                     warnings.warn('Using calibration value from JSON file for '
                                   f'{tr.id}.')
                 except KeyError:
-                    raise SystemExit('No calibration value available for '
-                                     f'{tr.id}.')
+                    raise KeyError('No calibration value available for '
+                                   f'{tr.id}.')
 
     print('Done')
 
-    return st_out
+    # Return the Stream with coordinates attached (and responses removed if
+    # specified)
+    if return_failed_stations:
+        return st_out, failed_stations
+    else:
+        return st_out
 
 
 def process_waveforms(st, freqmin, freqmax, envelope=False,
