@@ -29,6 +29,9 @@ with open(AVO_INFRA_COORD_FILE) as f:
 iris_client = FDSN_Client('IRIS')
 avo_client = EW_Client('pubavo1.wr.usgs.gov', port=16023)  # 16023 is long-term
 
+# Channels to use in data requests - covering all the bases here!
+CHANNELS = 'BDF,BDG,BDH,BDI,BDJ,BDK,HDF,DDF'
+
 
 def gather_waveforms(source, network, station, starttime, endtime,
                      remove_response=False, return_failed_stations=False,
@@ -71,9 +74,8 @@ def gather_waveforms(source, network, station, starttime, endtime,
 
         print('Reading data from IRIS FDSN...')
         try:
-            st_out = iris_client.get_waveforms(network, station, '*',
-                                               'BDF,HDF,DDF', starttime,
-                                               endtime,
+            st_out = iris_client.get_waveforms(network, station, '*', CHANNELS,
+                                               starttime, endtime,
                                                attach_response=remove_response)
         except FDSNNoDataException:
             st_out = Stream()  # Just create an empty Stream object
@@ -88,9 +90,8 @@ def gather_waveforms(source, network, station, starttime, endtime,
 
         print('Successfully connected. Reading data from WATC FDSN...')
         try:
-            st_out = watc_client.get_waveforms(network, station, '*',
-                                               'BDF,HDF,DDF', starttime,
-                                               endtime,
+            st_out = watc_client.get_waveforms(network, station, '*', CHANNELS,
+                                               starttime, endtime,
                                                attach_response=remove_response)
         except FDSNNoDataException:
             st_out = Stream()  # Just create an empty Stream object
@@ -172,7 +173,7 @@ def gather_waveforms(source, network, station, starttime, endtime,
             return st_out
 
     # Otherwise, show what the Stream contains
-    print(st_out)
+    print(st_out.__str__(extended=True))  # This syntax prints the WHOLE Stream
 
     # Add zeros to ensure all Traces have same length
     st_out.trim(starttime, endtime, pad=True, fill_value=0)
