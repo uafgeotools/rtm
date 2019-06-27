@@ -15,7 +15,7 @@ plt.rcParams.update({'font.size': FONT_SIZE})
 
 
 def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None,
-                    hires=False):
+                    label_stations=True, hires=False):
     """
     Plot a time slice through S to produce a map-view plot. If time and
     celerity are not specified, then the slice corresponds to the maximum of S
@@ -33,6 +33,8 @@ def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None,
                         error if the specified celerity is not in S. If None,
                         the celerity corresponding to max(S) is used (default:
                         None)
+        label_stations: Toggle labeling stations with network and station codes
+                        (default: True)
         hires: If True, use higher-resolution background image/coastlines,
                which looks better but can be slow (default: False)
     Returns:
@@ -94,28 +96,34 @@ def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None,
     qm = slice.plot.pcolormesh(ax=ax, alpha=0.5, cmap='inferno',
                                add_colorbar=False, transform=transform)
 
-    cbar = fig.colorbar(qm, label='Stack amplitude', pad=0.1)
+    cbar = fig.colorbar(qm, label='Stack amplitude', aspect=30)
     cbar.solids.set_alpha(1)
 
+    # Initialize list of handles for legend
+    h = [None, None, None]
+
     # Plot center of grid
-    ax.scatter(lon_0, lat_0, s=50, color='green', edgecolor='black',
-               label='Grid center', transform=ccrs.Geodetic())
+    h[0] = ax.scatter(lon_0, lat_0, s=50, color='limegreen', edgecolor='black',
+                      label='Grid center', transform=ccrs.Geodetic())
 
     # Plot stack maximum
-    ax.scatter(x_max, y_max, s=100, color='red', marker='*', edgecolor='black',
-               label='Stack maximum\n' + max_label, transform=transform)
-
-    ax.legend(loc='best')
+    h[1] = ax.scatter(x_max, y_max, s=100, color='red', marker='*',
+                      edgecolor='black', label='Stack maximum\n' + max_label,
+                      transform=transform)
 
     # Plot stations
     for tr in processed_st:
-        ax.scatter(tr.stats.longitude,  tr.stats.latitude, color='black',
-                   transform=ccrs.Geodetic())
-        ax.text(tr.stats.longitude, tr.stats.latitude,
-                '  {}.{}'.format(tr.stats.network, tr.stats.station),
-                verticalalignment='center_baseline',
-                horizontalalignment='left',
-                transform=ccrs.Geodetic())
+        h[2] = ax.scatter(tr.stats.longitude,  tr.stats.latitude, marker='v',
+                          color='white', edgecolor='black',
+                          label='Infrasound sensor', transform=ccrs.Geodetic())
+        if label_stations:
+            ax.text(tr.stats.longitude, tr.stats.latitude,
+                    '  {}.{}'.format(tr.stats.network, tr.stats.station),
+                    verticalalignment='center_baseline',
+                    horizontalalignment='left', fontsize=10,
+                    transform=ccrs.Geodetic())
+
+    ax.legend(h, [handle.get_label() for handle in h], loc='best')
 
     title = f'Time: {slice.time.values}\nCelerity: {slice.celerity.values} m/s'
 
@@ -132,7 +140,8 @@ def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None,
     return fig
 
 
-def plot_record_section(st, origin_time, source_location, plot_celerity=None):
+def plot_record_section(st, origin_time, source_location, plot_celerity=None,
+                        label_waveforms=True):
     """
     Plot a record section based upon user-provided source location and origin
     time. Optionally plot celerity for reference, with two plotting options.
@@ -145,6 +154,8 @@ def plot_record_section(st, origin_time, source_location, plot_celerity=None):
                        'range', plots a continuous swatch of celerities from
                        260-380 m/s. If a list, plots these specific celerities.
                        If None, does not plot any celerities (default: None)
+        label_waveforms: Toggle labeling waveforms with network and station
+                         codes (default: True)
     Returns:
         fig: Output figure
     """
@@ -167,16 +178,23 @@ def plot_record_section(st, origin_time, source_location, plot_celerity=None):
 
     trans = transforms.blended_transform_factory(ax.transAxes, ax.transData)
 
-    for tr in st_edit:
-        ax.text(1.01, tr.stats.distance / 1000,
-                f'{tr.stats.network}.{tr.stats.station}',
-                verticalalignment='center', transform=trans, fontsize=10)
+    if label_waveforms:
+        for tr in st_edit:
+            ax.text(1.01, tr.stats.distance / 1000,
+                    f'{tr.stats.network}.{tr.stats.station}',
+                    verticalalignment='center', transform=trans, fontsize=10)
+        pad = 0.1  # Move colorbar to the right to make room for labels
+    else:
+        pad = 0.05  # Matplotlib default for vertical colorbars
 
     if plot_celerity:
 
         # Check if user requested a continuous range of celerities
         if plot_celerity == 'range':
-            celerity_list = np.arange(260, 380 + 1, 1)
+            inc = 0.5  # [m/s]
+            celerity_list = np.arange(220, 350 + inc, inc)  # [m/s] Includes
+                                                            # all reasonable
+                                                            # celerities
             zorder = -1
 
         # Otherwise, they provided a list of discrete celerities
@@ -202,7 +220,9 @@ def plot_record_section(st, origin_time, source_location, plot_celerity=None):
         if plot_celerity == 'range':
             mapper = plt.cm.ScalarMappable(cmap=cmap)
             mapper.set_array(celerity_list)
-            fig.colorbar(mapper, label='Celerity (m/s)', pad=0.1, aspect=30)
+            cbar = fig.colorbar(mapper, label='Celerity (m/s)', pad=pad,
+                                aspect=30)
+            cbar.ax.minorticks_on()
 
         # If plotting discrete celerities, just add a legend
         else:
