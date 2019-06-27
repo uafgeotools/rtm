@@ -9,6 +9,8 @@ import numpy as np
 from scipy.signal import hilbert, windows, convolve
 from scipy.fftpack import next_fast_len
 from collections import OrderedDict
+from xarray import DataArray
+from grid_utils import calculate_time_buffer
 import fnmatch
 import warnings
 
@@ -32,16 +34,24 @@ avo_client = EW_Client('pubavo1.wr.usgs.gov', port=16023)  # 16023 is long-term
 # Channels to use in data requests - covering all the bases here!
 CHANNELS = 'BDF,BDG,BDH,BDI,BDJ,BDK,HDF,DDF'
 
-KM2M = 1000  # [m/km]
+KM2M = 1000     # [m/km]
+SEC2MIN = 1/60  # [min/s]
 
 
-def gather_waveforms(source, network, station, starttime, endtime,
+def gather_waveforms(source, network, station, starttime, endtime, buffer=0,
                      remove_response=False, return_failed_stations=False,
                      watc_username=None, watc_password=None):
     """
     Gather infrasound waveforms from IRIS or WATC FDSN, or AVO Winston, and
     output a Stream object with station/element coordinates attached.
     Optionally remove the sensitivity.
+
+    NOTE:
+        Usual RTM usage is to specify a starttime/endtime that brackets the
+        estimated source origin time. Then buffer is used to download enough
+        extra data to account for the time required for an infrasound signal to
+        propagate to the farthest station. Because this buffer is so critical,
+        this function issues a warning if it remains set to its default of 0 s.
 
     Args:
         source: Which source to gather waveforms from - options are:
@@ -52,6 +62,7 @@ def gather_waveforms(source, network, station, starttime, endtime,
         station: SEED station code
         starttime: Start time for data request (UTCDateTime)
         endtime: End time for data request (UTCDateTime)
+        buffer: [s] Extra amount of data to download after endtime (default: 0)
         remove_response: Toggle conversion to Pa via remove_sensitivity() if
                          available, else just do a simple scalar multiplication
                          (default: False)
@@ -71,13 +82,18 @@ def gather_waveforms(source, network, station, starttime, endtime,
     print('GATHERING DATA')
     print('--------------')
 
+    # Warn if buffer is set to 0 s
+    if buffer == 0:
+        warnings.warn('Buffer is set to 0 seconds. Are you sure you\'ve '
+                      'downloaded enough data for RTM?')
+
     # IRIS FDSN
     if source == 'IRIS':
 
         print('Reading data from IRIS FDSN...')
         try:
             st_out = iris_client.get_waveforms(network, station, '*', CHANNELS,
-                                               starttime, endtime,
+                                               starttime, endtime + buffer,
                                                attach_response=remove_response)
         except FDSNNoDataException:
             st_out = Stream()  # Just create an empty Stream object
@@ -93,7 +109,7 @@ def gather_waveforms(source, network, station, starttime, endtime,
         print('Successfully connected. Reading data from WATC FDSN...')
         try:
             st_out = watc_client.get_waveforms(network, station, '*', CHANNELS,
-                                               starttime, endtime,
+                                               starttime, endtime + buffer,
                                                attach_response=remove_response)
         except FDSNNoDataException:
             st_out = Stream()  # Just create an empty Stream object
@@ -120,26 +136,30 @@ def gather_waveforms(source, network, station, starttime, endtime,
                     for channel in ['BDF', 'BDG', 'BDH', 'BDI', 'BDJ', 'BDK']:
                         st_out += avo_client.get_waveforms(network, station,
                                                            '--', channel,
-                                                           starttime, endtime)
+                                                           starttime,
+                                                           endtime + buffer)
                 else:
                     for location in ['01', '02', '03', '04', '05', '06']:
                         st_out += avo_client.get_waveforms(network, station,
                                                            location, channel,
-                                                           starttime, endtime)
+                                                           starttime,
+                                                           endtime + buffer)
 
             # Single station case
             else:
                 st_out = avo_client.get_waveforms(network, station, '--',
-                                                  'BDF', starttime, endtime)
+                                                  'BDF', starttime,
+                                                  endtime + buffer)
 
                 # Special case for CLES1 and CLES2 which also have HDF channels
                 if station in ['CLES1', 'CLES2']:
                     st_out += avo_client.get_waveforms(network, station, '--',
                                                        'HDF', starttime,
-                                                       endtime)
+                                                       endtime + buffer)
 
         # KeyError means that the station is not on AVO Winston for ANY time
-        # period
+        # period, OR that the user didn't format the request (e.g., station
+        # string) appropriately
         except KeyError:
             st_out = Stream()  # Just create an empty Stream object
 
@@ -162,13 +182,13 @@ def gather_waveforms(source, network, station, starttime, endtime,
             if not return_failed_stations:
                 # If we're not returning the failed stations, then show this
                 # warning message to alert the user
-                warnings.warn(f'Station {sta} not available on {source} '
+                warnings.warn(f'Station {sta} not downloaded from {source} '
                               'server for this time period.')
             failed_stations.append(sta)
 
     # If the Stream is empty, then we can stop here
     if st_out.count() == 0:
-        print('No data found.')
+        print('No data downloaded.')
         if return_failed_stations:
             return st_out, failed_stations
         else:
@@ -178,14 +198,15 @@ def gather_waveforms(source, network, station, starttime, endtime,
     print(st_out.__str__(extended=True))  # This syntax prints the WHOLE Stream
 
     # Add zeros to ensure all Traces have same length
-    st_out.trim(starttime, endtime, pad=True, fill_value=0)
+    st_out.trim(starttime, endtime + buffer, pad=True, fill_value=0)
 
     print('Assigning coordinates...')
 
     # Assign coordinates using IRIS FDSN regardless of data source
     try:
         inv = iris_client.get_stations(network=network, station=station,
-                                       starttime=starttime, endtime=endtime,
+                                       starttime=starttime,
+                                       endtime=endtime + buffer,
                                        level='channel')
     except FDSNNoDataException:
         inv = []
@@ -252,16 +273,26 @@ def gather_waveforms(source, network, station, starttime, endtime,
 
 
 def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
-                          remove_response=False, watc_username=None,
+                          buffer=0, remove_response=False, watc_username=None,
                           watc_password=None):
     """
     Bulk gather infrasound waveforms within a specified maximum radius of a
     specified location. Waveforms are gathered from IRIS (and optionally WATC)
     FDSN, and AVO Winston. Outputs a Stream object with station/element
     coordinates attached. Optionally removes the sensitivity. [Output Stream
-    has the same properties as output Stream from gather_waveforms().] NOTE:
-    WATC database will NOT be used for station search NOR data download unless
-    BOTH watc_username and watc_password are set.
+    has the same properties as output Stream from gather_waveforms().]
+
+    NOTE 1:
+        WATC database will NOT be used for station search NOR data download
+        unless BOTH watc_username and watc_password are set.
+
+    NOTE 2:
+        Usual RTM usage is to specify a starttime/endtime that brackets the
+        estimated source origin time. Then buffer is used to download enough
+        extra data to account for the time required for an infrasound signal to
+        propagate to the farthest station. This function can automatically
+        calculate an appropriate buffer amount (it assumes that the station
+        search center and source grid search center are identical).
 
     Args:
         lon_0: [deg] Longitude of search center
@@ -269,6 +300,13 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
         max_radius: [km] Maximum radius to search for stations within
         starttime: Start time for data request (UTCDateTime)
         endtime: End time for data request (UTCDateTime)
+        buffer: Either a buffer time in s or an RTM grid (i.e., an
+                xarray.DataArray output from define_grid() for this event). If
+                a grid is specified, the buffer time in s is automatically
+                calculated based upon the grid params and this function's
+                station locations. This is the extra amount of data to download
+                after endtime, and is simply passed on to the calls to
+                gather_waveforms() (default: 0)
         remove_response: Toggle conversion to Pa via remove_sensitivity() if
                          available, else just do a simple scalar multiplication
                          (default: False)
@@ -284,7 +322,7 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
 
     print('Creating station list...')
 
-    # Grab IRIS inventory
+    # Grab IRIS inventory - not accounting for buffer here
     iris_inv = iris_client.get_stations(starttime=starttime, endtime=endtime,
                                         channel=CHANNELS, level='channel')
 
@@ -299,7 +337,7 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
                                   password=watc_password)
         print('Successfully connected.')
 
-        # Grab WATC inventory
+        # Grab WATC inventory - not accounting for buffer here
         watc_inv = watc_client.get_stations(starttime=starttime,
                                             endtime=endtime, channel=CHANNELS,
                                             level='channel')
@@ -307,6 +345,8 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
         inventories.append(watc_inv)  # Add WATC inventory to list
 
     requested_station_list = []  # Initialize list of stations to request
+
+    max_station_dist = 0  # [m] Keep track of the most distant station
 
     # Big loop through all channels in all inventories!
     for inv in inventories:
@@ -317,12 +357,18 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
                                                   cha.longitude)  # [m]
                     if dist <= max_radius * KM2M:
                         requested_station_list.append(stn.code)
+                        # Keep track of most distant station (within radius)
+                        if dist > max_station_dist:
+                            max_station_dist = dist
 
     # Loop through each entry in AVO infrasound station coordinates JSON file
     for sta, coord in avo_coords.items():
         dist, _, _ = gps2dist_azimuth(lat_0, lon_0, *coord[0:2])  # [m]
         if dist <= max_radius * KM2M:
             requested_station_list.append(sta)
+            # Keep track of most distant station (within radius)
+            if dist > max_station_dist:
+                max_station_dist = dist
 
     if not requested_station_list:
         raise ValueError('Station list is empty. Expand the station search '
@@ -331,7 +377,18 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
     # Put into the correct format for ObsPy (e.g., 'HOM,O22K,DLL')
     requested_stations = ','.join(np.unique(requested_station_list))
 
-    print('Done. Making calls to gather_waveforms()...')
+    print('Done')
+
+    # Check if buffer is an xarray.DataArray - if so, the user wants a buffer
+    # time to be automatically calculated from this grid
+    if type(buffer) == DataArray:
+        buffer = calculate_time_buffer(grid=buffer,
+                                       max_station_dist=max_station_dist)  # [s]
+
+    if buffer != 0:
+        print(f'Using buffer of {buffer:.1f} s (~{buffer * SEC2MIN:.0f} min)')
+
+    print('Making calls to gather_waveforms()...')
 
     st_out = Stream()  # Initialize empty Stream to populate
 
@@ -339,7 +396,7 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
     iris_st, iris_failed = gather_waveforms(source='IRIS', network='*',
                                             station=requested_stations,
                                             starttime=starttime,
-                                            endtime=endtime,
+                                            endtime=endtime, buffer=buffer,
                                             remove_response=remove_response,
                                             return_failed_stations=True)
     st_out += iris_st
@@ -354,6 +411,7 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
                                                     station=','.join(iris_failed),
                                                     starttime=starttime,
                                                     endtime=endtime,
+                                                    buffer=buffer,
                                                     remove_response=remove_response,
                                                     return_failed_stations=True,
                                                     watc_username=watc_username,
@@ -371,7 +429,7 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
             for sta in watc_failed:
                 st_out += gather_waveforms(source='AVO', network='AV',
                                            station=sta, starttime=starttime,
-                                           endtime=endtime,
+                                           endtime=endtime, buffer=buffer,
                                            remove_response=remove_response)
 
     print('--------------')
