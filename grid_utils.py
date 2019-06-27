@@ -11,6 +11,8 @@ from plotting_utils import _plot_geographic_context
 
 plt.ioff()  # Don't show the figure unless fig.show() is explicitly called
 
+MIN_CELERITY = 220  # [m/s] Used for travel time buffer calculation
+
 
 def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
                 plot_preview=False):
@@ -81,7 +83,11 @@ def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
 
     # Create grid
     data = np.full((y.size, x.size), np.nan)  # Initialize an array of NaNs
-    attrs = dict(grid_center=(lon_0, lat_0))
+    # Add grid "metadata"
+    attrs = dict(grid_center=(lon_0, lat_0),
+                 x_radius=x_radius,
+                 y_radius=y_radius,
+                 spacing=spacing)
     if projected:
         # Add the projection information to the grid metadata
         attrs['UTM'] = dict(zone=zone_number, southern_hemisphere=lat_0 < 0)
@@ -223,6 +229,49 @@ def grid_search(processed_st, grid, celerity_list, stack_method='sum'):
     print(f'Done (elapsed time = {toc-tic:.1f} s)')
 
     return S, shifted_streams
+
+
+def calculate_time_buffer(grid, max_station_dist):
+    """
+    Utility function for estimating the amount of time needed for an infrasound
+    signal to propagate from a source located anywhere in the RTM grid to the
+    station farthest from the RTM grid center. This "travel time buffer" helps
+    ensure that enough data is downloaded.
+
+    Args:
+        grid: x, y grid <-- output of define_grid()
+        max_station_dist: [m] The longest distance from the grid center to a
+                          station
+    Returns:
+        buffer: [s] Maximum travel time expected for a source anywhere in the
+                grid to the station farthest from the grid center
+    """
+
+    # If projected grid, just calculate Euclidean distance for diagonal
+    if grid.attrs['UTM']:
+        grid_diagonal = np.linalg.norm([grid.attrs['x_radius'],
+                                        grid.attrs['y_radius']])  # [m]
+
+    # If unprojected grid, find the "longer" of the two possible diagonals
+    else:
+        center_lon, center_lat = grid.attrs['grid_center']
+        corners = [(center_lat + grid.attrs['y_radius'],
+                    center_lon + grid.attrs['x_radius']),
+                   (center_lat - grid.attrs['y_radius'],
+                    center_lon - grid.attrs['x_radius'])]
+        diags = [gps2dist_azimuth(*corner, center_lat,
+                                  center_lon)[0] for corner in corners]
+        grid_diagonal = np.max(diags)  # [m]
+
+    # Maximum distance a signal would have to travel is the longest distance
+    # from the grid center to a station, PLUS the longest distance from the
+    # grid center to a grid corner
+    max_propagation_dist = max_station_dist + grid_diagonal
+
+    # Calculate maximum travel time
+    buffer = max_propagation_dist / MIN_CELERITY  # [s]
+
+    return buffer
 
 
 def _project_station_to_utm(tr, grid):
