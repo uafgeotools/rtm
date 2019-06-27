@@ -46,7 +46,7 @@ def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None,
     if stack_maximum.shape[0] is not 1:
         warnings.warn('Multiple maxima present in S along the time dimension. '
                       'Using first occurrence.')
-    elif stack_maximum.shape[1] is not 1:
+    if stack_maximum.shape[1] is not 1:
         warnings.warn('Multiple maxima present in S along the celerity '
                       'dimension. Using first occurrence.')
     max_coords = stack_maximum[0, 0, 0, 0].coords
