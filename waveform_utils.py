@@ -13,6 +13,7 @@ from xarray import DataArray
 from grid_utils import calculate_time_buffer
 import fnmatch
 import warnings
+from warning_config import RTMWarning
 
 
 plt.ioff()  # Don't show the figure unless fig.show() is explicitly called
@@ -85,7 +86,7 @@ def gather_waveforms(source, network, station, starttime, endtime, buffer=0,
     # Warn if buffer is set to 0 s
     if buffer == 0:
         warnings.warn('Buffer is set to 0 seconds. Are you sure you\'ve '
-                      'downloaded enough data for RTM?')
+                      'downloaded enough data for RTM?', RTMWarning)
 
     # IRIS FDSN
     if source == 'IRIS':
@@ -183,7 +184,7 @@ def gather_waveforms(source, network, station, starttime, endtime, buffer=0,
                 # If we're not returning the failed stations, then show this
                 # warning message to alert the user
                 warnings.warn(f'Station {sta} not downloaded from {source} '
-                              'server for this time period.')
+                              'server for this time period.', RTMWarning)
             failed_stations.append(sta)
 
     # If the Stream is empty, then we can stop here
@@ -234,9 +235,11 @@ def gather_waveforms(source, network, station, starttime, endtime, buffer=0,
             try:
                 tr.stats.latitude, tr.stats.longitude,\
                     tr.stats.elevation = avo_coords[tr.stats.station]
-                warnings.warn(f'Using coordinates from JSON file for {tr.id}.')
+                warnings.warn(f'Using coordinates from JSON file for {tr.id}.',
+                              RTMWarning)
             except KeyError:
-                raise KeyError(f'No coordinates available for {tr.id}.')
+                print(f'No coordinates available for {tr.id}. Stopping.')
+                raise
 
     # Remove sensitivity
     if remove_response:
@@ -257,10 +260,11 @@ def gather_waveforms(source, network, station, starttime, endtime, buffer=0,
                                                f'calibration value of {calib} '
                                                'Pa/ct')
                     warnings.warn('Using calibration value from JSON file for '
-                                  f'{tr.id}.')
+                                  f'{tr.id}.', RTMWarning)
                 except KeyError:
-                    raise KeyError('No calibration value available for '
-                                   f'{tr.id}.')
+                    print('No calibration value available for {tr.id}. '
+                          'Stopping.')
+                    raise
 
     print('Done')
 
@@ -292,7 +296,9 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
         extra data to account for the time required for an infrasound signal to
         propagate to the farthest station. This function can automatically
         calculate an appropriate buffer amount (it assumes that the station
-        search center and source grid search center are identical).
+        search center and source grid center are identical, which in practice
+        should be the case since the grid center should be used as the station
+        search center).
 
     Args:
         lon_0: [deg] Longitude of search center
@@ -426,11 +432,25 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
         if watc_failed:
 
             # Gather waveforms from AVO
+            remaining_failed = []
             for sta in watc_failed:
-                st_out += gather_waveforms(source='AVO', network='AV',
-                                           station=sta, starttime=starttime,
-                                           endtime=endtime, buffer=buffer,
-                                           remove_response=remove_response)
+                avo_st, avo_failed = gather_waveforms(source='AVO',
+                                                      network='AV',
+                                                      station=sta,
+                                                      starttime=starttime,
+                                                      endtime=endtime,
+                                                      buffer=buffer,
+                                                      remove_response=remove_response,
+                                                      return_failed_stations=True)
+
+                st_out += avo_st
+                remaining_failed += avo_failed
+
+            if remaining_failed:
+                print('--------------')
+                for sta in remaining_failed:
+                    warnings.warn(f'Station {sta} found in radius search but '
+                                  'no data found.', RTMWarning)
 
     print('--------------')
     print('Finishing gathering waveforms from station list. Check warnings '

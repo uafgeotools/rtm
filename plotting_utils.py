@@ -6,6 +6,7 @@ from cartopy.io.img_tiles import Stamen
 from obspy.geodetics import gps2dist_azimuth
 import numpy as np
 import warnings
+from warning_config import RTMWarning
 
 
 plt.ioff()  # Don't show the figure unless fig.show() is explicitly called
@@ -45,10 +46,10 @@ def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None,
     stack_maximum = S.where(S == S.max(), drop=True)
     if stack_maximum.shape[0] is not 1:
         warnings.warn('Multiple maxima present in S along the time dimension. '
-                      'Using first occurrence.')
+                      'Using first occurrence.', RTMWarning)
     if stack_maximum.shape[1] is not 1:
         warnings.warn('Multiple maxima present in S along the celerity '
-                      'dimension. Using first occurrence.')
+                      'dimension. Using first occurrence.', RTMWarning)
     max_coords = stack_maximum[0, 0, 0, 0].coords
     time_max = max_coords['time'].values
     celerity_max = max_coords['celerity'].values
@@ -85,7 +86,7 @@ def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None,
 
     if celerity_slice:
         if celerity_slice not in S['celerity'].values:
-            raise KeyError(f'Celerity {celerity_slice} m/s is not in S.')
+            raise IndexError(f'Celerity {celerity_slice} m/s is not in S.')
         celerity_to_plot = celerity_slice
     else:
         celerity_to_plot = celerity_max

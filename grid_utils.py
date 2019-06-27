@@ -5,8 +5,9 @@ import cartopy.crs as ccrs
 from obspy.geodetics import gps2dist_azimuth
 import utm
 import time
-import warnings
 from plotting_utils import _plot_geographic_context
+import warnings
+from warning_config import RTMWarning
 
 
 plt.ioff()  # Don't show the figure unless fig.show() is explicitly called
@@ -56,13 +57,15 @@ def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
     # Basic grid checks
     if dx != spacing:
         warnings.warn(f'Requested spacing of {spacing} does not match '
-                      f'np.linspace()-returned x-axis spacing of {dx}.')
+                      f'np.linspace()-returned x-axis spacing of {dx}.',
+                      RTMWarning)
     if dy != spacing:
         warnings.warn(f'Requested spacing of {spacing} does not match '
-                      f'np.linspace()-returned y-axis spacing of {dy}.')
+                      f'np.linspace()-returned y-axis spacing of {dy}.',
+                      RTMWarning)
     if not (x_0 in x and y_0 in y):
         warnings.warn('(x_0, y_0) is not located in grid. Check for numerical '
-                      'precision problems (i.e., rounding error).')
+                      'precision problems (i.e., rounding error).', RTMWarning)
     if projected:
         # Create list of grid corners
         corners = dict(SW=(x.min(), y.min()),
@@ -79,7 +82,7 @@ def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
                 warnings.warn(f'{label} grid corner locates to UTM zone '
                               f'{new_zone_number} instead of origin UTM zone '
                               f'{zone_number}. Consider reducing grid extent '
-                              'or using an unprojected grid.')
+                              'or using an unprojected grid.', RTMWarning)
 
     # Create grid
     data = np.full((y.size, x.size), np.nan)  # Initialize an array of NaNs
@@ -300,6 +303,6 @@ def _project_station_to_utm(tr, grid):
         warnings.warn(f'{tr.id} locates to UTM zone {station_zone_number} '
                       f'instead of grid UTM zone {grid_zone_number}. Consider '
                       'reducing station search extent or using an unprojected '
-                      'grid.')
+                      'grid.', RTMWarning)
 
     return station_utm
