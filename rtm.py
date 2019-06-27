@@ -27,7 +27,7 @@ LAT_0 = 60.0319         # [deg] Latitude of grid center
 
 BULK = True             # Toggle using bulk station search or not
 
-MAX_RADIUS = 400        # [km] Radius within which to search for stations
+MAX_RADIUS = 650        # [km] Radius within which to search for stations
 
 
 # watc_credentials.json contains a single line with format ["user", "password"]
@@ -68,11 +68,11 @@ if PROJECTED:
 else:
     X_RADIUS = 2   # [deg] E-W grid radius (half of grid "width")
     Y_RADIUS = 2   # [deg] N-S grid radius (half of grid "height")
-    SPACING = 0.5  # [deg] Grid spacing
+    SPACING = 0.1  # [deg] Grid spacing
 
 STACK_METHOD = 'sum'  # Choose either 'sum' or 'product'
 
-CELERITY_LIST = [280, 285, 290, 295, 300, 305, 310, 315, 320]  # [m/s]
+CELERITY_LIST = [295, 300, 305]  # [m/s]
 
 grid = define_grid(lon_0=LON_0, lat_0=LAT_0, x_radius=X_RADIUS,
                    y_radius=Y_RADIUS, spacing=SPACING, projected=PROJECTED,
@@ -89,7 +89,7 @@ from obspy import UTCDateTime
 import utm
 
 fig = plot_time_slice(S, st_proc, time_slice=None, celerity_slice=None,
-                      hires=False)
+                      label_stations=False, hires=False)
 
 max_coords = S.where(S == S.max(), drop=True)[0, 0, 0, 0].coords
 
@@ -107,4 +107,4 @@ else:
     max_loc = max_y, max_x
 
 fig = plot_record_section(st_proc, UTCDateTime(str(max_time)), max_loc,
-                          plot_celerity=[max_celerity])
+                          plot_celerity='range', label_waveforms=False)
