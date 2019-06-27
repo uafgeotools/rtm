@@ -108,3 +108,82 @@ else:
 
 fig = plot_record_section(st_proc, UTCDateTime(str(max_time)), max_loc,
                           plot_celerity='range', label_waveforms=False)
+
+#%% DEM sandbox
+
+from grid_utils import define_grid
+from osgeo import gdal, osr
+import matplotlib.pyplot as plt
+import numpy as np
+import cartopy.crs as ccrs
+
+gdal.UseExceptions()
+
+SPACING = 5
+
+# Yasur
+grid = define_grid(lon_0=169.447, lat_0=-19.532, x_radius=7000,
+                   y_radius=7000, spacing=SPACING, projected=True,
+                   plot_preview=False)
+
+input_raster = 'DEM_Union_UAV_161116_sm101.tif'
+output_raster = 'out.tif'
+
+dest_srs = osr.SpatialReference()
+proj_string = '+proj=utm +zone={} +datum=WGS84'.format(grid.attrs['UTM']['zone'])
+if grid.attrs['UTM']['southern_hemisphere']:
+    proj_string += ' +south'
+dest_srs.ImportFromProj4(proj_string)
+
+ds = gdal.Warp(output_raster, input_raster, dstSRS=dest_srs,
+               outputBounds=(grid.x.min() - SPACING/2,
+                             grid.y.min() - SPACING/2,
+                             grid.x.max() + SPACING/2,
+                             grid.y.max() + SPACING/2),
+               xRes=SPACING, yRes=SPACING, resampleAlg='lanczos'
+               )
+
+dem = np.flipud(ds.GetRasterBand(1).ReadAsArray())
+
+dem[dem == dem.min()] = np.nan
+
+ds = None
+
+proj = ccrs.UTM(**grid.attrs['UTM'])
+
+fig, ax = plt.subplots(figsize=(10, 10),
+                       subplot_kw=dict(projection=proj))
+
+
+def hill_shade(elev, altitude=45, azimuth=45):
+    altitude = np.deg2rad(altitude)
+    azimuth = np.deg2rad(azimuth)
+    x, y = np.gradient(elev)
+    slope = np.pi/2. - np.arctan(np.sqrt(x**2 + y**2))
+    aspect = np.arctan2(-x, y)
+
+    shaded = (np.sin(altitude) * np.sin(slope) +
+              np.cos(altitude) * np.cos(slope) *
+              np.cos((azimuth - np.pi/2.) - aspect))
+    return shaded
+
+
+shaded = hill_shade(dem, altitude=40, azimuth=45)
+
+grid_dem = grid.copy()
+grid_dem.data = dem
+grid_dem.plot.imshow(ax=ax, transform=proj, add_colorbar=False, cmap='viridis',
+                     zorder=5)
+
+grid_shaded = grid.copy()
+grid_shaded.data = shaded
+grid_shaded.plot.imshow(ax=ax, transform=proj, alpha=0.5,
+                        cmap='Greys_r', add_colorbar=False, zorder=10)
+
+# Plot the center of the grid
+ax.scatter(*grid.attrs['grid_center'], color='red', transform=ccrs.Geodetic(),
+           zorder=20)
+
+fig.canvas.draw()
+fig.tight_layout()
+fig.show()
