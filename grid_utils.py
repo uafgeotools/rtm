@@ -8,6 +8,7 @@ import time
 from plotting_utils import _plot_geographic_context
 import warnings
 from warning_config import RTMWarning
+import sys
 
 
 plt.ioff()  # Don't show the figure unless fig.show() is explicitly called
@@ -226,8 +227,9 @@ def grid_search(processed_st, grid, celerity_list, stack_method='sum'):
 
                 # Print grid search progress
                 counter += 1
-                print('{:.1f}%'.format((counter / total_its) * 100))
-
+                
+            sys.stdout.write("\r%.1f%%" % (counter / total_its*100))
+            sys.stdout.flush()
     toc = time.process_time()
     print(f'Done (elapsed time = {toc-tic:.1f} s)')
 
