@@ -1,65 +1,11 @@
-#%% (1) Grab and process the data
+#%% (1) Define grid
 
-from obspy import UTCDateTime
-import json
-from waveform_utils import gather_waveforms, gather_waveforms_bulk,\
-                           process_waveforms
+from grid_utils import define_grid
 
+LON_0 = -153.0918  # [deg] Longitude of grid center
+LAT_0 = 60.0319    # [deg] Latitude of grid center
 
-# Start and end of time window containing (suspected) events
-STARTTIME = UTCDateTime('2013-07-18T22:36:00')
-ENDTIME = STARTTIME + 60*5
-
-REMOVE_RESPONSE = True  # Toggle removing sensitivity or not
-
-FREQ_MIN = 0.1          # [Hz] Lower bandpass corner
-FREQ_MAX = 10           # [Hz] Upper bandpass corner
-
-DECIMATION_RATE = 50    # [Hz] New sampling rate to use for decimation
-
-SMOOTH_WIN = None       # [s] Smoothing window duration
-
-AGC_WIN = 250           # [s] AGC window duration
-AGC_METHOD = 'gismo'    # Method to use for AGC, specify 'gismo' or 'walker'
-
-# SHOWA CRATER COORDS ESTIMATED FROM GE
-LON_0 = 130.6650        # [deg] Longitude of grid center
-LAT_0 = 31.5786         # [deg] Latitude of grid center
-
-BULK = True             # Toggle using bulk station search or not
-
-MAX_RADIUS = 100        # [km] Radius within which to search for stations
-
-
-# watc_credentials.json contains a single line with format ["user", "password"]
-with open('watc_credentials.json') as f:
-    watc_username, watc_password = json.load(f)
-
-if BULK:
-    st = gather_waveforms_bulk(LON_0, LAT_0, MAX_RADIUS, STARTTIME, ENDTIME,
-                               remove_response=REMOVE_RESPONSE,
-                               watc_username=None,
-                               watc_password=None)
-else:
-    st = gather_waveforms(source='IRIS', network='AV,AK,IM,TA',
-                          station='HOM,M22K,O20K,RC01,DLL,I53H?',
-                          starttime=STARTTIME, endtime=ENDTIME,
-                          remove_response=REMOVE_RESPONSE,
-                          watc_username=watc_username,
-                          watc_password=watc_password)
-
-agc_params = dict(win_sec=AGC_WIN, method=AGC_METHOD)
-
-st_proc = process_waveforms(st=st, freqmin=FREQ_MIN, freqmax=FREQ_MAX,
-                            envelope=True, smooth_win=SMOOTH_WIN,
-                            decimation_rate=DECIMATION_RATE, agc_params=None,
-                            normalize=True, plot_steps=True)
-
-#%% (2) Define grid and perform grid search
-
-from grid_utils import define_grid, grid_search
-
-PROJECTED = True
+PROJECTED = False
 
 if PROJECTED:
     X_RADIUS = 250  # [m] E-W grid radius (half of grid "width")
@@ -71,26 +17,64 @@ else:
     Y_RADIUS = 2   # [deg] N-S grid radius (half of grid "height")
     SPACING = 0.1  # [deg] Grid spacing
 
-STACK_METHOD = 'product'  # Choose either 'sum' or 'product'
-
-CELERITY_LIST = [340]  # [m/s]
-
 grid = define_grid(lon_0=LON_0, lat_0=LAT_0, x_radius=X_RADIUS,
                    y_radius=Y_RADIUS, spacing=SPACING, projected=PROJECTED,
                    plot_preview=False)
 
+#%% (2) Grab and process the data
+
+import json
+from obspy import UTCDateTime
+from waveform_utils import gather_waveforms_bulk, process_waveforms
+
+# Start and end of time window containing (suspected) events
+STARTTIME = UTCDateTime('2019-06-20T23:55')
+ENDTIME = STARTTIME + 60*20
+
+MAX_RADIUS = 650        # [km] Radius within which to search for stations
+
+FREQ_MIN = 0.5          # [Hz] Lower bandpass corner
+FREQ_MAX = 2            # [Hz] Upper bandpass corner
+
+DECIMATION_RATE = 0.05  # [Hz] New sampling rate to use for decimation
+
+SMOOTH_WIN = 120        # [s] Smoothing window duration
+
+# watc_credentials.json contains a single line with format ["user", "password"]
+with open('watc_credentials.json') as f:
+    watc_username, watc_password = json.load(f)
+
+st = gather_waveforms_bulk(LON_0, LAT_0, MAX_RADIUS, STARTTIME, ENDTIME,
+                           buffer=grid, remove_response=True,
+                           watc_username=watc_username,
+                           watc_password=watc_password)
+
+st_proc = process_waveforms(st, freqmin=FREQ_MIN, freqmax=FREQ_MAX,
+                            envelope=True, smooth_win=SMOOTH_WIN,
+                            decimation_rate=DECIMATION_RATE, agc_params=None,
+                            normalize=True, plot_steps=False)
+
+#%% (3) Perform grid search
+
+from grid_utils import grid_search
+
+STACK_METHOD = 'sum'  # Choose either 'sum' or 'product'
+
+CELERITY_LIST = [295, 300, 395]  # [m/s]
+
 S, shifted_streams = grid_search(processed_st=st_proc, grid=grid,
                                  celerity_list=CELERITY_LIST,
+                                 starttime=STARTTIME, endtime=ENDTIME,
                                  stack_method=STACK_METHOD)
 
-#%% (3) Plot
+#%% (4) Plot
 
-from plotting_utils import plot_time_slice, plot_record_section
-from obspy import UTCDateTime
 import utm
+from obspy import UTCDateTime
+from plotting_utils import plot_time_slice, plot_record_section
 
 fig = plot_time_slice(S, st_proc, time_slice=None, celerity_slice=None,
-                      label_stations=True, hires=True)
+                      label_stations=False, hires=False)
 
 max_coords = S.where(S == S.max(), drop=True)[0, 0, 0, 0].coords
 
@@ -108,7 +92,7 @@ else:
     max_loc = max_y, max_x
 
 fig = plot_record_section(st_proc, UTCDateTime(str(max_time)), max_loc,
-                          plot_celerity=[max_celerity], label_waveforms=True)
+                          plot_celerity=[max_celerity], label_waveforms=False)
 
 #%% DEM sandbox
 
