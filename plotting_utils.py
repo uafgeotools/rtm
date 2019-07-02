@@ -3,6 +3,7 @@ import matplotlib.transforms as transforms
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from cartopy.io.img_tiles import Stamen
+from obspy import UTCDateTime
 from obspy.geodetics import gps2dist_azimuth
 import numpy as np
 import warnings
@@ -126,7 +127,8 @@ def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None,
 
     ax.legend(h, [handle.get_label() for handle in h], loc='best')
 
-    title = f'Time: {slice.time.values}\nCelerity: {slice.celerity.values} m/s'
+    title = f'Time: {UTCDateTime(str(slice.time.values)).datetime}' \
+            f'\nCelerity: {slice.celerity.values:g} m/s'
 
     # Label global maximum if applicable
     if slice.time.values == time_max and slice.celerity.values == celerity_max:
@@ -212,8 +214,8 @@ def plot_record_section(st, origin_time, source_location, plot_celerity=None,
         y_max = ax.get_ylim()[1]  # Save this for re-scaling axis
 
         for celerity, color in zip(celerity_list, colors):
-            ax.plot(xlim, xlim * celerity / 1000, label=celerity, color=color,
-                    zorder=zorder)
+            ax.plot(xlim, xlim * celerity / 1000, label=f'{celerity:g}',
+                    color=color, zorder=zorder)
 
         ax.set_ylim(top=y_max)  # Scale y-axis to pre-plotting extent
 
