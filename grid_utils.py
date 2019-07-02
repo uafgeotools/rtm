@@ -135,7 +135,8 @@ def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
     return grid_out
 
 
-def grid_search(processed_st, grid, celerity_list, stack_method='sum'):
+def grid_search(processed_st, grid, celerity_list, starttime=None,
+                endtime=None, stack_method='sum'):
     """
     Perform a grid search over x, y, and celerity (c) and return a 4-D object
     with dimensions x, y, t, and c. Also return time-shifted Streams for each
@@ -145,6 +146,10 @@ def grid_search(processed_st, grid, celerity_list, stack_method='sum'):
         processed_st: Pre-processed Stream <-- output of process_waveforms()
         grid: x, y grid to use <-- output of define_grid()
         celerity_list: List of celerities to use
+        starttime: Start time for grid search (UTCDateTime) (default: None,
+                   which translates to processed_st[0].stats.starttime)
+        endtime: End time for grid search (UTCDateTime) (default: None,
+                 which translates to processed_st[0].stats.endtime)
         stack_method: Method to use for stacking aligned waveforms. One of
                       'sum' or 'product' (default: 'sum')
 
@@ -163,8 +168,18 @@ def grid_search(processed_st, grid, celerity_list, stack_method='sum'):
     print('STARTING GRID SEARCH')
     print('--------------------')
 
-    # Define global time axis using the first Trace of the input Stream
-    times = processed_st[0].times(type='utcdatetime')
+    timing_st = processed_st.copy()
+
+    if not starttime:
+        # Define stack start time using first Trace of input Stream
+        starttime = timing_st[0].stats.starttime
+    if not endtime:
+        # Define stack end time using first Trace of input Stream
+        endtime = timing_st[0].stats.endtime
+
+    # Use Stream times to define global time axis for S
+    timing_st.trim(starttime, endtime, pad=True, fill_value=0)
+    times = timing_st[0].times(type='utcdatetime')
 
     # Expand grid dimensions in celerity and time
     S = grid.expand_dims(dict(celerity=np.float64(celerity_list))).copy()
@@ -204,7 +219,7 @@ def grid_search(processed_st, grid, celerity_list, stack_method='sum'):
                     tr.stats.processing.append('RTM: Shifted by '
                                                f'-{time_shift:.2f} s')
 
-                # Trim to time limits of input Stream
+                # Trim to time limits of global time axis
                 st.trim(times[0], times[-1], pad=True, fill_value=0)
 
                 if stack_method == 'sum':
