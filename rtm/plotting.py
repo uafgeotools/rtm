@@ -7,13 +7,7 @@ from obspy import UTCDateTime
 from obspy.geodetics import gps2dist_azimuth
 import numpy as np
 import warnings
-from warning_config import RTMWarning
-
-
-plt.ioff()  # Don't show the figure unless fig.show() is explicitly called
-
-FONT_SIZE = 14
-plt.rcParams.update({'font.size': FONT_SIZE})
+from . import RTMWarning
 
 
 def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None,
@@ -136,7 +130,7 @@ def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None,
 
     ax.set_title(title, pad=20)
 
-    fig.canvas.draw()
+    fig.canvas.draw()  # Needed to make fig.tight_layout() work
     fig.tight_layout()
     fig.show()
 
@@ -238,7 +232,6 @@ def plot_record_section(st, origin_time, source_location, plot_celerity=None,
     ax.set_ylabel('Distance (km) from '
                   '({:.4f}, {:.4f})'.format(*source_location))
 
-    fig.canvas.draw()
     fig.tight_layout()
     fig.show()
 

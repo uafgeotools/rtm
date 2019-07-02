@@ -17,10 +17,25 @@ you're using [conda](https://docs.conda.io/projects/conda/en/latest/index.html)!
 
 It's recommended that you create a new conda environment to use with this
 repository:
-
 ```
 conda create -n rtm cartopy fiona obspy utm xarray
 ```
+
+Usage
+-----
+
+To use rtm, clone or download this repository and add it to your Python path,
+e.g. in a script where you'd like to use rtm:
+```python
+import sys
+sys.path.insert(0, '/path/to/rtm')
+```
+Then you can access the module's functions with (for example)
+```python
+from rtm import define_grid
+```
+and so on. Currently, documentation only exists in function docstrings. For a
+usage example, see `example.py`.
 
 Authors
 -------

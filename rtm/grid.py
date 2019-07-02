@@ -5,12 +5,10 @@ import cartopy.crs as ccrs
 from obspy.geodetics import gps2dist_azimuth
 import utm
 import time
-from plotting_utils import _plot_geographic_context
 import warnings
-from warning_config import RTMWarning
+from .plotting import _plot_geographic_context
+from . import RTMWarning
 
-
-plt.ioff()  # Don't show the figure unless fig.show() is explicitly called
 
 MIN_CELERITY = 220  # [m/s] Used for travel time buffer calculation
 
@@ -126,7 +124,7 @@ def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
         # Plot the center of the grid
         ax.scatter(lon_0, lat_0, color='red', transform=ccrs.Geodetic())
 
-        fig.canvas.draw()
+        fig.canvas.draw()  # Needed to make fig.tight_layout() work
         fig.tight_layout()
         fig.show()
 

@@ -1,6 +1,6 @@
 #%% (1) Define grid
 
-from grid_utils import define_grid
+from rtm import define_grid
 
 LON_0 = -153.0918  # [deg] Longitude of grid center
 LAT_0 = 60.0319    # [deg] Latitude of grid center
@@ -25,7 +25,7 @@ grid = define_grid(lon_0=LON_0, lat_0=LAT_0, x_radius=X_RADIUS,
 
 import json
 from obspy import UTCDateTime
-from waveform_utils import gather_waveforms_bulk, process_waveforms
+from rtm import gather_waveforms_bulk, process_waveforms
 
 # Start and end of time window containing (suspected) events
 STARTTIME = UTCDateTime('2019-06-20T23:55')
@@ -56,7 +56,7 @@ st_proc = process_waveforms(st, freqmin=FREQ_MIN, freqmax=FREQ_MAX,
 
 #%% (3) Perform grid search
 
-from grid_utils import grid_search
+from rtm import grid_search
 
 STACK_METHOD = 'sum'  # Choose either 'sum' or 'product'
 
@@ -71,7 +71,7 @@ S, shifted_streams = grid_search(processed_st=st_proc, grid=grid,
 
 import utm
 from obspy import UTCDateTime
-from plotting_utils import plot_time_slice, plot_record_section
+from rtm import plot_time_slice, plot_record_section
 
 fig = plot_time_slice(S, st_proc, time_slice=None, celerity_slice=None,
                       label_stations=False, hires=False)
@@ -96,7 +96,7 @@ fig = plot_record_section(st_proc, UTCDateTime(str(max_time)), max_loc,
 
 #%% DEM sandbox
 
-from grid_utils import define_grid
+from rtm import define_grid
 from osgeo import gdal, osr
 import matplotlib.pyplot as plt
 import numpy as np

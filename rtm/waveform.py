@@ -1,4 +1,3 @@
-import json
 from obspy.clients.fdsn import Client as FDSN_Client
 from obspy.clients.earthworm import Client as EW_Client
 from obspy.clients.fdsn.header import FDSNNoDataException
@@ -10,23 +9,11 @@ from scipy.signal import hilbert, windows, convolve
 from scipy.fftpack import next_fast_len
 from collections import OrderedDict
 from xarray import DataArray
-from grid_utils import calculate_time_buffer
 import fnmatch
 import warnings
-from warning_config import RTMWarning
+from .grid import calculate_time_buffer
+from . import AVO_INFRA_COORDS, AVO_INFRA_CALIBS, RTMWarning
 
-
-plt.ioff()  # Don't show the figure unless fig.show() is explicitly called
-
-# Load AVO infrasound station calibration values (units are Pa/ct)
-AVO_INFRA_CALIB_FILE = 'avo_infra_calib_vals.json'
-with open(AVO_INFRA_CALIB_FILE) as f:
-    avo_calib_values = json.load(f)
-
-# Load AVO infrasound station coordinates (elevation units are meters)
-AVO_INFRA_COORD_FILE = 'avo_infra_coords.json'
-with open(AVO_INFRA_COORD_FILE) as f:
-    avo_coords = json.load(f)
 
 # Define IRIS and AVO clients (define WATC client within function)
 iris_client = FDSN_Client('IRIS')
@@ -35,6 +22,7 @@ avo_client = EW_Client('pubavo1.wr.usgs.gov', port=16023)  # 16023 is long-term
 # Channels to use in data requests - covering all the bases here!
 CHANNELS = 'BDF,BDG,BDH,BDI,BDJ,BDK,HDF,DDF'
 
+# Define some conversion factors
 KM2M = 1000     # [m/km]
 SEC2MIN = 1/60  # [min/s]
 
@@ -234,7 +222,7 @@ def gather_waveforms(source, network, station, starttime, endtime, buffer=0,
         except AttributeError:
             try:
                 tr.stats.latitude, tr.stats.longitude,\
-                    tr.stats.elevation = avo_coords[tr.stats.station]
+                    tr.stats.elevation = AVO_INFRA_COORDS[tr.stats.station]
                 warnings.warn(f'Using coordinates from JSON file for {tr.id}.',
                               RTMWarning)
             except KeyError:
@@ -254,7 +242,7 @@ def gather_waveforms(source, network, station, starttime, endtime, buffer=0,
                 tr.remove_sensitivity()
             except ValueError:
                 try:
-                    calib = avo_calib_values[tr.stats.station]
+                    calib = AVO_INFRA_CALIBS[tr.stats.station]
                     tr.data = tr.data * calib
                     tr.stats.processing.append('RTM: Data multiplied by '
                                                f'calibration value of {calib} '
@@ -368,7 +356,7 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
                             max_station_dist = dist
 
     # Loop through each entry in AVO infrasound station coordinates JSON file
-    for sta, coord in avo_coords.items():
+    for sta, coord in AVO_INFRA_COORDS.items():
         dist, _, _ = gps2dist_azimuth(lat_0, lon_0, *coord[0:2])  # [m]
         if dist <= max_radius * KM2M:
             requested_station_list.append(sta)
@@ -574,7 +562,6 @@ def process_waveforms(st, freqmin, freqmax, envelope=False,
             fig = plt.figure(figsize=(8, 8))
             st.plot(fig=fig, equal_scale=False)
             fig.axes[0].set_title(title)
-            fig.canvas.draw()
             fig.tight_layout()
             fig.show()
         print('Done')
