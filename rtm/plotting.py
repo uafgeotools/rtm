@@ -6,8 +6,7 @@ from cartopy.io.img_tiles import Stamen
 from obspy import UTCDateTime
 from obspy.geodetics import gps2dist_azimuth
 import numpy as np
-import warnings
-from . import RTMWarning
+from .stack import get_max_coordinates
 
 
 def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None,
@@ -38,18 +37,7 @@ def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None,
     """
 
     # Get coordinates of stack maximum
-    stack_maximum = S.where(S == S.max(), drop=True)
-    if stack_maximum.shape[0] is not 1:
-        warnings.warn('Multiple maxima present in S along the time dimension. '
-                      'Using first occurrence.', RTMWarning)
-    if stack_maximum.shape[1] is not 1:
-        warnings.warn('Multiple maxima present in S along the celerity '
-                      'dimension. Using first occurrence.', RTMWarning)
-    max_coords = stack_maximum[0, 0, 0, 0].coords
-    time_max = max_coords['time'].values
-    celerity_max = max_coords['celerity'].values
-    x_max = max_coords['x'].values
-    y_max = max_coords['y'].values
+    time_max, celerity_max, y_max, x_max = get_max_coordinates(S)
 
     # Gather coordinates of grid center
     lon_0, lat_0 = S.attrs['grid_center']
@@ -74,10 +62,11 @@ def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None,
 
     _plot_geographic_context(ax=ax, utm=S.attrs['UTM'], hires=hires)
 
+    # In either case, we convert from UTCDateTime to np.datetime64
     if time_slice:
         time_to_plot = np.datetime64(time_slice)
     else:
-        time_to_plot = time_max
+        time_to_plot = np.datetime64(time_max)
 
     if celerity_slice:
         if celerity_slice not in S['celerity'].values:
@@ -121,7 +110,7 @@ def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None,
 
     ax.legend(h, [handle.get_label() for handle in h], loc='best')
 
-    title = f'Time: {UTCDateTime(str(slice.time.values)).datetime}' \
+    title = f'Time: {UTCDateTime(slice.time.values.astype(str)).datetime}' \
             f'\nCelerity: {slice.celerity.values:g} m/s'
 
     # Label global maximum if applicable

@@ -69,30 +69,16 @@ S, shifted_streams = grid_search(processed_st=st_proc, grid=grid,
 
 #%% (4) Plot
 
-import utm
-from obspy import UTCDateTime
-from rtm import plot_time_slice, plot_record_section
+from rtm import plot_time_slice, plot_record_section, get_max_coordinates
 
 fig = plot_time_slice(S, st_proc, time_slice=None, celerity_slice=None,
                       label_stations=False, hires=False)
 
-max_coords = S.where(S == S.max(), drop=True)[0, 0, 0, 0].coords
+time_max, celerity_max, y_max, x_max = get_max_coordinates(S, unproject=True)
 
-max_x = max_coords['x'].values
-max_y = max_coords['y'].values
-max_time = max_coords['time'].values
-max_celerity = max_coords['celerity'].values
-
-# Projected case
-if S.attrs['UTM']:
-    max_loc = utm.to_latlon(max_x, max_y, zone_number=S.attrs['UTM']['zone'],
-                            northern=not S.attrs['UTM']['southern_hemisphere'])
-# Unprojected case
-else:
-    max_loc = max_y, max_x
-
-fig = plot_record_section(st_proc, UTCDateTime(str(max_time)), max_loc,
-                          plot_celerity=[max_celerity], label_waveforms=False)
+fig = plot_record_section(st_proc, origin_time=time_max,
+                          source_location=(y_max, x_max),
+                          plot_celerity=[celerity_max], label_waveforms=False)
 
 #%% DEM sandbox
 
