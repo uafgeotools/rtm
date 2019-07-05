@@ -45,7 +45,7 @@ with open('watc_credentials.json') as f:
     watc_username, watc_password = json.load(f)
 
 st = gather_waveforms_bulk(LON_0, LAT_0, MAX_RADIUS, STARTTIME, ENDTIME,
-                           buffer=grid, remove_response=True,
+                           time_buffer=grid, remove_response=True,
                            watc_username=watc_username,
                            watc_password=watc_password)
 

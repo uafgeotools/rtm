@@ -259,8 +259,8 @@ def calculate_time_buffer(grid, max_station_dist):
         max_station_dist: [m] The longest distance from the grid center to a
                           station
     Returns:
-        buffer: [s] Maximum travel time expected for a source anywhere in the
-                grid to the station farthest from the grid center
+        time_buffer: [s] Maximum travel time expected for a source anywhere in
+                     the grid to the station farthest from the grid center
     """
 
     # If projected grid, just calculate Euclidean distance for diagonal
@@ -285,9 +285,9 @@ def calculate_time_buffer(grid, max_station_dist):
     max_propagation_dist = max_station_dist + grid_diagonal
 
     # Calculate maximum travel time
-    buffer = max_propagation_dist / MIN_CELERITY  # [s]
+    time_buffer = max_propagation_dist / MIN_CELERITY  # [s]
 
-    return buffer
+    return time_buffer
 
 
 def _project_station_to_utm(tr, grid):
