@@ -1,4 +1,5 @@
 from obspy import UTCDateTime
+import numpy as np
 import utm
 import warnings
 from . import RTMWarning
@@ -26,13 +27,18 @@ def get_max_coordinates(S, unproject=False):
 
     # Warn if we have multiple maxima along any dimension
     for dim in stack_maximum.coords:
-        num_maxima = stack_maximum[dim].size
-        if num_maxima != 1:
-            warnings.warn(f'Multiple maxima ({num_maxima}) present in S along '
-                          f'the {dim} dimension. Using first occurrence.',
-                          RTMWarning)
+        num_dim_maxima = stack_maximum[dim].size
+        if num_dim_maxima != 1:
+            warnings.warn(f'Multiple maxima ({num_dim_maxima}) present in S '
+                          f'along the {dim} dimension', RTMWarning)
 
-    max_coords = stack_maximum[0, 0, 0, 0].coords  # Using first occurrence
+    max_indices = np.argwhere(~np.isnan(stack_maximum.data))
+    num_global_maxima = max_indices.shape[0]
+    if num_global_maxima != 1:
+        warnings.warn(f'Multiple global maxima ({num_global_maxima}) present '
+                      'in S. Using first occurrence.', RTMWarning)
+    # Using first occurrence with [0] index below
+    max_coords = stack_maximum[tuple(max_indices[0])].coords
 
     time_max = UTCDateTime(max_coords['time'].values.astype(str))
     celerity_max = max_coords['celerity'].values.tolist()
