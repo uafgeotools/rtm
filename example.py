@@ -5,17 +5,17 @@ from rtm import define_grid
 LON_0 = -153.0918  # [deg] Longitude of grid center
 LAT_0 = 60.0319    # [deg] Latitude of grid center
 
-PROJECTED = False
+PROJECTED = True
 
 if PROJECTED:
     X_RADIUS = 250  # [m] E-W grid radius (half of grid "width")
     Y_RADIUS = 250  # [m] N-S grid radius (half of grid "height")
-    SPACING = 5     # [m] Grid spacing
+    SPACING = 50    # [m] Grid spacing
 
 else:
     X_RADIUS = 2   # [deg] E-W grid radius (half of grid "width")
     Y_RADIUS = 2   # [deg] N-S grid radius (half of grid "height")
-    SPACING = 0.1  # [deg] Grid spacing
+    SPACING = 0.5  # [deg] Grid spacing
 
 grid = define_grid(lon_0=LON_0, lat_0=LAT_0, x_radius=X_RADIUS,
                    y_radius=Y_RADIUS, spacing=SPACING, projected=PROJECTED,
@@ -31,7 +31,7 @@ from rtm import gather_waveforms_bulk, process_waveforms
 STARTTIME = UTCDateTime('2019-06-20T23:55')
 ENDTIME = STARTTIME + 60*20
 
-MAX_RADIUS = 650        # [km] Radius within which to search for stations
+MAX_RADIUS = 250        # [km] Radius within which to search for stations
 
 FREQ_MIN = 0.5          # [Hz] Lower bandpass corner
 FREQ_MAX = 2            # [Hz] Upper bandpass corner
@@ -46,8 +46,8 @@ with open('watc_credentials.json') as f:
 
 st = gather_waveforms_bulk(LON_0, LAT_0, MAX_RADIUS, STARTTIME, ENDTIME,
                            time_buffer=grid, remove_response=True,
-                           watc_username=watc_username,
-                           watc_password=watc_password)
+                           watc_username=None,
+                           watc_password=None)
 
 st_proc = process_waveforms(st, freqmin=FREQ_MIN, freqmax=FREQ_MAX,
                             envelope=True, smooth_win=SMOOTH_WIN,
@@ -60,7 +60,7 @@ from rtm import grid_search
 
 STACK_METHOD = 'sum'  # Choose either 'sum' or 'product'
 
-CELERITY_LIST = [295, 300, 395]  # [m/s]
+CELERITY_LIST = [295, 300, 305]  # [m/s]
 
 S, shifted_streams = grid_search(processed_st=st_proc, grid=grid,
                                  celerity_list=CELERITY_LIST,
@@ -74,7 +74,7 @@ from rtm import plot_time_slice, plot_record_section, get_max_coordinates
 fig = plot_time_slice(S, st_proc, time_slice=None, celerity_slice=None,
                       label_stations=False, hires=False)
 
-time_max, celerity_max, y_max, x_max = get_max_coordinates(S, unproject=True)
+time_max, celerity_max, y_max, x_max = get_max_coordinates(S, unproject=S.attrs['UTM'])
 
 fig = plot_record_section(st_proc, origin_time=time_max,
                           source_location=(y_max, x_max),
