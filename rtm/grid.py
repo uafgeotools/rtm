@@ -188,6 +188,7 @@ def grid_search(processed_st, grid, celerity_list, starttime=None,
     if grid.attrs['UTM']:
         for tr in processed_st:
             tr.stats.utm_x, tr.stats.utm_y = _project_station_to_utm(tr, grid)
+            tr.stats.utm_zone = grid.attrs['UTM']['zone']
 
     # Pre-allocate NumPy array to store Streams for each grid point
     shifted_streams = np.empty(shape=S.shape[1:], dtype=object)
