@@ -36,8 +36,8 @@ def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None,
         fig: Output figure
     """
 
-    # Get coordinates of stack maximum
-    time_max, celerity_max, y_max, x_max = get_max_coordinates(S)
+    # Get coordinates of stack maximum in (latitude, longitude)
+    time_max, celerity_max, y_max, x_max = get_max_coordinates(S, unproject=S.attrs['UTM'])
 
     # Gather coordinates of grid center
     lon_0, lat_0 = S.attrs['grid_center']
@@ -45,8 +45,6 @@ def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None,
     if S.attrs['UTM']:
         proj = ccrs.UTM(**S.attrs['UTM'])
         transform = proj
-        # For UTM, label as (x, y)
-        max_label = '({:.1f} m E, {:.1f} m N)'.format(x_max, y_max)
     else:
         # This is a good projection to use since it preserves area
         proj = ccrs.AlbersEqualArea(central_longitude=lon_0,
@@ -54,8 +52,6 @@ def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None,
                                     standard_parallels=(S['y'].values.min(),
                                                         S['y'].values.max()))
         transform = ccrs.PlateCarree()
-        # For lat/lon, label as (lat, lon)
-        max_label = '({:.4f}, {:.4f})'.format(y_max, x_max)
 
     fig, ax = plt.subplots(figsize=(10, 10),
                            subplot_kw=dict(projection=proj))
@@ -93,8 +89,9 @@ def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None,
 
     # Plot stack maximum
     h[1] = ax.scatter(x_max, y_max, s=100, color='red', marker='*',
-                      edgecolor='black', label='Stack maximum\n' + max_label,
-                      transform=transform)
+                      edgecolor='black',
+                      label=f'Stack maximum\n({y_max:.4f}, {x_max:.4f})',
+                      transform=ccrs.Geodetic())
 
     # Plot stations
     for tr in processed_st:
