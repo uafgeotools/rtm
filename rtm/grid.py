@@ -138,7 +138,8 @@ def grid_search(processed_st, grid, celerity_list, starttime=None,
     """
     Perform a grid search over x, y, and celerity (c) and return a 4-D object
     with dimensions x, y, t, and c. Also return time-shifted Streams for each
-    (x, y, c) point.
+    (x, y, c) point. If a UTM grid is used, then the UTM (x, y) coordinates for
+    each station (tr.stats.utm_x, tr.stats.utm_y) are added to processed_st.
 
     Args:
         processed_st: Pre-processed Stream <-- output of process_waveforms()
@@ -183,6 +184,11 @@ def grid_search(processed_st, grid, celerity_list, starttime=None,
     S = grid.expand_dims(dict(celerity=np.float64(celerity_list))).copy()
     S = S.expand_dims(dict(time=times.astype('datetime64[ns]'))).copy()
 
+    # Project stations in processed_st to UTM if necessary
+    if grid.attrs['UTM']:
+        for tr in processed_st:
+            tr.stats.utm_x, tr.stats.utm_y = _project_station_to_utm(tr, grid)
+
     # Pre-allocate NumPy array to store Streams for each grid point
     shifted_streams = np.empty(shape=S.shape[1:], dtype=object)
 
@@ -200,12 +206,10 @@ def grid_search(processed_st, grid, celerity_list, starttime=None,
                 for tr in st:
 
                     if grid.attrs['UTM']:
-                        station_utm = _project_station_to_utm(tr, grid)
-
                         # Distance is in meters
-                        distance = np.linalg.norm(np.array(station_utm) -
+                        distance = np.linalg.norm(np.array([tr.stats.utm_x,
+                                                            tr.stats.utm_y]) -
                                                   np.array([x_coord, y_coord]))
-
                     else:
                         # Distance is in meters
                         distance, _, _ = gps2dist_azimuth(y_coord, x_coord,
