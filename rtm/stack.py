@@ -32,11 +32,17 @@ def get_max_coordinates(S, unproject=False):
             warnings.warn(f'Multiple maxima ({num_dim_maxima}) present in S '
                           f'along the {dim} dimension', RTMWarning)
 
+    # Since the where() function above returns a subset of the original S whose
+    # non-maximum values are set to nan, we must ignore these values when
+    # finding the coordinates of a maximum
     max_indices = np.argwhere(~np.isnan(stack_maximum.data))
+
+    # Warn if we have multiple global maxima
     num_global_maxima = max_indices.shape[0]
     if num_global_maxima != 1:
         warnings.warn(f'Multiple global maxima ({num_global_maxima}) present '
                       'in S. Using first occurrence.', RTMWarning)
+
     # Using first occurrence with [0] index below
     max_coords = stack_maximum[tuple(max_indices[0])].coords
 
