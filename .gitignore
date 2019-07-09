@@ -1,2 +1,8 @@
+# Ignore JSON file containing WATC VPN username and password
 watc_credentials.json
+
+# Ignore PyCharm project settings folder
 .idea/
+
+# Ignore all GeoTIFF files
+*.tif
