@@ -122,7 +122,11 @@ def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
                                  edgecolor='black', add_colorbar=False)
 
         # Plot the center of the grid
-        ax.scatter(lon_0, lat_0, color='red', transform=ccrs.Geodetic())
+        ax.scatter(lon_0, lat_0, s=50, color='limegreen', edgecolor='black',
+                   label='Grid center', transform=ccrs.Geodetic())
+
+        # Add a legend
+        ax.legend(loc='best')
 
         fig.canvas.draw()  # Needed to make fig.tight_layout() work
         fig.tight_layout()
