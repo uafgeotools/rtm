@@ -82,64 +82,11 @@ fig = plot_record_section(st_proc, origin_time=time_max,
 
 #%% DEM sandbox
 
-from rtm import define_grid
-from osgeo import gdal, osr
-import matplotlib.pyplot as plt
-import numpy as np
-import cartopy.crs as ccrs
-from cartopy.io.srtm import add_shading
+from rtm import define_grid, produce_dem
 
-gdal.UseExceptions()
+EXTERNAL_FILE = 'DEM_Union_UAV_161116_sm101.tif'
 
-SPACING = 30
+grid = define_grid(lon_0=169.447, lat_0=-19.532, x_radius=5000, y_radius=5000,
+                   spacing=5, projected=True)
 
-# Yasur
-grid = define_grid(lon_0=169.447, lat_0=-19.532, x_radius=5000,
-                   y_radius=5000, spacing=SPACING, projected=True,
-                   plot_preview=False)
-
-input_raster = 'DEM_Union_UAV_161116_sm101.tif'
-output_raster = 'out.tif'
-
-dest_srs = osr.SpatialReference()
-proj_string = '+proj=utm +zone={} +datum=WGS84'.format(grid.attrs['UTM']['zone'])
-if grid.attrs['UTM']['southern_hemisphere']:
-    proj_string += ' +south'
-dest_srs.ImportFromProj4(proj_string)
-
-NODATA = -9999
-
-ds = gdal.Warp(output_raster, input_raster, dstSRS=dest_srs, dstNodata=NODATA,
-               outputBounds=(grid.x.min() - SPACING/2,
-                             grid.y.min() - SPACING/2,
-                             grid.x.max() + SPACING/2,
-                             grid.y.max() + SPACING/2),
-               xRes=SPACING, yRes=SPACING, resampleAlg='lanczos'
-               )
-
-dem = np.flipud(ds.GetRasterBand(1).ReadAsArray())
-
-dem[dem == NODATA] = np.nan
-
-ds = None
-
-proj = ccrs.UTM(**grid.attrs['UTM'])
-
-fig, ax = plt.subplots(figsize=(10, 10),
-                       subplot_kw=dict(projection=proj))
-
-shaded_dem = add_shading(dem, azimuth=135, altitude=45)
-
-grid_shaded = grid.copy()
-grid_shaded.data = shaded_dem
-grid_shaded.plot.imshow(ax=ax, cmap='Greys_r', add_colorbar=False,
-                        transform=proj)
-
-# Plot the center of the grid
-ax.scatter(*grid.attrs['grid_center'], color='red', transform=ccrs.Geodetic())
-
-ax.set_title(f'{SPACING} m grid spacing')
-
-fig.canvas.draw()
-fig.tight_layout()
-fig.show()
+dem = produce_dem(grid, external_file=EXTERNAL_FILE)

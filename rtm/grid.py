@@ -2,15 +2,36 @@ import numpy as np
 import matplotlib.pyplot as plt
 import xarray as xr
 import cartopy.crs as ccrs
+from cartopy.io.srtm import add_shading
+from osgeo import gdal, osr
 from obspy.geodetics import gps2dist_azimuth
 import utm
 import time
+import os
+import subprocess
 import warnings
 from .plotting import _plot_geographic_context
 from . import RTMWarning
 
 
+gdal.UseExceptions()  # Allows for more Pythonic errors from GDAL
+
 MIN_CELERITY = 220  # [m/s] Used for travel time buffer calculation
+
+OUTPUT_DIR = 'rtm_dem'  # Name of directory to place rtm_dem_*.tif files into
+                        # (created in same dir as where function is called)
+
+TMP_TIFF = 'rtm_dem_tmp.tif'  # Filename to use for temporary I/O
+
+# Values in brackets below are latitude, longitude, x_radius, y_radius, spacing
+TEMPLATE = 'rtm_dem_{:.4f}_{:.4f}_{}x_{}y_{}m.tif'
+
+NODATA = -9999  # Nodata value to use for output rasters
+
+RESAMPLE_ALG = 'cubicspline'  # Algorithm to use for resampling
+                              # See https://gdal.org/programs/gdalwarp.html#cmdoption-gdalwarp-r
+                              # Good options are 'bilinear', 'cubic',
+                              # 'cubicspline', and 'lanczos'
 
 
 def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
@@ -135,6 +156,192 @@ def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
         print('Done')
 
     return grid_out
+
+
+def produce_dem(grid, external_file=None, plot_output=True):
+    """
+    Produce a digital elevation model (DEM) with the same extent, spacing, and
+    UTM projection as an input projected RTM grid. The data source can be
+    either a user-supplied file or global SRTM 1 arc-second (~30 m) data taken
+    from the GMT server. Both a GeoTIFF file and a NumPy array are created.
+    Optionally plot the output DEM. Output GeoTIFF files are placed in
+    ./rtm_dem (relative to where this function is called).
+
+    NOTE 1:
+        The filename convention for output files is
+
+            rtm_dem_<lat_0>_<lon_0>_<x_radius>x_<y_radius>y_<spacing>m.tif
+
+        See the docstring for define_grid() for details/units.
+
+    NOTE 2:
+        GMT caches downloaded SRTM tiles in the directory ~/.gmt/server/srtm1.
+        If you're concerned about space, you can delete this directory. It will
+        be created again the next time an SRTM tile is requested.
+
+    Args:
+        grid: Projected x, y grid <-- output of define_grid(projected=True)
+        external_file: Filename of external DEM file to use. If None, then SRTM
+                       data is used (default: None)
+        plot_output: Toggle plotting a hillshade of the output DEM - useful for
+                     identifying voids or artifacts (default: True)
+    Returns:
+        dem: 2-D NumPy array of elevation values with identical shape to input
+             grid.
+    """
+
+    print('--------------')
+    print('PROCESSING DEM')
+    print('--------------')
+
+    # If an external DEM file was not supplied, use SRTM data
+    if not external_file:
+
+        print('No external DEM file provided. Using 1 arc-second SRTM data '
+              'from GMT server.')
+
+        # Find corners going clockwise from SW (in UTM coordinates)
+        corners_utm = [(grid.x.values.min(), grid.y.values.min()),
+                       (grid.x.values.min(), grid.y.values.max()),
+                       (grid.x.values.max(), grid.y.values.max()),
+                       (grid.x.values.max(), grid.y.values.min())]
+
+        # Convert to lat/lon
+        lats = []
+        lons = []
+        for corner in corners_utm:
+            lat, lon = utm.to_latlon(*corner,
+                                     zone_number=grid.attrs['UTM']['zone'],
+                                     northern=not grid.attrs['UTM']['southern_hemisphere'])
+            lats.append(lat)
+            lons.append(lon)
+
+        # [deg] (lonmin, lonmax, latmin, latmax)
+        # np.floor and np.ceil here ensure we download more data than we need
+        region = [np.floor(min(lons)),
+                  np.ceil(max(lons)),
+                  np.floor(min(lats)),
+                  np.ceil(max(lats))]
+
+        # This command requires GMT 6
+        args = ['gmt', 'grdcut', '@srtm_relief_01s', '-V',
+                '-R{}/{}/{}/{}'.format(*region),
+                '-G{}=gd:GTiff'.format(TMP_TIFF)]
+        subprocess.run(args)
+
+        # Remove extra nodata metadata file
+        os.remove(TMP_TIFF + '.aux.xml')
+
+        # Remove gmt.history if one was created (depends on global GMT setting)
+        try:
+            os.remove('gmt.history')
+        except OSError:
+            pass
+
+        input_raster = TMP_TIFF
+
+    # If an external DEM file was supplied, use it
+    else:
+
+        print(f'Using external DEM file:\n\t{os.path.abspath(external_file)}')
+
+        input_raster = external_file
+
+    # Define target spatial reference system using grid metadata
+    dest_srs = osr.SpatialReference()
+    proj_string = '+proj=utm +zone={} +datum=WGS84'.format(grid.attrs['UTM']['zone'])
+    if grid.attrs['UTM']['southern_hemisphere']:
+        proj_string += ' +south'
+    dest_srs.ImportFromProj4(proj_string)
+
+    # Create output raster filename/path
+    if not os.path.exists(OUTPUT_DIR):
+        os.makedirs(OUTPUT_DIR)
+    output_file = TEMPLATE.format(*grid.attrs['grid_center'][::-1],
+                                  grid.attrs['x_radius'],
+                                  grid.attrs['y_radius'],
+                                  grid.attrs['spacing'])
+    output_raster = os.path.join(OUTPUT_DIR, output_file)
+
+    # Resample input raster, whether it be from an external file or SRTM
+    ds = gdal.Warp(output_raster, input_raster, dstSRS=dest_srs,
+                   dstNodata=NODATA,
+                   outputBounds=(grid.x.min() - grid.attrs['spacing']/2,
+                                 grid.y.min() - grid.attrs['spacing']/2,
+                                 grid.x.max() + grid.attrs['spacing']/2,
+                                 grid.y.max() + grid.attrs['spacing']/2),
+                   xRes=grid.attrs['spacing'], yRes=grid.attrs['spacing'],
+                   resampleAlg=RESAMPLE_ALG, copyMetadata=False,
+                   )
+
+    # Read resampled DEM into numpy array, set nodata values to np.nan
+    dem = np.flipud(ds.GetRasterBand(1).ReadAsArray())
+    dem[dem == NODATA] = np.nan
+
+    ds = None  # Removes dataset from memory
+
+    # Remove temporary tiff file if it was created
+    try:
+        os.remove(TMP_TIFF)
+    except OSError:
+        pass
+
+    # Warn user about possible units ambiguity - we can't check this directly!
+    warnings.warn('Elevation units are assumed to be in meters!', RTMWarning)
+
+    print(f'Created output DEM file:\n\t{os.path.abspath(output_raster)}')
+
+    print('Done')
+
+    if plot_output:
+
+        print('Generating DEM hillshade plot...')
+
+        proj = ccrs.UTM(**grid.attrs['UTM'])
+
+        fig, ax = plt.subplots(figsize=(10, 10),
+                               subplot_kw=dict(projection=proj))
+
+        # Create hillshade
+        shaded_dem = add_shading(dem, azimuth=135, altitude=45)
+
+        # Plot hillshade
+        grid_shaded = grid.copy()
+        grid_shaded.data = shaded_dem
+        grid_shaded.plot.imshow(ax=ax, cmap='Greys_r', add_colorbar=False,
+                                transform=proj)
+
+        # Add translucent DEM
+        grid_dem = grid.copy()
+        grid_dem.data = dem
+        im = grid_dem.plot.imshow(ax=ax, cmap='magma', alpha=0.5, vmin=0,
+                                  add_colorbar=False, transform=proj)
+        cbar = fig.colorbar(im, label='Elevation (m)')
+        cbar.solids.set_alpha(1)
+
+        # Plot the center of the grid
+        ax.scatter(*grid.attrs['grid_center'], s=50, color='limegreen',
+                   edgecolor='black', label='Grid center',
+                   transform=ccrs.Geodetic())
+
+        # Add a legend
+        ax.legend(loc='best')
+
+        if external_file:
+            source_label = os.path.abspath(external_file)
+        else:
+            source_label = '1 arc-second SRTM data'
+
+        ax.set_title('{}\nResampled to {} m spacing'.format(source_label,
+                                                            grid.attrs['spacing']))
+
+        fig.canvas.draw()
+        fig.tight_layout()
+        fig.show()
+
+        print('Done')
+
+    return dem
 
 
 def grid_search(processed_st, grid, celerity_list, starttime=None,
