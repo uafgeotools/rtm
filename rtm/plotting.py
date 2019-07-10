@@ -74,10 +74,18 @@ def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None,
     slice = S.sel(time=time_to_plot, celerity=celerity_to_plot,
                   method='nearest')
 
-    qm = slice.plot.pcolormesh(ax=ax, alpha=0.5, cmap='inferno',
-                               add_colorbar=False, transform=transform)
+    slice_plot_kwargs = dict(ax=ax, alpha=0.5, cmap='inferno',
+                             add_colorbar=False, transform=transform)
 
-    cbar = fig.colorbar(qm, label='Stack amplitude', aspect=30)
+    if S.attrs['UTM']:
+        # imshow works well here (no gridlines in translucent plot)
+        sm = slice.plot.imshow(**slice_plot_kwargs)
+    else:
+        # imshow performs poorly for Albers equal-area projection - use
+        # pcolormesh instead (gridlines will show in translucent plot)
+        sm = slice.plot.pcolormesh(**slice_plot_kwargs)
+
+    cbar = fig.colorbar(sm, label='Stack amplitude', aspect=30)
     cbar.solids.set_alpha(1)
 
     # Initialize list of handles for legend
@@ -243,7 +251,7 @@ def _plot_geographic_context(ax, utm, hires=False):
             zoom_level = 12
         else:
             zoom_level = 8
-        ax.add_image(Stamen(style='terrain-background'), zoom_level)
+        ax.add_image(Stamen(style='terrain-background'), zoom_level, zorder=-1)
 
     # Since unprojected grids have regional/global extent, just show the
     # coastlines
