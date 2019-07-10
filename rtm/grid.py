@@ -392,8 +392,8 @@ def grid_search(processed_st, grid, celerity_list, starttime=None,
     times = timing_st[0].times(type='utcdatetime')
 
     # Expand grid dimensions in celerity and time
-    S = grid.expand_dims(dict(celerity=np.float64(celerity_list))).copy()
-    S = S.expand_dims(dict(time=times.astype('datetime64[ns]'))).copy()
+    S = grid.expand_dims(celerity=np.float64(celerity_list)).copy()
+    S = S.expand_dims(time=times.astype('datetime64[ns]')).copy()
 
     # Project stations in processed_st to UTM if necessary
     if grid.attrs['UTM']:
