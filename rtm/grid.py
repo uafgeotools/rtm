@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import xarray as xr
+from xarray import DataArray
 import cartopy.crs as ccrs
 from cartopy.io.srtm import add_shading
 from osgeo import gdal, osr
@@ -115,7 +115,7 @@ def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
         attrs['UTM'] = dict(zone=zone_number, southern_hemisphere=lat_0 < 0)
     else:
         attrs['UTM'] = None
-    grid_out = xr.DataArray(data, coords=[('y', y), ('x', x)], attrs=attrs)
+    grid_out = DataArray(data, coords=[('y', y), ('x', x)], attrs=attrs)
 
     print('Done')
 
@@ -308,8 +308,8 @@ def produce_dem(grid, external_file=None, plot_output=True):
         # Plot hillshade
         grid_shaded = grid.copy()
         grid_shaded.data = shaded_dem
-        grid_shaded.plot.imshow(ax=ax, cmap='Greys_r', add_colorbar=False,
-                                transform=proj)
+        grid_shaded.plot.imshow(ax=ax, cmap='Greys_r', center=False,
+                                add_colorbar=False, transform=proj)
 
         # Add translucent DEM
         grid_dem = grid.copy()
