@@ -19,7 +19,7 @@ you're using [conda](https://docs.conda.io/projects/conda/en/latest/index.html)!
 It's recommended that you create a new conda environment to use with this
 repository:
 ```
-conda create -n rtm -c conda-forge -c conda-forge/label/dev cartopy fiona gmt=6 obspy utm xarray
+conda create -n rtm -c conda-forge -c conda-forge/label/cf201901 cartopy fiona gmt=6 obspy utm xarray
 ```
 
 Usage
