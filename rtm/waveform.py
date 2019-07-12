@@ -447,7 +447,7 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
 
     print('--------------')
     print('Finishing gathering waveforms from station list. Check warnings '
-          'above for any missed stations.')
+          'for any missed stations.')
 
     return st_out
 

@@ -30,7 +30,7 @@ def get_max_coordinates(S, unproject=False):
         num_dim_maxima = stack_maximum[dim].size
         if num_dim_maxima != 1:
             warnings.warn(f'Multiple maxima ({num_dim_maxima}) present in S '
-                          f'along the {dim} dimension', RTMWarning)
+                          f'along the {dim} dimension.', RTMWarning)
 
     # Since the where() function above returns a subset of the original S whose
     # non-maximum values are set to nan, we must ignore these values when
