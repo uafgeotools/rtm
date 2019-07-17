@@ -6,7 +6,7 @@ import json
 #import fnmatch
     
 
-def mseed_local(datadir,network,station,starttime,endtime,time_buffer=0,return_failed_stations=False):
+def mseed_local(datadir,network,station,starttime,endtime,time_buffer=0,remove_response=False,return_failed_stations=False):
     """
     Read in waveforms from "local" 1 hr, IRIS-compliant miniseed files, and
     output a Stream object with station/element coordinates attached.
@@ -28,6 +28,9 @@ def mseed_local(datadir,network,station,starttime,endtime,time_buffer=0,return_f
         endtime: End time for data request (UTCDateTime)
         time_buffer: [s] Extra amount of data to download after endtime
                      (default: 0) (not implemented yet)
+        remove_response: conversion to Pa by applying calib. Full response/sensitivity
+                    removal not currently implelmented and calib typically
+                    applied already in local miniseed files (default: False)                     
         return_failed_stations (in prog): If True, returns a list of station codes that
                                 were requested but not downloaded. This
                                 disables the standard failed station warning
@@ -126,5 +129,15 @@ def mseed_local(datadir,network,station,starttime,endtime,time_buffer=0,return_f
         except KeyError:
             print(f'No coordinates available for {tr.id}. Stopping.')
             raise
+
+    # Remove sensitivity...typcially already done in local miniseed file (for now!)
+    if remove_response:
+
+        print('Removing sensitivity via calib value...')
+        for tr in st_out:
+            # Just applyin calib for now until we get full response info in! 
+            #tr.remove_sensitivity()
+            tr.data=tr.data*tr.stats.calib
+
 
     return st_out
