@@ -404,6 +404,22 @@ def grid_search(processed_st, grid, celerity_list, starttime=None,
     # Pre-allocate NumPy array to store Streams for each grid point
     shifted_streams = np.empty(shape=S.shape[1:], dtype=object)
 
+    #set up matrix with distance values for each station-grid point
+    nx,ny=grid.shape
+    distmat=np.empty((len(processed_st),ny,nx))
+    for i,tr in enumerate(processed_st):
+        for ii in range(ny):
+            for jj in range(nx):
+
+                 if grid.attrs['UTM']:
+                     distmat[i,ii,jj]=np.linalg.norm(np.array([tr.stats.utm_x,tr.stats.utm_y])
+                     -np.array([S['x'].values[jj], S['y'].values[ii]]))
+                 else:
+                     # Distance is in meters
+                     distmat[i,ii,jj], _, _ = gps2dist_azimuth(S['y'].values[ii], S['x'].values[jj],
+                                                     tr.stats.latitude,
+                                                     tr.stats.longitude)
+
     total_its = np.product(S.shape[1:])  # Don't count time dimension
     counter = 0
     tic = time.process_time()
@@ -415,20 +431,9 @@ def grid_search(processed_st, grid, celerity_list, starttime=None,
 
                 st = processed_st.copy()
 
-                for tr in st:
+                for l,tr in enumerate(st):
 
-                    if grid.attrs['UTM']:
-                        # Distance is in meters
-                        distance = np.linalg.norm(np.array([tr.stats.utm_x,
-                                                            tr.stats.utm_y]) -
-                                                  np.array([x_coord, y_coord]))
-                    else:
-                        # Distance is in meters
-                        distance, _, _ = gps2dist_azimuth(y_coord, x_coord,
-                                                          tr.stats.latitude,
-                                                          tr.stats.longitude)
-
-                    time_shift = distance / celerity  # [s]
+                    time_shift = distmat[l,j,k] / celerity  # [s]
                     tr.stats.starttime = tr.stats.starttime - time_shift
                     tr.stats.processing.append('RTM: Shifted by '
                                                f'-{time_shift:.2f} s')
