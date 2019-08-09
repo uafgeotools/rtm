@@ -344,7 +344,7 @@ def produce_dem(grid, external_file=None, plot_output=True):
     return dem
 
 
-def grid_search(processed_st, grid, celerity_list, starttime=None,
+def grid_search(processed_st, grid, celerity_list, elev, starttime=None,
                 endtime=None, stack_method='sum'):
     """
     Perform a grid search over x, y, and celerity (c) and return a 4-D object
@@ -356,6 +356,8 @@ def grid_search(processed_st, grid, celerity_list, starttime=None,
         processed_st: Pre-processed Stream <-- output of process_waveforms()
         grid: x, y grid to use <-- output of define_grid()
         celerity_list: List of celerities to use
+        elev :  grid of elevation values for 3-D euclidean distance time removal,
+                such as output from produce_dem(). Set to scalar, such as 0, for 2-D.
         starttime: Start time for grid search (UTCDateTime) (default: None,
                    which translates to processed_st[0].stats.starttime)
         endtime: End time for grid search (UTCDateTime) (default: None,
@@ -367,6 +369,7 @@ def grid_search(processed_st, grid, celerity_list, starttime=None,
 
             'product' Multiply the aligned waveforms sample-by-sample. Results
                       in a more spatially concentrated stack maximum.
+
     Returns:
         S: xarray.DataArray object containing the 4-D (t, c, y, x) stack
            function
@@ -405,15 +408,24 @@ def grid_search(processed_st, grid, celerity_list, starttime=None,
     shifted_streams = np.empty(shape=S.shape[1:], dtype=object)
 
     #set up matrix with distance values for each station-grid point
-    nx,ny=grid.shape
+    ny,nx=grid.shape
     distmat=np.empty((len(processed_st),ny,nx))
     for i,tr in enumerate(processed_st):
         for ii in range(ny):
             for jj in range(nx):
 
-                 if grid.attrs['UTM']:
+                 if grid.attrs['UTM']['zone'] and not np.isscalar(elev):
+                    #calculate 3-D euclidean distance for utm scenario using DEM values
+                    distmat[i,ii,jj]=np.sqrt((tr.stats.utm_x-S['x'].values[jj])**2
+                          +(tr.stats.utm_y-S['y'].values[ii])**2
+                          +(tr.stats.elevation-elev[ii,jj])**2)
+
+
+                 elif grid.attrs['UTM']['zone']:
+                     #calculdate 2-D euclidean distance for utm scenario
                      distmat[i,ii,jj]=np.linalg.norm(np.array([tr.stats.utm_x,tr.stats.utm_y])
-                     -np.array([S['x'].values[jj], S['y'].values[ii]]))
+                          -np.array([S['x'].values[jj], S['y'].values[ii]]))
+
                  else:
                      # Distance is in meters
                      distmat[i,ii,jj], _, _ = gps2dist_azimuth(S['y'].values[ii], S['x'].values[jj],
