@@ -145,8 +145,8 @@ def gather_waveforms(source, network, station, starttime, endtime,
                                                   'BDF', starttime,
                                                   endtime + time_buffer)
 
-                # Special case for CLES1 and CLES2 which also have HDF channels
-                if station in ['CLES1', 'CLES2']:
+                # Special case for single stations with HDF channel
+                if station in ['CLES1', 'CLES2', 'HAG', 'PVV', 'SSLN']:
                     st_out += avo_client.get_waveforms(network, station, '--',
                                                        'HDF', starttime,
                                                        endtime + time_buffer)
@@ -478,12 +478,12 @@ def mseed_local(datadir,network,station,starttime,endtime,time_buffer=0,remove_r
                      (default: 0) (not implemented yet)
         remove_response: conversion to Pa by applying calib. Full response/sensitivity
                     removal not currently implelmented and calib typically
-                    applied already in local miniseed files (default: False)                     
+                    applied already in local miniseed files (default: False)
         return_failed_stations (in prog): If True, returns a list of station codes that
                                 were requested but not downloaded. This
                                 disables the standard failed station warning
                                 message (default: False) (not implemented yet)
-                     
+
     Returns:
         st_out: Stream containing gathered waveforms
         failed_stations: (Optional) List containing station codes that were
@@ -493,7 +493,7 @@ def mseed_local(datadir,network,station,starttime,endtime,time_buffer=0,remove_r
     print('--------------')
     print('GATHERING LOCAL MINISEED DATA')
     print('--------------')
-    
+
     #find whole hour to determine number of files
     start_rnd=UTCDateTime(starttime.year,starttime.month,starttime.day,starttime.hour)
     nfiles=int(np.ceil((endtime-start_rnd)/3600))    #find the number of hourly miniseed files
@@ -504,7 +504,7 @@ def mseed_local(datadir,network,station,starttime,endtime,time_buffer=0,remove_r
 
     #loop through each hour and add data on to existing stream object
     for ii in range(nfiles):
-        
+
         #temporary start and end times
         starttimetmp=starttime+tstep*ctstep
         #endtimetmp=starttimetmp+tstep
@@ -519,7 +519,7 @@ def mseed_local(datadir,network,station,starttime,endtime,time_buffer=0,remove_r
         #should we specify a channel and location code? right now I'm saying no
         for sta in station:
             mseed_name=(network+'.'+sta+'*'+ yr + '.' + jday + '.' + hr)
-            
+
             fname=glob.glob(datadir+mseed_name)
             if fname:
                 for fnametmp in fname:
@@ -531,10 +531,10 @@ def mseed_local(datadir,network,station,starttime,endtime,time_buffer=0,remove_r
                 continue
 
         ctstep=ctstep+1
-        
+
     st_out.merge()
     st_out.sort()
-    
+
 #    # Check that all requested stations are present in Stream
 #    requested_stations = station.split(',')
 #    downloaded_stations = [tr.stats.station for tr in st_out]
@@ -569,7 +569,7 @@ def mseed_local(datadir,network,station,starttime,endtime,time_buffer=0,remove_r
     #print('Assigning coordinates...')
     with open('watc_infra_coords.json') as f:
         WATC_INFRA_COORDS = json.load(f)
-    
+
     for tr in st_out:
         try:
             tr.stats.latitude, tr.stats.longitude,\
@@ -583,7 +583,7 @@ def mseed_local(datadir,network,station,starttime,endtime,time_buffer=0,remove_r
 
         print('Removing sensitivity via calib value...')
         for tr in st_out:
-            # Just applyin calib for now until we get full response info in! 
+            # Just applyin calib for now until we get full response info in!
             #tr.remove_sensitivity()
             tr.data=tr.data*tr.stats.calib
 
