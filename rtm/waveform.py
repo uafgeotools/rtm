@@ -2,13 +2,14 @@ from obspy.clients.fdsn import Client as FDSN_Client
 from obspy.clients.earthworm import Client as EW_Client
 from obspy.clients.fdsn.header import FDSNNoDataException
 from obspy.geodetics import gps2dist_azimuth
-from obspy import Stream,read,UTCDateTime
+from obspy import Stream, read, UTCDateTime
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.signal import hilbert, windows, convolve
 from scipy.fftpack import next_fast_len
 from collections import OrderedDict
 from xarray import DataArray
+import os
 import glob
 import json
 import fnmatch
@@ -22,11 +23,12 @@ iris_client = FDSN_Client('IRIS')
 avo_client = EW_Client('pubavo1.wr.usgs.gov', port=16023)  # 16023 is long-term
 
 # Channels to use in data requests - covering all the bases here!
-CHANNELS = 'EHZ,BDF,BDG,BDH,BDI,BDJ,BDK,HDF,DDF'
+CHANNELS = 'BDF,BDG,BDH,BDI,BDJ,BDK,HDF,DDF'
 
 # Define some conversion factors
 KM2M = 1000     # [m/km]
 SEC2MIN = 1/60  # [min/s]
+HR2SEC = 3600   # [s/hr]
 
 
 def gather_waveforms(source, network, station, starttime, endtime,
@@ -454,140 +456,97 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
     return st_out
 
 
-def mseed_local(datadir,network,station,starttime,endtime,time_buffer=0,remove_response=False,return_failed_stations=False):
+def read_local(data_dir, coord_file, network, station, starttime, endtime):
     """
-    Read in waveforms from "local" 1 hr, IRIS-compliant miniseed files, and
+    Read in waveforms from "local" 1-hour, IRIS-compliant miniSEED files, and
     output a Stream object with station/element coordinates attached.
-    Optionally remove the sensitivity.
 
-    NOTE:
-        Usual RTM usage is to specify a starttime/endtime that brackets the
-        estimated source origin time. Then time_buffer is used to download
-        enough extra data to account for the time required for an infrasound
-        signal to propagate to the farthest station. Because this buffer is so
-        critical, this function issues a warning if it remains set to its
-        default of 0 s.
+    NOTE 1:
+        The expected naming convention for the miniSEED files is:
+        <network>.<station>.<location>.<channel>.<year>.<julian_day>.<hour>
+
+    NOTE 2:
+        This function assumes that the response has been removed from the
+        waveforms in the input miniSEED files. This is usually the case.
 
     Args:
-        datadir: directory where miniseed files live
+        data_dir: Directory containing miniSEED files
+        coord_file: JSON file containing coordinates for local stations (full
+                    path required)
         network: SEED network code
         station: SEED station code
         starttime: Start time for data request (UTCDateTime)
         endtime: End time for data request (UTCDateTime)
-        time_buffer: [s] Extra amount of data to download after endtime
-                     (default: 0) (not implemented yet)
-        remove_response: conversion to Pa by applying calib. Full response/sensitivity
-                    removal not currently implelmented and calib typically
-                    applied already in local miniseed files (default: False)
-        return_failed_stations (in prog): If True, returns a list of station codes that
-                                were requested but not downloaded. This
-                                disables the standard failed station warning
-                                message (default: False) (not implemented yet)
 
     Returns:
         st_out: Stream containing gathered waveforms
-        failed_stations: (Optional) List containing station codes that were
-                         requested but not downloaded
     """
 
-    print('--------------')
+    print('-----------------------------')
     print('GATHERING LOCAL MINISEED DATA')
-    print('--------------')
+    print('-----------------------------')
 
-    #find whole hour to determine number of files
-    start_rnd=UTCDateTime(starttime.year,starttime.month,starttime.day,starttime.hour)
-    nfiles=int(np.ceil((endtime-start_rnd)/3600))    #find the number of hourly miniseed files
+    # Take (hour) floor of starttime
+    starttime_hr = UTCDateTime(starttime.year, starttime.month, starttime.day,
+                               starttime.hour)
 
-    tstep=3600    #time step in seconds
-    ctstep=0
-    st_out=Stream()
+    # Take (hour) floor of endtime - this ensures we check this miniSEED file
+    endtime_hr = UTCDateTime(endtime.year, endtime.month, endtime.day,
+                             endtime.hour)
 
-    #loop through each hour and add data on to existing stream object
-    for ii in range(nfiles):
+    # Define filename template (don't check location or channel!)
+    template = f'{network}.{station}.*.*.{{}}.{{}}.{{}}'
 
-        #temporary start and end times
-        starttimetmp=starttime+tstep*ctstep
-        #endtimetmp=starttimetmp+tstep
+    # Initialize Stream object
+    st_out = Stream()
 
-        #get miniseed naming strucutre format for each file
-        yr=starttimetmp.strftime('%Y')
-        hr=starttimetmp.strftime('%H')
-        #hr2=endtimetmp.strftime('%H')
-        jday = starttimetmp.strftime('%j')
+    # Initialize the starting hour
+    tmp_time = starttime_hr
 
-        #now read in miniseed file for each station
-        #should we specify a channel and location code? right now I'm saying no
-        for sta in station:
-            mseed_name=(network+'.'+sta+'*'+ yr + '.' + jday + '.' + hr)
+    # Cycle forward in time, advancing hour by hour through miniSEED files
+    while tmp_time <= endtime_hr:
 
-            fname=glob.glob(datadir+mseed_name)
-            if fname:
-                for fnametmp in fname:
-                    st_out +=read(fnametmp)    #add data onto existing stream
-                    print('Reading in '+fnametmp)
-            else:
-                print ('\nNo files found for ' + mseed_name)    #debugging here
-                print ('Skipping to next station!\n\n')
-                continue
+        pattern = template.format(tmp_time.strftime('%Y'),
+                                  tmp_time.strftime('%j'),
+                                  tmp_time.strftime('%H'))
 
-        ctstep=ctstep+1
+        files = glob.glob(os.path.join(data_dir, pattern))
 
-    st_out.merge()
+        for file in files:
+            st_out += read(file)
+
+        tmp_time += HR2SEC  # Add an hour!
+
+    st_out.merge()  # Merge traces with the same ID
     st_out.sort()
-
-#    # Check that all requested stations are present in Stream
-#    requested_stations = station.split(',')
-#    downloaded_stations = [tr.stats.station for tr in st_out]
-#    failed_stations = []
-#    for sta in requested_stations:
-#        # The below check works with wildcards, but obviously cannot dsetect if
-#        # ALL stations corresponding to a given wildcard (e.g., O??K) were
-#        # downloaded. Thus, if careful station selection is desired, specify
-#        # each station explicitly and the below check will then be effective.
-#        if not fnmatch.filter(downloaded_stations, sta):
-#            if not return_failed_stations:
-#                # If we're not returning the failed stations, then show this
-#                # warning message to alert the user
-#                warnings.warn(f'Station {sta} not downloaded from {source} '
-#                              'server for this time period.', RTMWarning)
-#            failed_stations.append(sta)
 
     # If the Stream is empty, then we can stop here
     if st_out.count() == 0:
         print('No data downloaded.')
-        if return_failed_stations:
-            return st_out, failed_stations
-        else:
-            return st_out
-
-    # Add zeros to ensure all Traces have same length
-    st_out.trim(starttime, endtime, pad=True, fill_value=0)
+        return st_out
 
     # Otherwise, show what the Stream contains
     print(st_out.__str__(extended=True))  # This syntax prints the WHOLE Stream
 
-    #print('Assigning coordinates...')
-    with open('watc_infra_coords.json') as f:
-        WATC_INFRA_COORDS = json.load(f)
+    # Add zeros to ensure all Traces have same length
+    st_out.trim(starttime, endtime, pad=True, fill_value=0)
 
+    print('Assigning coordinates...')
+
+    # Assign coordinates by searching through user-supplied JSON file
+    with open(coord_file) as f:
+        local_coords = json.load(f)
     for tr in st_out:
         try:
             tr.stats.latitude, tr.stats.longitude,\
-                tr.stats.elevation = WATC_INFRA_COORDS[tr.stats.station]
+                tr.stats.elevation = local_coords[tr.stats.station]
         except KeyError:
             print(f'No coordinates available for {tr.id}. Stopping.')
             raise
 
-    # Remove sensitivity...typcially already done in local miniseed file (for now!)
-    if remove_response:
+    print('Done')
 
-        print('Removing sensitivity via calib value...')
-        for tr in st_out:
-            # Just applyin calib for now until we get full response info in!
-            #tr.remove_sensitivity()
-            tr.data=tr.data*tr.stats.calib
-
-
+    # Return the Stream with coordinates attached
     return st_out
 
 
