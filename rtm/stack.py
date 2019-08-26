@@ -51,11 +51,11 @@ def get_max_coordinates(S, unproject=False):
 
     if unproject:
         # If the grid is projected
-        if S.attrs['UTM']:
+        if S.UTM:
             print('Unprojecting coordinates from UTM to (latitude, longitude).')
             y_max, x_max = utm.to_latlon(x_max, y_max,
-                                         zone_number=S.attrs['UTM']['zone'],
-                                         northern=not S.attrs['UTM']['southern_hemisphere'])
+                                         zone_number=S.UTM['zone'],
+                                         northern=not S.UTM['southern_hemisphere'])
         # If the grid is already in lat/lon
         else:
             print('unproject=True is set but coordinates are already in '

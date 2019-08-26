@@ -33,13 +33,13 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     """
 
     # Get coordinates of stack maximum in (latitude, longitude)
-    time_max, y_max, x_max = get_max_coordinates(S, unproject=S.attrs['UTM'])
+    time_max, y_max, x_max = get_max_coordinates(S, unproject=S.UTM)
 
     # Gather coordinates of grid center
-    lon_0, lat_0 = S.attrs['grid_center']
+    lon_0, lat_0 = S.grid_center
 
-    if S.attrs['UTM']:
-        proj = ccrs.UTM(**S.attrs['UTM'])
+    if S.UTM:
+        proj = ccrs.UTM(**S.UTM)
         transform = proj
     else:
         # This is a good projection to use since it preserves area
@@ -52,7 +52,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     fig, ax = plt.subplots(figsize=(10, 10),
                            subplot_kw=dict(projection=proj))
 
-    _plot_geographic_context(ax=ax, utm=S.attrs['UTM'], hires=hires)
+    _plot_geographic_context(ax=ax, utm=S.UTM, hires=hires)
 
     # In either case, we convert from UTCDateTime to np.datetime64
     if time_slice:
@@ -65,7 +65,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     slice_plot_kwargs = dict(ax=ax, alpha=0.5, cmap='inferno',
                              add_colorbar=False, transform=transform)
 
-    if S.attrs['UTM']:
+    if S.UTM:
         # imshow works well here (no gridlines in translucent plot)
         sm = slice.plot.imshow(**slice_plot_kwargs)
     else:

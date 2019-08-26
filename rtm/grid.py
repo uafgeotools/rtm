@@ -123,7 +123,7 @@ def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
     if plot_preview:
         print('Generating grid preview plot...')
         if projected:
-            proj = ccrs.UTM(**grid_out.attrs['UTM'])
+            proj = ccrs.UTM(**grid_out.UTM)
             transform = proj
         else:
             # This is a good projection to use since it preserves area
@@ -211,8 +211,8 @@ def produce_dem(grid, external_file=None, plot_output=True):
         lons = []
         for corner in corners_utm:
             lat, lon = utm.to_latlon(*corner,
-                                     zone_number=grid.attrs['UTM']['zone'],
-                                     northern=not grid.attrs['UTM']['southern_hemisphere'])
+                                     zone_number=grid.UTM['zone'],
+                                     northern=not grid.UTM['southern_hemisphere'])
             lats.append(lat)
             lons.append(lon)
 
@@ -249,28 +249,26 @@ def produce_dem(grid, external_file=None, plot_output=True):
 
     # Define target spatial reference system using grid metadata
     dest_srs = osr.SpatialReference()
-    proj_string = '+proj=utm +zone={} +datum=WGS84'.format(grid.attrs['UTM']['zone'])
-    if grid.attrs['UTM']['southern_hemisphere']:
+    proj_string = '+proj=utm +zone={} +datum=WGS84'.format(grid.UTM['zone'])
+    if grid.UTM['southern_hemisphere']:
         proj_string += ' +south'
     dest_srs.ImportFromProj4(proj_string)
 
     # Create output raster filename/path
     if not os.path.exists(OUTPUT_DIR):
         os.makedirs(OUTPUT_DIR)
-    output_file = TEMPLATE.format(*grid.attrs['grid_center'][::-1],
-                                  grid.attrs['x_radius'],
-                                  grid.attrs['y_radius'],
-                                  grid.attrs['spacing'])
+    output_file = TEMPLATE.format(*grid.grid_center[::-1], grid.x_radius,
+                                  grid.y_radius, grid.spacing)
     output_raster = os.path.join(OUTPUT_DIR, output_file)
 
     # Resample input raster, whether it be from an external file or SRTM
     ds = gdal.Warp(output_raster, input_raster, dstSRS=dest_srs,
                    dstNodata=NODATA,
-                   outputBounds=(grid.x.min() - grid.attrs['spacing']/2,
-                                 grid.y.min() - grid.attrs['spacing']/2,
-                                 grid.x.max() + grid.attrs['spacing']/2,
-                                 grid.y.max() + grid.attrs['spacing']/2),
-                   xRes=grid.attrs['spacing'], yRes=grid.attrs['spacing'],
+                   outputBounds=(grid.x.min() - grid.spacing/2,
+                                 grid.y.min() - grid.spacing/2,
+                                 grid.x.max() + grid.spacing/2,
+                                 grid.y.max() + grid.spacing/2),
+                   xRes=grid.spacing, yRes=grid.spacing,
                    resampleAlg=RESAMPLE_ALG, copyMetadata=False,
                    )
 
@@ -297,7 +295,7 @@ def produce_dem(grid, external_file=None, plot_output=True):
 
         print('Generating DEM hillshade plot...')
 
-        proj = ccrs.UTM(**grid.attrs['UTM'])
+        proj = ccrs.UTM(**grid.UTM)
 
         fig, ax = plt.subplots(figsize=(10, 10),
                                subplot_kw=dict(projection=proj))
@@ -320,7 +318,7 @@ def produce_dem(grid, external_file=None, plot_output=True):
         cbar.solids.set_alpha(1)
 
         # Plot the center of the grid
-        ax.scatter(*grid.attrs['grid_center'], s=50, color='limegreen',
+        ax.scatter(*grid.grid_center, s=50, color='limegreen',
                    edgecolor='black', label='Grid center',
                    transform=ccrs.Geodetic())
 
@@ -333,7 +331,7 @@ def produce_dem(grid, external_file=None, plot_output=True):
             source_label = '1 arc-second SRTM data'
 
         ax.set_title('{}\nResampled to {} m spacing'.format(source_label,
-                                                            grid.attrs['spacing']))
+                                                            grid.spacing))
 
         fig.canvas.draw()
         fig.tight_layout()
@@ -402,10 +400,10 @@ def grid_search(processed_st, grid, celerity, elevation=None, starttime=None,
     S.attrs['celerity'] = celerity
 
     # Project stations in processed_st to UTM if necessary
-    if grid.attrs['UTM']:
+    if grid.UTM:
         for tr in processed_st:
             tr.stats.utm_x, tr.stats.utm_y = _project_station_to_utm(tr, grid)
-            tr.stats.utm_zone = grid.attrs['UTM']['zone']
+            tr.stats.utm_zone = grid.UTM['zone']
 
     # Pre-allocate NumPy array to store Streams for each grid point
     shifted_streams = np.empty(shape=S.shape[1:], dtype=object)
@@ -417,7 +415,7 @@ def grid_search(processed_st, grid, celerity, elevation=None, starttime=None,
         for j in range(ny):
             for k in range(nx):
 
-                if grid.attrs['UTM']:  # This is a UTM grid
+                if grid.UTM:  # This is a UTM grid
 
                     # Define x-y coordinate vectors
                     tr_coords = [tr.stats.utm_x, tr.stats.utm_y]
@@ -503,17 +501,16 @@ def calculate_time_buffer(grid, max_station_dist):
     """
 
     # If projected grid, just calculate Euclidean distance for diagonal
-    if grid.attrs['UTM']:
-        grid_diagonal = np.linalg.norm([grid.attrs['x_radius'],
-                                        grid.attrs['y_radius']])  # [m]
+    if grid.UTM:
+        grid_diagonal = np.linalg.norm([grid.x_radius, grid.y_radius])  # [m]
 
     # If unprojected grid, find the "longer" of the two possible diagonals
     else:
-        center_lon, center_lat = grid.attrs['grid_center']
-        corners = [(center_lat + grid.attrs['y_radius'],
-                    center_lon + grid.attrs['x_radius']),
-                   (center_lat - grid.attrs['y_radius'],
-                    center_lon - grid.attrs['x_radius'])]
+        center_lon, center_lat = grid.grid_center
+        corners = [(center_lat + grid.y_radius,
+                    center_lon + grid.x_radius),
+                   (center_lat - grid.y_radius,
+                    center_lon - grid.x_radius)]
         diags = [gps2dist_azimuth(*corner, center_lat,
                                   center_lon)[0] for corner in corners]
         grid_diagonal = np.max(diags)  # [m]
@@ -543,7 +540,7 @@ def _project_station_to_utm(tr, grid):
         station_utm: [utm_x, utm_y] coordinates for station associated with tr
     """
 
-    grid_zone_number = grid.attrs['UTM']['zone']
+    grid_zone_number = grid.UTM['zone']
     *station_utm, _, _ = utm.from_latlon(tr.stats.latitude,
                                          tr.stats.longitude,
                                          force_zone_number=grid_zone_number)
