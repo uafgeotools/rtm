@@ -60,25 +60,24 @@ from rtm import grid_search
 
 STACK_METHOD = 'sum'  # Choose either 'sum' or 'product'
 
-CELERITY_LIST = [295, 300, 305]  # [m/s]
+CELERITY = 300  # [m/s]
 
 S, shifted_streams = grid_search(processed_st=st_proc, grid=grid,
-                                 celerity_list=CELERITY_LIST,
-                                 starttime=STARTTIME, endtime=ENDTIME,
-                                 stack_method=STACK_METHOD)
+                                 celerity=CELERITY, starttime=STARTTIME,
+                                 endtime=ENDTIME, stack_method=STACK_METHOD)
 
 #%% (4) Plot
 
 from rtm import plot_time_slice, plot_record_section, get_max_coordinates
 
-fig = plot_time_slice(S, st_proc, time_slice=None, celerity_slice=None,
-                      label_stations=False, hires=False)
+fig = plot_time_slice(S, st_proc, time_slice=None, label_stations=False,
+                      hires=False)
 
-time_max, celerity_max, y_max, x_max = get_max_coordinates(S, unproject=S.attrs['UTM'])
+time_max, y_max, x_max = get_max_coordinates(S, unproject=S.UTM)
 
 fig = plot_record_section(st_proc, origin_time=time_max,
                           source_location=(y_max, x_max),
-                          plot_celerity=[celerity_max], label_waveforms=False)
+                          plot_celerity=[S.celerity], label_waveforms=False)
 
 #%% DEM sandbox
 

@@ -344,20 +344,22 @@ def produce_dem(grid, external_file=None, plot_output=True):
     return dem
 
 
-def grid_search(processed_st, grid, celerity_list, elev, starttime=None,
+def grid_search(processed_st, grid, celerity, elevation=None, starttime=None,
                 endtime=None, stack_method='sum'):
     """
-    Perform a grid search over x, y, and celerity (c) and return a 4-D object
-    with dimensions x, y, t, and c. Also return time-shifted Streams for each
-    (x, y, c) point. If a UTM grid is used, then the UTM (x, y) coordinates for
-    each station (tr.stats.utm_x, tr.stats.utm_y) are added to processed_st.
+    Perform a grid search over x and y and return a 3-D object with dimensions
+    x, y, and t. Also return time-shifted Streams for each (x, y) point. If a
+    UTM grid is used, then the UTM (x, y) coordinates for each station
+    (tr.stats.utm_x, tr.stats.utm_y) are added to processed_st. Optionally
+    provide a 2-D array of elevation values to enable 3-D distance computation.
 
     Args:
         processed_st: Pre-processed Stream <-- output of process_waveforms()
         grid: x, y grid to use <-- output of define_grid()
-        celerity_list: List of celerities to use
-        elev :  grid of elevation values for 3-D euclidean distance time removal,
-                such as output from produce_dem(). Set to scalar, such as 0, for 2-D.
+        celerity: [m/s] Single celerity to use for travel time removal
+        elevation: Grid of elevation values for 3-D Euclidean distance time
+                   removal, such as output from produce_dem(). If None, only
+                   performs 2-D Euclidian distance time removal (default: None)
         starttime: Start time for grid search (UTCDateTime) (default: None,
                    which translates to processed_st[0].stats.starttime)
         endtime: End time for grid search (UTCDateTime) (default: None,
@@ -371,9 +373,8 @@ def grid_search(processed_st, grid, celerity_list, elev, starttime=None,
                       in a more spatially concentrated stack maximum.
 
     Returns:
-        S: xarray.DataArray object containing the 4-D (t, c, y, x) stack
-           function
-        shifted_streams: NumPy array with dimensions (c, y, x) containing the
+        S: xarray.DataArray object containing the 3-D (t, y, x) stack function
+        shifted_streams: NumPy array with dimensions (y, x) containing the
                          time-shifted Streams
     """
 
@@ -394,9 +395,11 @@ def grid_search(processed_st, grid, celerity_list, elev, starttime=None,
     timing_st.trim(starttime, endtime, pad=True, fill_value=0)
     times = timing_st[0].times(type='utcdatetime')
 
-    # Expand grid dimensions in celerity and time
-    S = grid.expand_dims(celerity=np.float64(celerity_list)).copy()
-    S = S.expand_dims(time=times.astype('datetime64[ns]')).copy()
+    # Expand grid dimensions in time
+    S = grid.expand_dims(time=times.astype('datetime64[ns]')).copy()
+
+    # Store celerity in S attributes
+    S.attrs['celerity'] = celerity
 
     # Project stations in processed_st to UTM if necessary
     if grid.attrs['UTM']:
@@ -407,72 +410,75 @@ def grid_search(processed_st, grid, celerity_list, elev, starttime=None,
     # Pre-allocate NumPy array to store Streams for each grid point
     shifted_streams = np.empty(shape=S.shape[1:], dtype=object)
 
-    #set up matrix with distance values for each station-grid point
-    ny,nx=grid.shape
-    distmat=np.empty((len(processed_st),ny,nx))
-    for i,tr in enumerate(processed_st):
-        for ii in range(ny):
-            for jj in range(nx):
+    # Pre-compute distances from each grid point to each station
+    ny, nx = grid.shape
+    distmat = np.empty((processed_st.count(), ny, nx))
+    for i, tr in enumerate(processed_st):
+        for j in range(ny):
+            for k in range(nx):
 
-                 if grid.attrs['UTM']['zone'] and not np.isscalar(elev):
-                    #calculate 3-D euclidean distance for utm scenario using DEM values
-                    distmat[i,ii,jj]=np.sqrt((tr.stats.utm_x-S['x'].values[jj])**2
-                          +(tr.stats.utm_y-S['y'].values[ii])**2
-                          +(tr.stats.elevation-elev[ii,jj])**2)
+                if grid.attrs['UTM']:  # This is a UTM grid
 
+                    # Define x-y coordinate vectors
+                    tr_coords = [tr.stats.utm_x, tr.stats.utm_y]
+                    grid_coords = [S['x'].values[k], S['y'].values[j]]
 
-                 elif grid.attrs['UTM']['zone']:
-                     #calculdate 2-D euclidean distance for utm scenario
-                     distmat[i,ii,jj]=np.linalg.norm(np.array([tr.stats.utm_x,tr.stats.utm_y])
-                          -np.array([S['x'].values[jj], S['y'].values[ii]]))
+                    if elevation is not None:
+                        # Add the z-coordinates onto the coordinate vectors
+                        tr_coords.append(tr.stats.elevation)
+                        grid_coords.append(elevation[j, k])
 
-                 else:
-                     # Distance is in meters
-                     distmat[i,ii,jj], _, _ = gps2dist_azimuth(S['y'].values[ii], S['x'].values[jj],
-                                                     tr.stats.latitude,
-                                                     tr.stats.longitude)
+                    # 2-D or 3-D Euclidian distance in meters
+                    distmat[i, j, k] = np.linalg.norm(np.array(tr_coords) -
+                                                      np.array(grid_coords))
+
+                else:  # This is a lat/lon grid
+                    # Distance is in meters
+                    distmat[i, j, k], _, _ = gps2dist_azimuth(S['y'].values[j],
+                                                              S['x'].values[k],
+                                                              tr.stats.latitude,
+                                                              tr.stats.longitude)
 
     total_its = np.product(S.shape[1:])  # Don't count time dimension
     counter = 0
     tic = time.process_time()
-    for i, celerity in enumerate(S['celerity'].values):
 
-        for j, y_coord in enumerate(S['y']):
+    for i, y_coord in enumerate(S['y']):
 
-            for k, x_coord in enumerate(S['x']):
+        for j, x_coord in enumerate(S['x']):
 
-                st = processed_st.copy()
+            st = processed_st.copy()
 
-                for l,tr in enumerate(st):
+            for k, tr in enumerate(st):
 
-                    time_shift = distmat[l,j,k] / celerity  # [s]
-                    tr.stats.starttime = tr.stats.starttime - time_shift
-                    tr.stats.processing.append('RTM: Shifted by '
-                                               f'-{time_shift:.2f} s')
+                time_shift = distmat[k, i, j] / celerity  # [s]
+                tr.stats.starttime = tr.stats.starttime - time_shift
+                tr.stats.processing.append('RTM: Shifted by '
+                                           f'-{time_shift:.2f} s')
 
-                # Trim to time limits of global time axis
-                st.trim(times[0], times[-1], pad=True, fill_value=0)
+            # Trim to time limits of global time axis
+            st.trim(times[0], times[-1], pad=True, fill_value=0)
 
-                if stack_method == 'sum':
-                    stack = np.sum([tr.data for tr in st], axis=0)
+            if stack_method == 'sum':
+                stack = np.sum([tr.data for tr in st], axis=0)
 
-                elif stack_method == 'product':
-                    stack = np.product([tr.data for tr in st], axis=0)
+            elif stack_method == 'product':
+                stack = np.product([tr.data for tr in st], axis=0)
 
-                else:
-                    raise ValueError(f'Stack method \'{stack_method}\' not '
-                                     'recognized. Method must be either '
-                                     '\'sum\' or \'product\'.')
+            else:
+                raise ValueError(f'Stack method \'{stack_method}\' not '
+                                 'recognized. Method must be either '
+                                 '\'sum\' or \'product\'.')
 
-                # Assign stacked time series to this latitude/longitude point
-                S.loc[dict(x=x_coord, y=y_coord, celerity=celerity)] = stack
+            # Assign stacked time series to this latitude/longitude point
+            S.loc[dict(x=x_coord, y=y_coord)] = stack
 
-                # Save the time-shifted Stream
-                shifted_streams[i, j, k] = st
+            # Save the time-shifted Stream
+            shifted_streams[i, j] = st
 
-                # Print grid search progress
-                counter += 1
-                print('{:.1f}%'.format((counter / total_its) * 100), end='\r')
+            # Print grid search progress
+            counter += 1
+            print('{:.1f}%'.format((counter / total_its) * 100), end='\r')
 
     toc = time.process_time()
     print(f'Done (elapsed time = {toc-tic:.1f} s)')

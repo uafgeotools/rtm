@@ -9,12 +9,12 @@ import numpy as np
 from .stack import get_max_coordinates
 
 
-def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None,
-                    label_stations=True, hires=False):
+def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
+                    hires=False):
     """
-    Plot a time slice through S to produce a map-view plot. If time and
-    celerity are not specified, then the slice corresponds to the maximum of S
-    in the time and celerity directions.
+    Plot a time slice through S to produce a map-view plot. If time is not
+    specified, then the slice corresponds to the maximum of S in the time
+    direction.
 
     Args:
         S: xarray.DataArray containing the stack function S
@@ -24,10 +24,6 @@ def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None,
         time_slice: UTCDateTime of desired time slice. The nearest time in S to
                     this specified time will be plotted. If None, the time
                     corresponding to max(S) is used (default: None)
-        celerity_slice: [m/s] Value of celerity to use for slice. Throws an
-                        error if the specified celerity is not in S. If None,
-                        the celerity corresponding to max(S) is used (default:
-                        None)
         label_stations: Toggle labeling stations with network and station codes
                         (default: True)
         hires: If True, use higher-resolution background image/coastlines,
@@ -37,7 +33,7 @@ def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None,
     """
 
     # Get coordinates of stack maximum in (latitude, longitude)
-    time_max, celerity_max, y_max, x_max = get_max_coordinates(S, unproject=S.attrs['UTM'])
+    time_max, y_max, x_max = get_max_coordinates(S, unproject=S.attrs['UTM'])
 
     # Gather coordinates of grid center
     lon_0, lat_0 = S.attrs['grid_center']
@@ -64,15 +60,7 @@ def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None,
     else:
         time_to_plot = np.datetime64(time_max)
 
-    if celerity_slice:
-        if celerity_slice not in S['celerity'].values:
-            raise IndexError(f'Celerity {celerity_slice} m/s is not in S.')
-        celerity_to_plot = celerity_slice
-    else:
-        celerity_to_plot = celerity_max
-
-    slice = S.sel(time=time_to_plot, celerity=celerity_to_plot,
-                  method='nearest')
+    slice = S.sel(time=time_to_plot, method='nearest')
 
     slice_plot_kwargs = dict(ax=ax, alpha=0.5, cmap='inferno',
                              add_colorbar=False, transform=transform)
@@ -115,11 +103,13 @@ def plot_time_slice(S, processed_st, time_slice=None, celerity_slice=None,
 
     ax.legend(h, [handle.get_label() for handle in h], loc='best')
 
-    title = f'Time: {UTCDateTime(slice.time.values.astype(str)).datetime}' \
-            f'\nCelerity: {slice.celerity.values:g} m/s'
+    title = f'Time: {UTCDateTime(slice.time.values.astype(str)).datetime}'
+
+    if S.celerity:
+        title += f'\nCelerity: {S.celerity:g} m/s'
 
     # Label global maximum if applicable
-    if slice.time.values == time_max and slice.celerity.values == celerity_max:
+    if slice.time.values == time_max:
         title = 'GLOBAL MAXIMUM\n\n' + title
 
     ax.set_title(title, pad=20)

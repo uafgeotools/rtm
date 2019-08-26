@@ -18,7 +18,6 @@ def get_max_coordinates(S, unproject=False):
                    coordinates to (latitude, longitude) (default: False)
     Returns:
         time_max: Time (UTCDateTime) corresponding to global max(S)
-        celerity_max: [m/s] Celerity corresponding to global max(S)
         y_max: [deg lat. or m N] y-coordinate corresponding to max(S)
         x_max: [deg lon. or m E] x-coordinate corresponding to max(S)
     """
@@ -47,7 +46,6 @@ def get_max_coordinates(S, unproject=False):
     max_coords = stack_maximum[tuple(max_indices[0])].coords
 
     time_max = UTCDateTime(max_coords['time'].values.astype(str))
-    celerity_max = max_coords['celerity'].values.tolist()
     y_max = max_coords['y'].values.tolist()
     x_max = max_coords['x'].values.tolist()
 
@@ -63,4 +61,4 @@ def get_max_coordinates(S, unproject=False):
             print('unproject=True is set but coordinates are already in '
                   '(latitude, longitude). Doing nothing.')
 
-    return time_max, celerity_max, y_max, x_max
+    return time_max, y_max, x_max
