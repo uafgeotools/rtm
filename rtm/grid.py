@@ -163,7 +163,7 @@ def produce_dem(grid, external_file=None, plot_output=True):
     Produce a digital elevation model (DEM) with the same extent, spacing, and
     UTM projection as an input projected RTM grid. The data source can be
     either a user-supplied file or global SRTM 1 arc-second (~30 m) data taken
-    from the GMT server. Both a GeoTIFF file and a NumPy array are created.
+    from the GMT server. Both a GeoTIFF file and a DataArray are created.
     Optionally plot the output DEM. Output GeoTIFF files are placed in
     ./rtm_dem (relative to where this function is called).
 
@@ -186,8 +186,8 @@ def produce_dem(grid, external_file=None, plot_output=True):
         plot_output: Toggle plotting a hillshade of the output DEM - useful for
                      identifying voids or artifacts (default: True)
     Returns:
-        dem: 2-D NumPy array of elevation values with identical shape to input
-             grid.
+        dem: 2-D xarray.DataArray of elevation values with identical shape to
+             input grid.
     """
 
     print('--------------')
@@ -272,9 +272,10 @@ def produce_dem(grid, external_file=None, plot_output=True):
                    resampleAlg=RESAMPLE_ALG, copyMetadata=False,
                    )
 
-    # Read resampled DEM into numpy array, set nodata values to np.nan
-    dem = np.flipud(ds.GetRasterBand(1).ReadAsArray())
-    dem[dem == NODATA] = np.nan
+    # Read resampled DEM into DataArray, set nodata values to np.nan
+    dem = grid.copy()
+    dem.data = np.flipud(ds.GetRasterBand(1).ReadAsArray())
+    dem.data[dem.data == NODATA] = np.nan
 
     ds = None  # Removes dataset from memory
 
@@ -295,7 +296,7 @@ def produce_dem(grid, external_file=None, plot_output=True):
 
         print('Generating DEM hillshade plot...')
 
-        proj = ccrs.UTM(**grid.UTM)
+        proj = ccrs.UTM(**dem.UTM)
 
         fig, ax = plt.subplots(figsize=(10, 10),
                                subplot_kw=dict(projection=proj))
@@ -310,15 +311,13 @@ def produce_dem(grid, external_file=None, plot_output=True):
                                 add_colorbar=False, transform=proj)
 
         # Add translucent DEM
-        grid_dem = grid.copy()
-        grid_dem.data = dem
-        im = grid_dem.plot.imshow(ax=ax, cmap='magma', alpha=0.5, vmin=0,
-                                  add_colorbar=False, transform=proj)
+        im = dem.plot.imshow(ax=ax, cmap='magma', alpha=0.5, vmin=0,
+                             add_colorbar=False, transform=proj)
         cbar = fig.colorbar(im, label='Elevation (m)')
         cbar.solids.set_alpha(1)
 
         # Plot the center of the grid
-        ax.scatter(*grid.grid_center, s=50, color='limegreen',
+        ax.scatter(*dem.grid_center, s=50, color='limegreen',
                    edgecolor='black', label='Grid center',
                    transform=ccrs.Geodetic())
 
@@ -331,7 +330,7 @@ def produce_dem(grid, external_file=None, plot_output=True):
             source_label = '1 arc-second SRTM data'
 
         ax.set_title('{}\nResampled to {} m spacing'.format(source_label,
-                                                            grid.spacing))
+                                                            dem.spacing))
 
         fig.canvas.draw()
         fig.tight_layout()
