@@ -70,14 +70,13 @@ S = grid_search(processed_st=st_proc, grid=grid, celerity=CELERITY,
 
 from rtm import plot_time_slice, plot_record_section, get_max_coordinates
 
-fig = plot_time_slice(S, st_proc, time_slice=None, label_stations=True,
-                      hires=True)
+plot_time_slice(S, st_proc, time_slice=None, label_stations=True, hires=True)
 
 time_max, y_max, x_max = get_max_coordinates(S, unproject=S.UTM)
 
-fig = plot_record_section(st_proc, origin_time=time_max,
-                          source_location=(y_max, x_max),
-                          plot_celerity=S.celerity, label_waveforms=True)
+plot_record_section(st_proc, origin_time=time_max,
+                    source_location=(y_max, x_max), plot_celerity=S.celerity,
+                    label_waveforms=True)
 
 #%% DEM sandbox
 
