@@ -10,6 +10,7 @@ import time
 import os
 import subprocess
 import warnings
+from .travel_time import _generate_travel_time_array
 from .plotting import _plot_geographic_context
 from . import RTMWarning
 
@@ -341,7 +342,7 @@ def produce_dem(grid, external_file=None, plot_output=True):
     return dem
 
 
-def grid_search(processed_st, grid, celerity, elevation=None, starttime=None,
+def grid_search(processed_st, grid, celerity, dem=None, starttime=None,
                 endtime=None, stack_method='sum'):
     """
     Perform a grid search over x and y and return a 3-D object with dimensions
@@ -354,9 +355,9 @@ def grid_search(processed_st, grid, celerity, elevation=None, starttime=None,
         processed_st: Pre-processed Stream <-- output of process_waveforms()
         grid: x, y grid to use <-- output of define_grid()
         celerity: [m/s] Single celerity to use for travel time removal
-        elevation: Grid of elevation values for 3-D Euclidean distance time
-                   removal, such as output from produce_dem(). If None, only
-                   performs 2-D Euclidian distance time removal (default: None)
+        dem: Grid of elevation values for 3-D Euclidean distance time removal,
+             such as output from produce_dem(). If None, only performs 2-D
+             Euclidian distance time removal (default: None)
         starttime: Start time for grid search (UTCDateTime) (default: None,
                    which translates to processed_st[0].stats.starttime)
         endtime: End time for grid search (UTCDateTime) (default: None,
@@ -402,49 +403,23 @@ def grid_search(processed_st, grid, celerity, elevation=None, starttime=None,
             tr.stats.utm_x, tr.stats.utm_y = _project_station_to_utm(tr, grid)
             tr.stats.utm_zone = grid.UTM['zone']
 
-    # Pre-compute distances from each grid point to each station
-    ny, nx = grid.shape
-    distmat = np.empty((processed_st.count(), ny, nx))
-    for i, tr in enumerate(processed_st):
-        for j in range(ny):
-            for k in range(nx):
-
-                if grid.UTM:  # This is a UTM grid
-
-                    # Define x-y coordinate vectors
-                    tr_coords = [tr.stats.utm_x, tr.stats.utm_y]
-                    grid_coords = [S['x'].values[k], S['y'].values[j]]
-
-                    if elevation is not None:
-                        # Add the z-coordinates onto the coordinate vectors
-                        tr_coords.append(tr.stats.elevation)
-                        grid_coords.append(elevation[j, k])
-
-                    # 2-D or 3-D Euclidian distance in meters
-                    distmat[i, j, k] = np.linalg.norm(np.array(tr_coords) -
-                                                      np.array(grid_coords))
-
-                else:  # This is a lat/lon grid
-                    # Distance is in meters
-                    distmat[i, j, k], _, _ = gps2dist_azimuth(S['y'].values[j],
-                                                              S['x'].values[k],
-                                                              tr.stats.latitude,
-                                                              tr.stats.longitude)
+    # Generate 3-D travel time array (station, y, x)
+    travel_times = _generate_travel_time_array(grid, processed_st,
+                                               method='celerity',
+                                               celerity=celerity, dem=dem)
 
     total_its = np.product(S.shape[1:])  # Don't count time dimension
     counter = 0
     tic = time.process_time()
 
-    for i, y_coord in enumerate(S['y']):
-
-        for j, x_coord in enumerate(S['x']):
+    for x in S.x:
+        for y in S.y:
 
             st = processed_st.copy()
 
-            for k, tr in enumerate(st):
-
-                time_shift = distmat[k, i, j] / celerity  # [s]
-                tr.stats.starttime = tr.stats.starttime - time_shift
+            for tr in st:
+                time_shift = travel_times.sel(x=x, y=y, station=tr.id)  # [s]
+                tr.stats.starttime = tr.stats.starttime - time_shift.data
 
             # Trim to time limits of global time axis
             st.trim(times[0], times[-1], pad=True, fill_value=0)
@@ -461,7 +436,7 @@ def grid_search(processed_st, grid, celerity, elevation=None, starttime=None,
                                  '\'sum\' or \'product\'.')
 
             # Assign stacked time series to this latitude/longitude point
-            S.loc[dict(x=x_coord, y=y_coord)] = stack
+            S.loc[dict(x=x, y=y)] = stack
 
             # Print grid search progress
             counter += 1

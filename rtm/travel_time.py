@@ -3,12 +3,13 @@ import json
 import utm
 import numpy as np
 import matplotlib.pyplot as plt
+from obspy.geodetics import gps2dist_azimuth
 import re
 import glob
 
 
-def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, grid, dem, H_MAX, TEMP,
-                     MAX_T, DT, SRC_FREQ, VSNAP, SURSNAP, SNAPOUT):
+def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
+                     DT, SRC_FREQ, VSNAP, SURSNAP, SNAPOUT):
     """
     Prepare and write RTM/FDTD files. Writes station, elevation, density, and
     sound speed file. Also parameter files for each station and shell script
@@ -18,10 +19,8 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, grid, dem, H_MAX, TEMP,
         FDTD_DIR: output directory for FDTD run
         FILENAME_ROOT: FDTD input filename prefix
         station: SEED station code
-        grid: xarray.DataArray object containing the grid coordinates and
-                  metadata
-        dem: 2-D NumPy array of elevation values with identical shape to input
-             grid.
+        dem: xarray.DataArray object containing the elevation values as well as
+             grid coordinates and metadata
         H_MAX: max grid height [m]
         TEMP: temerature for sound speed calculation [K]
         MAX_T: duration of FDTD simulation [s] (make sure it extends across
@@ -45,8 +44,8 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, grid, dem, H_MAX, TEMP,
     c = np.sqrt(1.402 * r * TEMP) # [m/s]; adiabatic sound speed
 
     #set up x/y grid and DEM
-    x=np.array(grid.x-grid.x.min())
-    y=np.array(grid.y-grid.y.min())
+    x=np.array(dem.x-dem.x.min())
+    y=np.array(dem.y-dem.y.min())
     xmax=x.max()
     ymax=y.max()
 
@@ -54,7 +53,7 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, grid, dem, H_MAX, TEMP,
     print('Max_y = ' + str(ymax))
     print('Max Z = '  + str(H_MAX))
     print('Min H = 0')
-    print ('dh = ' + str(grid.spacing))
+    print ('dh = ' + str(dem.spacing))
 
     # Save DEM into one-column text file from lower-left to upper-right, row by
     # row
@@ -81,8 +80,8 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, grid, dem, H_MAX, TEMP,
             staloc[i] = WATC_INFRA_COORDS[sta]
             stautm[i] = utm.from_latlon(staloc[i][0], staloc[i][1])
             #find station x/y grid point closest to utm x/y
-            staxyz[i] = [np.abs(grid.x.values-stautm[i][0]).argmin(),
-                  np.abs(grid.y.values-stautm[i][1]).argmin(),staloc[i][2]]
+            staxyz[i] = [np.abs(dem.x.values-stautm[i][0]).argmin(),
+                  np.abs(dem.y.values-stautm[i][1]).argmin(),staloc[i][2]]
         except KeyError:
            print('Failed! No matching station coordinates found for %s'%sta)
            raise
@@ -108,8 +107,8 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, grid, dem, H_MAX, TEMP,
     print('Saving elevation file...%d values'%len(elev))
     f = open(topo_file,'w')
     #elevation header: x,y,dx,dy
-    f.write(str(len(x)) + ' ' + str(len(y)) + ' ' + str(float(grid.spacing)) +
-            ' ' + str(float(grid.spacing)) +'\n')
+    f.write(str(len(x)) + ' ' + str(len(y)) + ' ' + str(float(dem.spacing)) +
+            ' ' + str(float(dem.spacing)) +'\n')
     for ii in range(len(elev)):
         #if np.remainder(temp_elev, grid.spacing) == 1:
         #    temp_elev = temp_elev + 1
@@ -128,8 +127,8 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, grid, dem, H_MAX, TEMP,
     f.close()
 
     # create vertical profiles for FDTD. Static values for now
-    num_rows = int((H_MAX/grid.spacing) + 1)
-    h_array = np.arange(0,H_MAX+2,grid.spacing)
+    num_rows = int((H_MAX/dem.spacing) + 1)
+    h_array = np.arange(0,H_MAX+2,dem.spacing)
 
     c= '%.2f' % round(c, 2)    # Round to two decimal places
     c_file = FDTD_DIR + 'input/' + 'vel_' + FILENAME_ROOT + '.txt'
@@ -172,7 +171,7 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, grid, dem, H_MAX, TEMP,
         #see infraFDTD manual for more info!
         f=open(FDTD_DIR+foutnamenew,'w')
         f.write('PATH input=./input output=./'+OUTDIRtmp+'\n')
-        f.write('FDMESH x=%d y=%d max_elev=%d dh=%d \n' % (xmax,ymax,H_MAX,grid.spacing))
+        f.write('FDMESH x=%d y=%d max_elev=%d dh=%d \n' % (xmax,ymax,H_MAX,dem.spacing))
         f.write('TIME T=%d dt=%.3f\n' % (MAX_T,DT))
         f.write('TOPOGRAPHY elevfile=' + 'elev_' + FILENAME_ROOT + '.txt' + '\n')
         f.write('SOUND_SPEED profile=' + 'vel_' + FILENAME_ROOT + '.txt' + '\n')
@@ -268,3 +267,51 @@ def read_fdtd_files(FDTD_DIR, stations):
         print('done\n')
 
     return tprop
+
+
+def _generate_travel_time_array(grid, st, method, **method_kwargs):
+
+    # Expand the grid to a 3-D array of (station, y, x)
+    travel_times = grid.expand_dims(station=[tr.id for tr in st]).copy()
+
+    if method == 'celerity':
+
+        # Grab this method's keyword arguments
+        celerity = method_kwargs['celerity']  # This is required!
+        dem = method_kwargs.get('dem')  # This defaults to None if KeyError
+
+        for tr in st:
+            for y_coord in grid['y'].values:
+                for x_coord in grid['x'].values:
+
+                    if grid.UTM:  # This is a UTM grid
+
+                        # Define x-y coordinate vectors
+                        tr_coords = [tr.stats.utm_x, tr.stats.utm_y]
+                        grid_coords = [x_coord, y_coord]
+
+                        if dem is not None:
+                            # Add the z-coordinates onto the coordinate vectors
+                            tr_coords.append(tr.stats.elevation)
+                            grid_coords.append(dem.sel(x=x_coord, y=y_coord))
+
+                        # 2-D or 3-D Euclidian distance in meters
+                        distance = np.linalg.norm(np.array(tr_coords) -
+                                                  np.array(grid_coords))
+
+                    else:  # This is a lat/lon grid
+                        # Distance is in meters
+                        distance, _, _ = gps2dist_azimuth(y_coord, x_coord,
+                                                          tr.stats.latitude,
+                                                          tr.stats.longitude)
+
+                    # Store travel time for this station and source grid point
+                    # in seconds
+                    travel_times.loc[dict(x=x_coord, y=y_coord,
+                                          station=tr.id)] = distance / celerity
+
+    else:
+        raise NotImplementedError('Only method=\'celerity\' is implemented '
+                                  'thus far.')
+
+    return travel_times
