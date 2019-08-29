@@ -62,9 +62,9 @@ STACK_METHOD = 'sum'  # Choose either 'sum' or 'product'
 
 CELERITY = 295  # [m/s]
 
-S, shifted_streams = grid_search(processed_st=st_proc, grid=grid,
-                                 celerity=CELERITY, starttime=STARTTIME,
-                                 endtime=ENDTIME, stack_method=STACK_METHOD)
+S = grid_search(processed_st=st_proc, grid=grid, celerity=CELERITY,
+                starttime=STARTTIME, endtime=ENDTIME,
+                stack_method=STACK_METHOD)
 
 #%% (4) Plot
 

@@ -404,9 +404,6 @@ def grid_search(processed_st, grid, celerity, elevation=None, starttime=None,
             tr.stats.utm_x, tr.stats.utm_y = _project_station_to_utm(tr, grid)
             tr.stats.utm_zone = grid.UTM['zone']
 
-    # Pre-allocate NumPy array to store Streams for each grid point
-    shifted_streams = np.empty(shape=S.shape[1:], dtype=object)
-
     # Pre-compute distances from each grid point to each station
     ny, nx = grid.shape
     distmat = np.empty((processed_st.count(), ny, nx))
@@ -450,8 +447,6 @@ def grid_search(processed_st, grid, celerity, elevation=None, starttime=None,
 
                 time_shift = distmat[k, i, j] / celerity  # [s]
                 tr.stats.starttime = tr.stats.starttime - time_shift
-                tr.stats.processing.append('RTM: Shifted by '
-                                           f'-{time_shift:.2f} s')
 
             # Trim to time limits of global time axis
             st.trim(times[0], times[-1], pad=True, fill_value=0)
@@ -470,9 +465,6 @@ def grid_search(processed_st, grid, celerity, elevation=None, starttime=None,
             # Assign stacked time series to this latitude/longitude point
             S.loc[dict(x=x_coord, y=y_coord)] = stack
 
-            # Save the time-shifted Stream
-            shifted_streams[i, j] = st
-
             # Print grid search progress
             counter += 1
             print('{:.1f}%'.format((counter / total_its) * 100), end='\r')
@@ -480,7 +472,7 @@ def grid_search(processed_st, grid, celerity, elevation=None, starttime=None,
     toc = time.process_time()
     print(f'Done (elapsed time = {toc-tic:.1f} s)')
 
-    return S, shifted_streams
+    return S
 
 
 def calculate_time_buffer(grid, max_station_dist):
