@@ -45,8 +45,8 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
         # This is a good projection to use since it preserves area
         proj = ccrs.AlbersEqualArea(central_longitude=lon_0,
                                     central_latitude=lat_0,
-                                    standard_parallels=(S['y'].values.min(),
-                                                        S['y'].values.max()))
+                                    standard_parallels=(S.y.values.min(),
+                                                        S.y.values.max()))
         transform = ccrs.PlateCarree()
 
     fig, ax = plt.subplots(figsize=(10, 10),

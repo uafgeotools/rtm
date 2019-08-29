@@ -280,20 +280,20 @@ def _generate_travel_time_array(grid, st, method, **method_kwargs):
         celerity = method_kwargs['celerity']  # This is required!
         dem = method_kwargs.get('dem')  # This defaults to None if KeyError
 
-        for tr in st:
-            for y_coord in grid['y'].values:
-                for x_coord in grid['x'].values:
+        for x in grid.x:
+            for y in grid.y:
+                for tr in st:
 
                     if grid.UTM:  # This is a UTM grid
 
                         # Define x-y coordinate vectors
                         tr_coords = [tr.stats.utm_x, tr.stats.utm_y]
-                        grid_coords = [x_coord, y_coord]
+                        grid_coords = [x, y]
 
                         if dem is not None:
                             # Add the z-coordinates onto the coordinate vectors
                             tr_coords.append(tr.stats.elevation)
-                            grid_coords.append(dem.sel(x=x_coord, y=y_coord))
+                            grid_coords.append(dem.sel(x=x, y=y))
 
                         # 2-D or 3-D Euclidian distance in meters
                         distance = np.linalg.norm(np.array(tr_coords) -
@@ -301,13 +301,13 @@ def _generate_travel_time_array(grid, st, method, **method_kwargs):
 
                     else:  # This is a lat/lon grid
                         # Distance is in meters
-                        distance, _, _ = gps2dist_azimuth(y_coord, x_coord,
+                        distance, _, _ = gps2dist_azimuth(y, x,
                                                           tr.stats.latitude,
                                                           tr.stats.longitude)
 
                     # Store travel time for this station and source grid point
                     # in seconds
-                    travel_times.loc[dict(x=x_coord, y=y_coord,
+                    travel_times.loc[dict(x=x, y=y,
                                           station=tr.id)] = distance / celerity
 
     else:
