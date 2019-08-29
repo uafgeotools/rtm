@@ -10,7 +10,7 @@ import time
 import os
 import subprocess
 import warnings
-from .travel_time import _generate_travel_time_array
+from .travel_time import _celerity_travel_time, _fdtd_travel_time
 from .plotting import _plot_geographic_context
 from . import RTMWarning
 
@@ -404,9 +404,8 @@ def grid_search(processed_st, grid, celerity, dem=None, starttime=None,
             tr.stats.utm_zone = grid.UTM['zone']
 
     # Generate 3-D travel time array (station, y, x)
-    travel_times = _generate_travel_time_array(grid, processed_st,
-                                               method='celerity',
-                                               celerity=celerity, dem=dem)
+    travel_times = _celerity_travel_time(grid, processed_st, celerity=celerity,
+                                         dem=dem)
 
     total_its = np.product(S.shape[1:])  # Don't count time dimension
     counter = 0

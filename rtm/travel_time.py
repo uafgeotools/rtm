@@ -190,22 +190,28 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
         fsh.close()
 
 
-def read_fdtd_files(FDTD_DIR, stations):
+def _fdtd_travel_time(grid, st, FDTD_DIR):
     """
     Computes travel time from each station to each grid point using FDTD
     output surface pressure files.
 
     Args:
+        grid:
+        st:
         FDTD_DIR: output directory for FDTD run
-        stations: SEED station codes (e.g. 'YIFS')
     Returns:
-        tprop: [s] propagation times for Stream containing gathered waveforms
-
+        travel_times:
     """
 
     print('--------------')
     print('USING FDTD FILES FOR RTM TIME CALCULATION')
     print('--------------')
+
+    # Get SEED station codes
+    stations = [tr.stats.station for tr in st]
+
+    # Expand the grid to a 3-D array of (station, y, x)
+    travel_times = grid.expand_dims(station=[tr.id for tr in st]).copy()
 
     #get surface coordinates and elevations
     indx3=np.loadtxt(FDTD_DIR+ 'output_'+stations[0]+'/sur_coords.txt',
@@ -266,52 +272,44 @@ def read_fdtd_files(FDTD_DIR, stations):
         tprop[i,:,:]=tprop[i,:,:]-srcdelay
         print('done\n')
 
-    return tprop
+    # Assign to xarray.DataArray
+    travel_times.data = tprop
+
+    return travel_times
 
 
-def _generate_travel_time_array(grid, st, method, **method_kwargs):
+def _celerity_travel_time(grid, st, celerity, dem=None):
 
     # Expand the grid to a 3-D array of (station, y, x)
     travel_times = grid.expand_dims(station=[tr.id for tr in st]).copy()
 
-    if method == 'celerity':
+    for x in grid.x:
+        for y in grid.y:
+            for tr in st:
 
-        # Grab this method's keyword arguments
-        celerity = method_kwargs['celerity']  # This is required!
-        dem = method_kwargs.get('dem')  # This defaults to None if KeyError
+                if grid.UTM:  # This is a UTM grid
 
-        for x in grid.x:
-            for y in grid.y:
-                for tr in st:
+                    # Define x-y coordinate vectors
+                    tr_coords = [tr.stats.utm_x, tr.stats.utm_y]
+                    grid_coords = [x, y]
 
-                    if grid.UTM:  # This is a UTM grid
+                    if dem is not None:
+                        # Add the z-coordinates onto the coordinate vectors
+                        tr_coords.append(tr.stats.elevation)
+                        grid_coords.append(dem.sel(x=x, y=y))
 
-                        # Define x-y coordinate vectors
-                        tr_coords = [tr.stats.utm_x, tr.stats.utm_y]
-                        grid_coords = [x, y]
+                    # 2-D or 3-D Euclidian distance in meters
+                    distance = np.linalg.norm(np.array(tr_coords) -
+                                              np.array(grid_coords))
 
-                        if dem is not None:
-                            # Add the z-coordinates onto the coordinate vectors
-                            tr_coords.append(tr.stats.elevation)
-                            grid_coords.append(dem.sel(x=x, y=y))
+                else:  # This is a lat/lon grid
+                    # Distance is in meters
+                    distance, _, _ = gps2dist_azimuth(y, x, tr.stats.latitude,
+                                                      tr.stats.longitude)
 
-                        # 2-D or 3-D Euclidian distance in meters
-                        distance = np.linalg.norm(np.array(tr_coords) -
-                                                  np.array(grid_coords))
-
-                    else:  # This is a lat/lon grid
-                        # Distance is in meters
-                        distance, _, _ = gps2dist_azimuth(y, x,
-                                                          tr.stats.latitude,
-                                                          tr.stats.longitude)
-
-                    # Store travel time for this station and source grid point
-                    # in seconds
-                    travel_times.loc[dict(x=x, y=y,
-                                          station=tr.id)] = distance / celerity
-
-    else:
-        raise NotImplementedError('Only method=\'celerity\' is implemented '
-                                  'thus far.')
+                # Store travel time for this station and source grid point
+                # in seconds
+                travel_times.loc[dict(x=x, y=y,
+                                      station=tr.id)] = distance / celerity
 
     return travel_times
