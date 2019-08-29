@@ -77,7 +77,7 @@ time_max, y_max, x_max = get_max_coordinates(S, unproject=S.UTM)
 
 fig = plot_record_section(st_proc, origin_time=time_max,
                           source_location=(y_max, x_max),
-                          plot_celerity=[S.celerity], label_waveforms=True)
+                          plot_celerity=S.celerity, label_waveforms=True)
 
 #%% DEM sandbox
 

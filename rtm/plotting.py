@@ -131,10 +131,11 @@ def plot_record_section(st, origin_time, source_location, plot_celerity=None,
         st: Any Stream object with tr.stats.latitude, tr.stats.longitude data
         origin_time: UTCDateTime specifying the origin time
         source_location: Tuple of (lat, lon) specifying source location
-        plot_celerity: Can be either 'range' or a list of celerities. If
-                       'range', plots a continuous swatch of celerities from
-                       260-380 m/s. If a list, plots these specific celerities.
-                       If None, does not plot any celerities (default: None)
+        plot_celerity: Can be either 'range' or a single celerity or a list of
+                       celerities. If 'range', plots a continuous swatch of
+                       celerities from 260-380 m/s. Otherwise, plots specific
+                       celerities. If None, does not plot any celerities
+                       (default: None)
         label_waveforms: Toggle labeling waveforms with network and station
                          codes (default: True)
     Returns:
@@ -178,8 +179,12 @@ def plot_record_section(st, origin_time, source_location, plot_celerity=None,
                                                             # celerities
             zorder = -1
 
-        # Otherwise, they provided a list of discrete celerities
+        # Otherwise, they provided specific celerities
         else:
+            # Type conversion
+            if type(plot_celerity) is not list:
+                plot_celerity = [plot_celerity]
+
             celerity_list = plot_celerity
             celerity_list.sort()
             zorder = None
