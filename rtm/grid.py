@@ -345,10 +345,10 @@ def grid_search(processed_st, grid, celerity, elevation=None, starttime=None,
                 endtime=None, stack_method='sum'):
     """
     Perform a grid search over x and y and return a 3-D object with dimensions
-    x, y, and t. Also return time-shifted Streams for each (x, y) point. If a
-    UTM grid is used, then the UTM (x, y) coordinates for each station
-    (tr.stats.utm_x, tr.stats.utm_y) are added to processed_st. Optionally
-    provide a 2-D array of elevation values to enable 3-D distance computation.
+    x, y, and t. If a UTM grid is used, then the UTM (x, y) coordinates for
+    each station (tr.stats.utm_x, tr.stats.utm_y) are added to processed_st.
+    Optionally provide a 2-D array of elevation values to enable 3-D distance
+    computation.
 
     Args:
         processed_st: Pre-processed Stream <-- output of process_waveforms()
@@ -371,8 +371,6 @@ def grid_search(processed_st, grid, celerity, elevation=None, starttime=None,
 
     Returns:
         S: xarray.DataArray object containing the 3-D (t, y, x) stack function
-        shifted_streams: NumPy array with dimensions (y, x) containing the
-                         time-shifted Streams
     """
 
     print('--------------------')
