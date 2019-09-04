@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from obspy.geodetics import gps2dist_azimuth
 import re
 import glob
+import time
 
 
 def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
@@ -283,6 +284,14 @@ def _celerity_travel_time(grid, st, celerity, dem=None):
     # Expand the grid to a 3-D array of (station, y, x)
     travel_times = grid.expand_dims(station=[tr.id for tr in st]).copy()
 
+    print('-------------------------------------------------')
+    print(f'CALCULATING TRAVEL TIMES USING CELERITY = {celerity:g} M/S')
+    print('-------------------------------------------------')
+
+    total_its = travel_times.size
+    counter = 0
+    tic = time.process_time()
+
     for x in grid.x:
         for y in grid.y:
             for tr in st:
@@ -311,5 +320,12 @@ def _celerity_travel_time(grid, st, celerity, dem=None):
                 # in seconds
                 travel_times.loc[dict(x=x, y=y,
                                       station=tr.id)] = distance / celerity
+
+                # Print progress
+                counter += 1
+                print('{:.1f}%'.format((counter / total_its) * 100), end='\r')
+
+    toc = time.process_time()
+    print(f'Done (elapsed time = {toc-tic:.1f} s)')
 
     return travel_times

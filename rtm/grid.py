@@ -374,10 +374,6 @@ def grid_search(processed_st, grid, celerity, dem=None, starttime=None,
         S: xarray.DataArray object containing the 3-D (t, y, x) stack function
     """
 
-    print('--------------------')
-    print('STARTING GRID SEARCH')
-    print('--------------------')
-
     timing_st = processed_st.copy()
 
     if not starttime:
@@ -406,6 +402,10 @@ def grid_search(processed_st, grid, celerity, dem=None, starttime=None,
     # Generate 3-D travel time array (station, y, x)
     travel_times = _celerity_travel_time(grid, processed_st, celerity=celerity,
                                          dem=dem)
+
+    print('----------------------')
+    print('PERFORMING GRID SEARCH')
+    print('----------------------')
 
     total_its = np.product(S.shape[1:])  # Don't count time dimension
     counter = 0
