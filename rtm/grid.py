@@ -10,7 +10,7 @@ import time
 import os
 import subprocess
 import warnings
-from .travel_time import _celerity_travel_time, _fdtd_travel_time
+from .travel_time import celerity_travel_time, fdtd_travel_time
 from .plotting import _plot_geographic_context
 from . import RTMWarning
 
@@ -342,8 +342,8 @@ def produce_dem(grid, external_file=None, plot_output=True):
     return dem
 
 
-def grid_search(processed_st, grid, celerity, dem=None, starttime=None,
-                endtime=None, stack_method='sum'):
+def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
+                stack_method='sum', **time_kwargs):
     """
     Perform a grid search over x and y and return a 3-D object with dimensions
     x, y, and t. If a UTM grid is used, then the UTM (x, y) coordinates for
@@ -354,10 +354,16 @@ def grid_search(processed_st, grid, celerity, dem=None, starttime=None,
     Args:
         processed_st: Pre-processed Stream <-- output of process_waveforms()
         grid: x, y grid to use <-- output of define_grid()
-        celerity: [m/s] Single celerity to use for travel time removal
-        dem: Grid of elevation values for 3-D Euclidean distance time removal,
-             such as output from produce_dem(). If None, only performs 2-D
-             Euclidian distance time removal (default: None)
+        time_method: Method to use for calculating travel times. One of
+                     'celerity' or 'fdtd'
+
+          'celerity' A single celerity is assumed for propagation. Distances
+                     are either 2-D or 3-D (if a DEM is supplied)
+
+              'fdtd' Travel times are calculated using a finite-difference
+                     time-domain algorithim which accounts for wave
+                     interactions with topography. Only valid for UTM grids.
+
         starttime: Start time for grid search (UTCDateTime) (default: None,
                    which translates to processed_st[0].stats.starttime)
         endtime: End time for grid search (UTCDateTime) (default: None,
@@ -370,9 +376,17 @@ def grid_search(processed_st, grid, celerity, dem=None, starttime=None,
             'product' Multiply the aligned waveforms sample-by-sample. Results
                       in a more spatially concentrated stack maximum.
 
+        **time_kwargs: Keyword arguments to be passed on to
+                       celerity_travel_time() or fdtd_travel_time() functions.
+                       For details, see the docstrings of those functions.
     Returns:
         S: xarray.DataArray object containing the 3-D (t, y, x) stack function
     """
+
+    # Check that the requested method works with the provided grid
+    if time_method == 'fdtd' and not grid.UTM:
+        raise NotImplementedError('The FDTD method is not implemented for '
+                                  'unprojected (regional) grids.')
 
     timing_st = processed_st.copy()
 
@@ -390,18 +404,23 @@ def grid_search(processed_st, grid, celerity, dem=None, starttime=None,
     # Expand grid dimensions in time
     S = grid.expand_dims(time=times.astype('datetime64[ns]')).copy()
 
-    # Store celerity in S attributes
-    S.attrs['celerity'] = celerity
-
     # Project stations in processed_st to UTM if necessary
     if grid.UTM:
         for tr in processed_st:
             tr.stats.utm_x, tr.stats.utm_y = _project_station_to_utm(tr, grid)
             tr.stats.utm_zone = grid.UTM['zone']
 
-    # Generate 3-D travel time array (station, y, x)
-    travel_times = _celerity_travel_time(grid, processed_st, celerity=celerity,
-                                         dem=dem)
+    # Call appropriate travel time array creation function
+    if time_method == 'celerity':
+        travel_times = celerity_travel_time(grid, processed_st, **time_kwargs)
+        # Store celerity in S attributes
+        S.attrs['celerity'] = time_kwargs['celerity']
+    elif time_method == 'fdtd':
+        travel_times = fdtd_travel_time(grid, processed_st, **time_kwargs)
+    else:
+        raise ValueError(f'Travel time calculation method \'{time_method}\' '
+                         'not recognized. Method must be either \'celerity\' '
+                         'or \'fdtd\'.')
 
     print('----------------------')
     print('PERFORMING GRID SEARCH')

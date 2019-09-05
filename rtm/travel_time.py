@@ -191,17 +191,17 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
         fsh.close()
 
 
-def _fdtd_travel_time(grid, st, FDTD_DIR):
+def fdtd_travel_time(grid, st, FDTD_DIR=os.getcwd()):
     """
     Computes travel time from each station to each grid point using FDTD
     output surface pressure files.
 
     Args:
-        grid:
-        st:
-        FDTD_DIR: output directory for FDTD run
+        grid: x, y grid to use <-- output of define_grid()
+        st: Stream containing coordinates for each station
+        FDTD_DIR: output directory for FDTD run (default: os.getcwd())
     Returns:
-        travel_times:
+        travel_times: Blah blah blah
     """
 
     print('--------------')
@@ -279,7 +279,21 @@ def _fdtd_travel_time(grid, st, FDTD_DIR):
     return travel_times
 
 
-def _celerity_travel_time(grid, st, celerity, dem=None):
+def celerity_travel_time(grid, st, celerity=343, dem=None):
+    """
+    Blah blah blah
+
+    Args:
+        grid: x, y grid to use <-- output of define_grid()
+        st: Stream containing coordinates for each station
+        celerity: [m/s] Single celerity to use for travel time removal
+                  (default: 343)
+        dem: Grid of elevation values for 3-D Euclidean distance time removal,
+             such as output from produce_dem(). If None, only performs 2-D
+             Euclidian distance time removal (default: None)
+    Returns:
+        travel_times: Blah blah blah
+    """
 
     # Expand the grid to a 3-D array of (station, y, x)
     travel_times = grid.expand_dims(station=[tr.id for tr in st]).copy()
@@ -307,7 +321,7 @@ def _celerity_travel_time(grid, st, celerity, dem=None):
                         tr_coords.append(tr.stats.elevation)
                         grid_coords.append(dem.sel(x=x, y=y))
 
-                    # 2-D or 3-D Euclidian distance in meters
+                    # 2-D or 3-D Euclidean distance in meters
                     distance = np.linalg.norm(np.array(tr_coords) -
                                               np.array(grid_coords))
 

@@ -58,13 +58,15 @@ st_proc = process_waveforms(st, freqmin=FREQ_MIN, freqmax=FREQ_MAX,
 
 from rtm import grid_search
 
+TIME_METHOD = 'celerity'  # Choose either 'celerity' or 'fdtd'
+
 STACK_METHOD = 'sum'  # Choose either 'sum' or 'product'
 
 CELERITY = 295  # [m/s]
 
-S = grid_search(processed_st=st_proc, grid=grid, celerity=CELERITY,
+S = grid_search(processed_st=st_proc, grid=grid, time_method=TIME_METHOD,
                 starttime=STARTTIME, endtime=ENDTIME,
-                stack_method=STACK_METHOD)
+                stack_method=STACK_METHOD, celerity=CELERITY)
 
 #%% (4) Plot
 
