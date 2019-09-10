@@ -225,6 +225,10 @@ def fdtd_travel_time(grid, st, FDTD_DIR=os.getcwd()):
     nvals=indx3.shape[0]
     nsta=len(stations)
 
+    if [nx,ny] != [travel_times.sizes['x'],travel_times.sizes['y']]:
+        raise ValueError('Grid and FDTD calculation dimensions do not'
+                         'match. Check dimensions.')
+        
     tprop=np.zeros((nsta,ny,nx))
 
     #loop through each station and get propagation times to each grid point
