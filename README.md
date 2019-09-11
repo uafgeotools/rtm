@@ -1,7 +1,7 @@
 rtm
 ===
 
-Reverse time migration of infrasound signals.
+A Python package for reverse time migration of infrasound signals.
 
 Dependencies
 ------------
