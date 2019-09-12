@@ -7,6 +7,7 @@ from obspy.geodetics import gps2dist_azimuth
 import re
 import glob
 import time
+from xarray import DataArray
 
 
 def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
@@ -219,8 +220,8 @@ def fdtd_travel_time(grid, st, FILENAME_ROOT, FDTD_DIR=os.getcwd()):
     # Get SEED station codes
     stations = [tr.stats.station for tr in st]
 
-    # Expand the grid to a 3-D array of (station, y, x)
-    travel_times = grid.expand_dims(station=[tr.id for tr in st]).copy()
+    ## Expand the grid to a 3-D array of (station, y, x)
+    #travel_times = grid.expand_dims(station=[tr.id for tr in st]).copy()
 
     #get surface coordinates and elevations
     indx3=np.loadtxt(FDTD_DIR+ 'output_'+stations[0]+'/sur_coords.txt',
@@ -233,15 +234,16 @@ def fdtd_travel_time(grid, st, FILENAME_ROOT, FDTD_DIR=os.getcwd()):
     nvals=indx3.shape[0]
     nsta=len(stations)
 
+    tprop=np.zeros((nsta,ny,nx))
+
     #get geosptial info for FDTD grid
     with open(FDTD_DIR+FILENAME_ROOT+'.json') as json_file:
         geo_info = json.load(json_file)
 
-    if [nx,ny] != [travel_times.sizes['x'],travel_times.sizes['y']]:
-        raise ValueError('Grid and FDTD calculation dimensions do not'
-                         'match. Check dimensions.')
-        
-    tprop=np.zeros((nsta,ny,nx))
+    #create empty xarray for travel times and all stations
+    #this isn't quite correct currently as data dims are off...
+    travel_times = DataArray(data=np.empty((ny,nx)),dims=['y','x'], attrs=geo_info)
+    travel_times=travel_times.expand_dims(station=[tr.id for tr in st]).copy()
 
     #loop through each station and get propagation times to each grid point
     for i,sta in enumerate(stations):
