@@ -62,4 +62,4 @@ from .waveform import gather_waveforms, gather_waveforms_bulk, read_local, \
                       process_waveforms
 from .plotting import plot_time_slice, plot_record_section
 from .stack import get_max_coordinates
-from .travel_time import prepare_fdtd_run
+from .travel_time import prepare_fdtd_run, fdtd_travel_time
