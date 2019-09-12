@@ -198,7 +198,7 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
 
 
 
-def fdtd_travel_time(grid, st, FDTD_DIR=os.getcwd()):
+def fdtd_travel_time(grid, st, FILENAME_ROOT, FDTD_DIR=os.getcwd()):
     """
     Computes travel time from each station to each grid point using FDTD
     output surface pressure files.
@@ -206,6 +206,7 @@ def fdtd_travel_time(grid, st, FDTD_DIR=os.getcwd()):
     Args:
         grid: x, y grid to use <-- output of define_grid()
         st: Stream containing coordinates for each station
+        FILENAME_ROOT: FDTD filename prefix
         FDTD_DIR: output directory for FDTD run (default: os.getcwd())
     Returns:
         travel_times: Blah blah blah
@@ -231,6 +232,10 @@ def fdtd_travel_time(grid, st, FDTD_DIR=os.getcwd()):
     ny=len(y)
     nvals=indx3.shape[0]
     nsta=len(stations)
+
+    #get geosptial info for FDTD grid
+    with open(FDTD_DIR+FILENAME_ROOT+'.json') as json_file:
+        geo_info = json.load(json_file)
 
     if [nx,ny] != [travel_times.sizes['x'],travel_times.sizes['y']]:
         raise ValueError('Grid and FDTD calculation dimensions do not'
