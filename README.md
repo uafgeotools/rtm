@@ -1,7 +1,12 @@
 rtm
 ===
 
-A Python package for reverse time migration of infrasound signals.
+A Python package for reverse time migration (RTM) of infrasound signals. Infrasound data are back-projected over a grid of potential sources. Based upon previous work by Sanderson et al. (in review) and Walker et al. (2010), this implementation is flexible and applicable to a wide variety of network geometries and sizes. Realistic travel-times can be integrated from numerical modeling and atmospheric specifications.
+
+Sanderson, R., Matoza, R. S., Fee, D., Haney, M. M., Lyons, J. J. (in review), Remote detection and location of explosive volcanism in Alaska with the EarthScope Transportable Array, Journal of Geophysical Research: Solid Earth.
+
+Walker, K. T., Hedlin, M. A. H., de Groot‐Hedlin, C., Vergoz, J., Le Pichon, A., & Drob, D. P. (2010). Source location of the 19 February 2008 Oregon bolide using seismic networks and infrasound arrays. Journal of Geophysical Research: Solid Earth (1978–2012), 115(B12).
+
 
 Dependencies
 ------------
