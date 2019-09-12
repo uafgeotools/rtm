@@ -69,8 +69,8 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
     #now deal with stations
     station_file = FDTD_DIR + 'input/' + 'sta_' + FILENAME_ROOT + '.txt'
 
-    with open('watc_infra_coords.json') as f:
-        WATC_INFRA_COORDS = json.load(f)
+    with open('local_infra_coords.json') as f:
+        LOCAL_INFRA_COORDS = json.load(f)
 
     #get station lat/lon and utm coordinates
     staloc={}   #lat,lon,z
@@ -78,7 +78,7 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
     staxyz={}   #x,y,z for FDTD grid
     for i,sta in enumerate(station):
         try:
-            staloc[i] = WATC_INFRA_COORDS[sta]
+            staloc[i] = LOCAL_INFRA_COORDS[sta]
             stautm[i] = utm.from_latlon(staloc[i][0], staloc[i][1])
             #find station x/y grid point closest to utm x/y
             staxyz[i] = [np.abs(dem.x.values-stautm[i][0]).argmin(),
@@ -189,6 +189,13 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
         fsh=open(FDTD_DIR+sh_name,'a')
         fsh.write('ifd '+ foutnamenew +' > run_' + FILENAME_ROOT+'_'+sta+'.txt \n')
         fsh.close()
+
+    # write json file of geospatial info
+    geo_info = dem.to_dict(data=False)
+    with open(FDTD_DIR+FILENAME_ROOT+'.json', 'w') as outfile:
+        json.dump(geo_info['attrs'], outfile)
+
+
 
 
 def fdtd_travel_time(grid, st, FDTD_DIR=os.getcwd()):
