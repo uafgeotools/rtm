@@ -105,7 +105,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
 
     title = f'Time: {UTCDateTime(slice.time.values.astype(str)).datetime}'
 
-    if S.celerity:
+    if hasattr(S, 'celerity'):
         title += f'\nCelerity: {S.celerity:g} m/s'
 
     # Label global maximum if applicable
