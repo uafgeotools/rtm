@@ -208,7 +208,7 @@ def fdtd_travel_time(grid, st, FILENAME_ROOT, FDTD_DIR=os.getcwd()):
         FILENAME_ROOT: FDTD filename prefix
         FDTD_DIR: output directory for FDTD run (default: os.getcwd())
     Returns:
-        travel_times: Blah blah blah
+        fdtd_interp: Blah blah blah
     """
 
     print('--------------')
@@ -291,7 +291,14 @@ def fdtd_travel_time(grid, st, FILENAME_ROOT, FDTD_DIR=os.getcwd()):
     # Assign to xarray.DataArray
     travel_times.data = tprop
 
-    return travel_times
+    #interpolate travel_times onto trial source grd
+    grid=grid.expand_dims(station=[tr.id for tr in st]).copy()
+    fdtd_interp = travel_times.interp_like(grid)
+
+    #copy over attrs as it doesn't by default? weird
+    fdtd_interp.attrs=grid.attrs
+
+    return fdtd_interp
 
 
 def celerity_travel_time(grid, st, celerity=343, dem=None):
