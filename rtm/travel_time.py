@@ -238,8 +238,6 @@ def fdtd_travel_time(grid, st, FILENAME_ROOT, FDTD_DIR=os.getcwd()):
     travel_times = open_dataarray(FDTD_DIR+FILENAME_ROOT+'.nc')
 
     #create empty xarray for travel times and all stations
-    #this isn't quite correct currently as data dims are off...
-    #travel_times = DataArray(data=np.empty((ny,nx)),dims=['y','x'], attrs=geo_info)
     travel_times=travel_times.expand_dims(station=[tr.id for tr in st]).copy()
 
     #loop through each station and get propagation times to each grid point
@@ -293,10 +291,13 @@ def fdtd_travel_time(grid, st, FILENAME_ROOT, FDTD_DIR=os.getcwd()):
 
     #interpolate travel_times onto trial source grd
     grid=grid.expand_dims(station=[tr.id for tr in st]).copy()
+
+    fdtd_interp=grid.copy()
     fdtd_interp = travel_times.interp_like(grid)
 
     #copy over attrs as it doesn't by default? weird
     fdtd_interp.attrs=grid.attrs
+    #fdtd_interp.coords=grid.coords
 
     return fdtd_interp
 
