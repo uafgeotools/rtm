@@ -7,7 +7,7 @@ from obspy.geodetics import gps2dist_azimuth
 import re
 import glob
 import time
-from xarray import open_dataarray
+import pickle
 
 
 def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
@@ -193,10 +193,9 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
         fsh.write('ifd '+ foutnamenew +' > run_' + FILENAME_ROOT+'_'+sta+'.txt \n')
         fsh.close()
 
-    # write dem to netcdf file for later UserWarning
-    #have to delete the UTM attrribute for now as it causes an error when writing!
-    del dem.attrs['UTM']
-    dem.to_netcdf(FDTD_DIR+FILENAME_ROOT+'.nc')
+    # Write DEM to pickle file for later use
+    with open(FDTD_DIR + FILENAME_ROOT + '.pkl', 'wb') as f:
+        pickle.dump(dem, f, protocol=-1)
 
 
 def fdtd_travel_time(grid, st, FILENAME_ROOT, FDTD_DIR=os.getcwd()):
@@ -236,8 +235,9 @@ def fdtd_travel_time(grid, st, FILENAME_ROOT, FDTD_DIR=os.getcwd()):
 
     tprop=np.zeros((nsta,ny,nx))
 
-    #get geosptial info for FDTD grid from netcdf file
-    travel_times = open_dataarray(FDTD_DIR+FILENAME_ROOT+'.nc')
+    # Get geospatial info for FDTD grid from pickle file
+    with open(FDTD_DIR + FILENAME_ROOT + '.pkl') as f:
+        travel_times = pickle.load(f)
 
     #create empty xarray for travel times and all stations
     travel_times=travel_times.expand_dims(station=[tr.id for tr in st]).copy()
