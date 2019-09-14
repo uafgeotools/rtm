@@ -236,7 +236,7 @@ def fdtd_travel_time(grid, st, FILENAME_ROOT, FDTD_DIR=os.getcwd()):
     tprop=np.zeros((nsta,ny,nx))
 
     # Get geospatial info for FDTD grid from pickle file
-    with open(FDTD_DIR + FILENAME_ROOT + '.pkl') as f:
+    with open(FDTD_DIR + FILENAME_ROOT + '.pkl','rb') as f:
         travel_times = pickle.load(f)
 
     #create empty xarray for travel times and all stations
