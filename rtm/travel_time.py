@@ -76,14 +76,16 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
     #get station lat/lon and utm coordinates
     staloc={}   #lat,lon,z
     stautm={}   #utmx,utmy,utmzone
-    staxyz={}   #x,y,z for FDTD grid
+    staxyz_g={}   #x,y,z in FDTD grid
+    staxyz={}    #x,y,z actual values
     for i,sta in enumerate(station):
         try:
             staloc[i] = LOCAL_INFRA_COORDS[sta]
             stautm[i] = utm.from_latlon(staloc[i][0], staloc[i][1])
             #find station x/y grid point closest to utm x/y
-            staxyz[i] = [np.abs(dem.x.values-stautm[i][0]).argmin(),
+            staxyz_g[i] = [np.abs(dem.x.values-stautm[i][0]).argmin(),
                   np.abs(dem.y.values-stautm[i][1]).argmin(),staloc[i][2]]
+            staxyz[i] = [dem.spacing*x for x in staxyz_g[i]]
         except KeyError:
            print('Failed! No matching station coordinates found for %s'%sta)
            raise
