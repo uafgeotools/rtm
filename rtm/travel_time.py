@@ -181,7 +181,7 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
         f.write('SOUND_SPEED profile=' + 'vel_' + FILENAME_ROOT + '.txt' + '\n')
         f.write('AIR_DENSITY profile=' + 'den_' + FILENAME_ROOT + '.txt' + '\n')
         #set monopole source at the station!
-        f.write('MSOURCE x=%.1f y=%.1f height=0 func=bharris integral=1 freq=%.1f, p0=1\n'
+        f.write('MSOURCE x=%.1f y=%.1f height=0 func=bharris integral=1 freq=%.1f p0=1\n'
                 %(staxyz[i][0],staxyz[i][1],float(SRC_FREQ)))
         f.write('SSNAPSHOT name=sur height=0 interval=%.3f\n'%(SNAPOUT))
         f.write('STATION name=SRC x=%.1f y=%.1f height=0\n'%(staxyz[i][0],staxyz[i][1]))
@@ -250,12 +250,12 @@ def fdtd_travel_time(grid, st, FILENAME_ROOT, FDTD_DIR=os.getcwd()):
 
         #get monopole source time and data vector
         src=np.genfromtxt(OUTDIRtmp+ 'monopole_src_1.txt') #'SRC_wav.txt')
-        tvec=src[:,0]
+        srctvec=src[:,0]
         srcdata=src[:,1]
 
         #find the delay in the sourc peak
         samax=np.argmax(abs(np.diff(srcdata)))
-        srcdelay=tvec[samax-1] #subtract 1 because of the diff
+        srcdelay=srctvec[samax-1] #subtract 1 because of the diff
 
         #get surface snapshot filenames
         fnames=glob.glob(OUTDIRtmp+'sur_pressure*.dat')
@@ -276,7 +276,7 @@ def fdtd_travel_time(grid, st, FILENAME_ROOT, FDTD_DIR=os.getcwd()):
             f.close()
             psurf[ij,:,:]=np.reshape(PP0,(len(y),len(x)))
 
-        tvec=np.linspace(tvec[0],tvec[-1],nfiles)
+        tvec=np.linspace(srctvec[0],srctvec[-1],nfiles)
 
         #now determine time delays from each grid point to each station
         for ii in range(ny):
