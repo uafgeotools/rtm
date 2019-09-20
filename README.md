@@ -1,7 +1,7 @@
 rtm
 ===
 
-rtm is a Python package for reverse time migration (RTM) of infrasound signals. Infrasound waveform data are back-projected over a grid of trial source locations. Based upon previous work by Sanderson et al. (in review) and Walker et al. (2010), this implementation is flexible and applicable to a wide variety of network geometries and sizes. Realistic travel times can be incorporated from numerical modeling or atmospheric specifications.
+_rtm_ is a Python package for reverse time migration (RTM) of infrasound signals. Infrasound waveform data are back-projected over a grid of trial source locations. Based upon previous work by Sanderson et al. (in review) and Walker et al. (2010), this implementation is flexible and applicable to a wide variety of network geometries and sizes. Realistic travel times can be incorporated from numerical modeling or atmospheric specifications.
 
 **References**
 
@@ -31,8 +31,8 @@ conda create -n rtm -c conda-forge -c conda-forge/label/dev cartopy fiona gmt=6 
 Usage
 -----
 
-To use rtm, clone or download this repository and add it to your Python path,
-e.g. in a script where you'd like to use rtm:
+To use _rtm_, clone or download this repository and add it to your Python path,
+e.g. in a script where you'd like to use _rtm_:
 ```python
 import sys
 sys.path.insert(0, '/path/to/rtm')
