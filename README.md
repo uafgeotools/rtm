@@ -22,6 +22,12 @@ Solid Earth_, 115, B12329. https://doi.org/10.1029/2010JB007863
 Dependencies
 ------------
 
+_uafgeotools_ repositories:
+
+* [_waveform_collection_](https://github.com/uafgeotools/waveform_collection)
+
+Python packages:
+
 * [cartopy](https://scitools.org.uk/cartopy/docs/latest/)
 * [Fiona](https://fiona.readthedocs.io/en/latest/)
 * [GMT](https://docs.generic-mapping-tools.org/dev/index.html)
@@ -41,14 +47,17 @@ conda create -n rtm -c conda-forge -c conda-forge/label/dev cartopy fiona gmt=6 
 Usage
 -----
 
-To use _rtm_, clone or download this repository and add it to your Python path,
-e.g. in a script where you'd like to use _rtm_:
+To use _rtm_, clone or download this repository and any additional
+_uafgeotools_ repository dependencies and add them to your `PYTHONPATH`, e.g.
+in a script where you'd like to use _rtm_:
 ```python
 import sys
-sys.path.insert(0, '/path/to/rtm')
+sys.path.append('/path/to/waveform_collection')
+sys.path.append('/path/to/rtm')
 ```
-Then you can access the package's functions with (for example)
+Then you can access package functions with (for example)
 ```python
+from waveform_collection import gather_waveforms
 from rtm import define_grid
 ```
 and so on. Currently, documentation only exists in function docstrings. For a

@@ -1,3 +1,9 @@
+#%% (0) Add locations of waveform_collection and rtm to PYTHONPATH
+
+import sys
+sys.path.append('/Users/ldtoney/repos/waveform_collection')
+sys.path.append('/Users/ldtoney/repos/rtm')
+
 #%% (1) Define grid
 
 from rtm import define_grid
@@ -25,7 +31,8 @@ grid = define_grid(lon_0=LON_0, lat_0=LAT_0, x_radius=X_RADIUS,
 
 import json
 from obspy import UTCDateTime
-from rtm import gather_waveforms_bulk, process_waveforms
+from waveform_collection import gather_waveforms_bulk
+from rtm import calculate_time_buffer, process_waveforms
 
 # Start and end of time window containing (suspected) events
 STARTTIME = UTCDateTime('2019-07-15T16:10')
@@ -44,8 +51,10 @@ SMOOTH_WIN = 60         # [s] Smoothing window duration
 with open('watc_credentials.json') as f:
     watc_username, watc_password = json.load(f)
 
+time_buffer = calculate_time_buffer(grid, MAX_RADIUS)
+
 st = gather_waveforms_bulk(LON_0, LAT_0, MAX_RADIUS, STARTTIME, ENDTIME,
-                           time_buffer=grid, remove_response=True,
+                           time_buffer=time_buffer, remove_response=True,
                            watc_username=watc_username,
                            watc_password=watc_password)
 

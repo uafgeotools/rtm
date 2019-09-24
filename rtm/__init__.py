@@ -58,8 +58,7 @@ del os
 # -----------------------------------------------------------------------------
 
 from .grid import define_grid, produce_dem, grid_search, calculate_time_buffer
-from .waveform import gather_waveforms, gather_waveforms_bulk, read_local, \
-                      process_waveforms
+from .waveform import process_waveforms
 from .plotting import plot_time_slice, plot_record_section
 from .stack import get_max_coordinates
 from .travel_time import prepare_fdtd_run, fdtd_travel_time
