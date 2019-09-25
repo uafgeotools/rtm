@@ -1,9 +1,3 @@
-#%% (0) Add locations of waveform_collection and rtm to PYTHONPATH
-
-import sys
-sys.path.append('/Users/ldtoney/repos/waveform_collection')
-sys.path.append('/Users/ldtoney/repos/rtm')
-
 #%% (1) Define grid
 
 from rtm import define_grid
