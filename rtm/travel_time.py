@@ -8,6 +8,7 @@ import re
 import glob
 import time
 import pickle
+import xarray as xr
 
 
 def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
@@ -219,77 +220,85 @@ def fdtd_travel_time(grid, st, FILENAME_ROOT, FDTD_DIR=os.getcwd()):
     # Get SEED station codes
     stations = [tr.stats.station for tr in st]
 
-    ## Expand the grid to a 3-D array of (station, y, x)
-    #travel_times = grid.expand_dims(station=[tr.id for tr in st]).copy()
+    # load existing times from netcdf if they exists, and add UTM attribute
+    if os.path.isfile(FDTD_DIR+FILENAME_ROOT+'.nc'):
+        print('Loading %s for FDTD travel times' % (FILENAME_ROOT+'.nc'))
+        travel_times = xr.open_dataarray(FDTD_DIR+FILENAME_ROOT+'.nc')
+        travel_times.assign_attrs(UTM=grid.UTM)
 
-    #get surface coordinates and elevations
-    indx3=np.loadtxt(FDTD_DIR+ 'output_'+stations[0]+'/sur_coords.txt',
-                     dtype = int)
-
-    x=np.unique(indx3[:,0])
-    y=np.unique(indx3[:,1])
-    nx=len(x)
-    ny=len(y)
-    nvals=indx3.shape[0]
-    nsta=len(stations)
-
-    tprop=np.zeros((nsta,ny,nx))
-
-    # Get geospatial info for FDTD grid from pickle file
-    with open(FDTD_DIR + FILENAME_ROOT + '.pkl','rb') as f:
-        travel_times = pickle.load(f)
-
-    #create empty xarray for travel times and all stations
-    travel_times=travel_times.expand_dims(station=[tr.id for tr in st]).copy()
-
-    #loop through each station and get propagation times to each grid point
-    for i,sta in enumerate(stations):
-        print('Running for %s'%sta)
-
-        OUTDIRtmp=FDTD_DIR+'output_'+sta+'/'
-
-        #get monopole source time and data vector
-        src=np.genfromtxt(OUTDIRtmp+ 'monopole_src_1.txt') #'SRC_wav.txt')
-        srctvec=src[:,0]
-        srcdata=src[:,1]
-
-        #find the delay in the sourc peak
-        samax=np.argmax(abs(np.diff(srcdata)))
-        srcdelay=srctvec[samax-1] #subtract 1 because of the diff
-
-        #get surface snapshot filenames
-        fnames=glob.glob(OUTDIRtmp+'sur_pressure*.dat')
-
-        #need to sort by name! this is tricky but seems to work
-        fnames.sort(key=lambda var:[int(x) if x.isdigit() else x for x in re.findall(r'[^0-9]|[0-9]+', var)])
-
-        nfiles=len(fnames)
-        print('Reading in %d files for %s and calculating travel times'%(nfiles,OUTDIRtmp))
-
-        #populate surface pressure
-        psurf=np.zeros((nfiles,ny,nx))
-        for ij,fnametmp in enumerate(fnames):
-
-            f=open(fnametmp,'rb')
-            PP0=np.fromfile(f,dtype=np.float64,count=nvals)
-            #PP0=np.fromfile(f,dtype=np.float32,count=nvals) #32-bit float for old FDTD version
-            f.close()
-            psurf[ij,:,:]=np.reshape(PP0,(len(y),len(x)))
-
-        tvec=np.linspace(srctvec[0],srctvec[-1],nfiles)
-
-        #now determine time delays from each grid point to each station
-        for ii in range(ny):
-            for jj in range(nx):
-                amax=np.argmax(np.abs(psurf[:,ii,jj]))
-                tprop[i,ii,jj]=tvec[amax]
-
-        #remove delay from peak of src-time function to get propagation time
-        tprop[i,:,:]=tprop[i,:,:]-srcdelay
-        print('done\n')
-
-    # Assign to xarray.DataArray
-    travel_times.data = tprop
+    else:
+        #get surface coordinates and elevations
+        indx3=np.loadtxt(FDTD_DIR+ 'output_'+stations[0]+'/sur_coords.txt',
+                         dtype = int)
+    
+        x=np.unique(indx3[:,0])
+        y=np.unique(indx3[:,1])
+        nx=len(x)
+        ny=len(y)
+        nvals=indx3.shape[0]
+        nsta=len(stations)
+    
+        tprop=np.zeros((nsta,ny,nx))
+    
+        # Get geospatial info for FDTD grid from pickle file
+        with open(FDTD_DIR + FILENAME_ROOT + '.pkl','rb') as f:
+            travel_times = pickle.load(f)
+    
+        #create empty xarray for travel times and all stations
+        travel_times=travel_times.expand_dims(station=[tr.id for tr in st]).copy()
+    
+        #loop through each station and get propagation times to each grid point
+        for i,sta in enumerate(stations):
+            print('Running for %s'%sta)
+    
+            OUTDIRtmp=FDTD_DIR+'output_'+sta+'/'
+    
+            #get monopole source time and data vector
+            src=np.genfromtxt(OUTDIRtmp+ 'monopole_src_1.txt') #'SRC_wav.txt')
+            srctvec=src[:,0]
+            srcdata=src[:,1]
+    
+            #find the delay in the sourc peak
+            samax=np.argmax(abs(np.diff(srcdata)))
+            srcdelay=srctvec[samax-1] #subtract 1 because of the diff
+    
+            #get surface snapshot filenames
+            fnames=glob.glob(OUTDIRtmp+'sur_pressure*.dat')
+    
+            #need to sort by name! this is tricky but seems to work
+            fnames.sort(key=lambda var:[int(x) if x.isdigit() else x for x in re.findall(r'[^0-9]|[0-9]+', var)])
+    
+            nfiles=len(fnames)
+            print('Reading in %d files for %s and calculating travel times'%(nfiles,OUTDIRtmp))
+    
+            #populate surface pressure
+            psurf=np.zeros((nfiles,ny,nx))
+            for ij,fnametmp in enumerate(fnames):
+    
+                f=open(fnametmp,'rb')
+                PP0=np.fromfile(f,dtype=np.float64,count=nvals)
+                #PP0=np.fromfile(f,dtype=np.float32,count=nvals) #32-bit float for old FDTD version
+                f.close()
+                psurf[ij,:,:]=np.reshape(PP0,(len(y),len(x)))
+    
+            tvec=np.linspace(srctvec[0],srctvec[-1],nfiles)
+    
+            #now determine time delays from each grid point to each station
+            for ii in range(ny):
+                for jj in range(nx):
+                    amax=np.argmax(np.abs(psurf[:,ii,jj]))
+                    tprop[i,ii,jj]=tvec[amax]
+    
+            #remove delay from peak of src-time function to get propagation time
+            tprop[i,:,:]=tprop[i,:,:]-srcdelay
+            print('done\n')
+    
+        # Assign to xarray.DataArray
+        travel_times.data = tprop
+    
+        # Save as netcdf file for later
+        del travel_times.attrs['UTM']
+        travel_times.to_netcdf(FDTD_DIR+FILENAME_ROOT+'.nc')
 
     #interpolate travel_times onto trial source grd
     grid=grid.expand_dims(station=[tr.id for tr in st]).copy()
