@@ -428,7 +428,7 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
 
     total_its = np.product(S.shape[1:])  # Don't count time dimension
     counter = 0
-    tic = time.process_time()
+    tic = time.time()
 
     for x in S.x:
         for y in S.y:
@@ -460,7 +460,7 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
             counter += 1
             print('{:.1f}%'.format((counter / total_its) * 100), end='\r')
 
-    toc = time.process_time()
+    toc = time.time()
     print(f'Done (elapsed time = {toc-tic:.1f} s)')
 
     return S
