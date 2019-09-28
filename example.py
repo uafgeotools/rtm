@@ -25,7 +25,7 @@ grid = define_grid(lon_0=LON_0, lat_0=LAT_0, x_radius=X_RADIUS,
 
 import json
 from obspy import UTCDateTime
-from waveform_collection import gather_waveforms_bulk
+from waveform_collection import gather_waveforms_bulk, INFRASOUND_CHANNELS
 from rtm import calculate_time_buffer, process_waveforms
 
 # Start and end of time window containing (suspected) events
@@ -48,8 +48,8 @@ with open('watc_credentials.json') as f:
 time_buffer = calculate_time_buffer(grid, MAX_RADIUS)
 
 st = gather_waveforms_bulk(LON_0, LAT_0, MAX_RADIUS, STARTTIME, ENDTIME,
-                           time_buffer=time_buffer, remove_response=True,
-                           watc_username=watc_username,
+                           INFRASOUND_CHANNELS, time_buffer=time_buffer,
+                           remove_response=True, watc_username=watc_username,
                            watc_password=watc_password)
 
 st_proc = process_waveforms(st, freqmin=FREQ_MIN, freqmax=FREQ_MAX,
