@@ -10,7 +10,7 @@ from .stack import get_max_coordinates
 
 
 def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
-                    hires=False):
+                    hires=False, dem=False):
     """
     Plot a time slice through S to produce a map-view plot. If time is not
     specified, then the slice corresponds to the maximum of S in the time
@@ -28,6 +28,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
                         (default: True)
         hires: If True, use higher-resolution background image/coastlines,
                which looks better but can be slow (default: False)
+        dem: Overlay time slice on a user-supplied DEM from produce_dem
     Returns:
         fig: Output figure
     """
@@ -38,7 +39,10 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     # Gather coordinates of grid center
     lon_0, lat_0 = S.grid_center
 
-    if S.UTM:
+    if dem:
+        proj=None
+        transform=None
+    elif S.UTM:
         proj = ccrs.UTM(**S.UTM)
         transform = proj
     else:
@@ -51,8 +55,8 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
 
     fig, ax = plt.subplots(figsize=(10, 10),
                            subplot_kw=dict(projection=proj))
-
-    _plot_geographic_context(ax=ax, utm=S.UTM, hires=hires)
+    if ~dem:
+        _plot_geographic_context(ax=ax, utm=S.UTM, hires=hires)
 
     # In either case, we convert from UTCDateTime to np.datetime64
     if time_slice:
