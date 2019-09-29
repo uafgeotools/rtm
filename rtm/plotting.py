@@ -7,6 +7,7 @@ from obspy import UTCDateTime
 from obspy.geodetics import gps2dist_azimuth
 import numpy as np
 from .stack import get_max_coordinates
+import utm
 
 
 def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
@@ -39,12 +40,15 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     # Gather coordinates of grid center
     lon_0, lat_0 = S.grid_center
 
-    if dem:
-        proj=None
-        transform=None
+    if dem.spacing:
+        proj = None
+        transform = None
+        plot_transform = None
+        lon_o, lat_0, _, _=utm.from_latlon(S.grid_center[1],S.grid_center[0])
     elif S.UTM:
         proj = ccrs.UTM(**S.UTM)
         transform = proj
+        plot_transform = ccrs.Geodetic()
     else:
         # This is a good projection to use since it preserves area
         proj = ccrs.AlbersEqualArea(central_longitude=lon_0,
@@ -52,10 +56,12 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
                                     standard_parallels=(S.y.values.min(),
                                                         S.y.values.max()))
         transform = ccrs.PlateCarree()
+        plot_transform = ccrs.Geodetic()
+
 
     fig, ax = plt.subplots(figsize=(10, 10),
                            subplot_kw=dict(projection=proj))
-    if ~dem:
+    if dem.spacing:
         _plot_geographic_context(ax=ax, utm=S.UTM, hires=hires)
 
     # In either case, we convert from UTCDateTime to np.datetime64
@@ -66,7 +72,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
 
     slice = S.sel(time=time_to_plot, method='nearest')
 
-    slice_plot_kwargs = dict(ax=ax, alpha=0.5, cmap='inferno',
+    slice_plot_kwargs = dict(ax=ax, alpha=0.5, cmap='hot_r',
                              add_colorbar=False, transform=transform)
 
     if S.UTM:
@@ -85,7 +91,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
 
     # Plot center of grid
     h[0] = ax.scatter(lon_0, lat_0, s=50, color='limegreen', edgecolor='black',
-                      label='Grid center', transform=ccrs.Geodetic())
+                      label='Grid center', transform=plot_transform)
 
     # Plot stack maximum
     h[1] = ax.scatter(x_max, y_max, s=100, color='red', marker='*',
@@ -97,13 +103,13 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     for tr in processed_st:
         h[2] = ax.scatter(tr.stats.longitude,  tr.stats.latitude, marker='v',
                           color='white', edgecolor='black',
-                          label='Infrasound sensor', transform=ccrs.Geodetic())
+                          label='Infrasound sensor', transform=plot_transform)
         if label_stations:
             ax.text(tr.stats.longitude, tr.stats.latitude,
                     '  {}.{}'.format(tr.stats.network, tr.stats.station),
                     verticalalignment='center_baseline',
                     horizontalalignment='left', fontsize=10,
-                    transform=ccrs.Geodetic())
+                    transform=plot_transform)
 
     ax.legend(h, [handle.get_label() for handle in h], loc='best')
 
