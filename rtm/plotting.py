@@ -29,14 +29,14 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
                         (default: True)
         hires: If True, use higher-resolution background image/coastlines,
                which looks better but can be slow (default: False)
-        dem: Overlay time slice on a user-supplied DEM from produce_dem 
+        dem: Overlay time slice on a user-supplied DEM from produce_dem
                 (default: None)
     Returns:
         fig: Output figure
     """
 
     st = processed_st.copy()
-    
+
     # Get coordinates of stack maximum in (latitude, longitude)
     time_max, y_max, x_max = get_max_coordinates(S, unproject=S.UTM)
 
@@ -47,7 +47,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
         proj = None
         transform = None
         plot_transform = None
-        
+
         #convert various lat/lons to UTM
         lon_0, lat_0, _, _=utm.from_latlon(S.grid_center[1],S.grid_center[0])
         x_max, y_max, _, _=utm.from_latlon(y_max,x_max)
@@ -71,7 +71,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
 
     fig, ax = plt.subplots(figsize=(10, 10),
                            subplot_kw=dict(projection=proj))
-    
+
     # In either case, we convert from UTCDateTime to np.datetime64
     if time_slice:
         time_to_plot = np.datetime64(time_slice)
@@ -85,12 +85,12 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
         slice_plot_kwargs = dict(ax=ax, alpha=0.5, cmap='hot_r',
                              add_colorbar=False, transform=transform)
     else:
-        CS = dem.plot.contour(ax=ax, colors='k', levels=40, add_labels=True,
+        cs = dem.plot.contour(ax=ax, colors='k', levels=40, add_labels=True,
                               zorder=-1)
-        ax.clabel(CS, CS.levels[::2], fontsize=9, fmt='%d', inline=1)
-        
+        ax.clabel(cs, cs.levels[::2], fontsize=9, fmt='%d', inline=1)
+
         slice_plot_kwargs = dict(ax=ax, alpha=0.5, cmap='hot_r',
-                             add_colorbar=False)
+                                 add_colorbar=False)
         transform=ax.transData
         plot_transform=ax.transData
 
