@@ -69,7 +69,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
         plot_transform = ccrs.Geodetic()
 
 
-    fig, ax = plt.subplots(figsize=(10, 10),
+    fig, ax = plt.subplots(figsize=(8, 8),
                            subplot_kw=dict(projection=proj))
 
     # In either case, we convert from UTCDateTime to np.datetime64
@@ -85,7 +85,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
         slice_plot_kwargs = dict(ax=ax, alpha=0.5, cmap='hot_r',
                              add_colorbar=False, transform=transform)
     else:
-        cs = dem.plot.contour(ax=ax, colors='k', levels=40, add_labels=True,
+        cs = dem.plot.contour(ax=ax, colors='k', levels=50, add_labels=True,
                               zorder=-1)
         ax.clabel(cs, cs.levels[::2], fontsize=9, fmt='%d', inline=1)
 
@@ -121,7 +121,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     # Plot stations
     for tr in st:
         h[2] = ax.scatter(tr.stats.longitude,  tr.stats.latitude, marker='v',
-                          color='white', edgecolor='black',
+                          color='blue', edgecolor='black',
                           label='Infrasound sensor', transform=plot_transform)
         if label_stations:
             ax.text(tr.stats.longitude, tr.stats.latitude,
