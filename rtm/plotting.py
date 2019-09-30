@@ -35,6 +35,8 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
         fig: Output figure
     """
 
+    st = processed_st.copy()
+    
     # Get coordinates of stack maximum in (latitude, longitude)
     time_max, y_max, x_max = get_max_coordinates(S, unproject=S.UTM)
 
@@ -45,7 +47,14 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
         proj = None
         transform = None
         plot_transform = None
-        lon_o, lat_0, _, _=utm.from_latlon(S.grid_center[1],S.grid_center[0])
+        
+        #convert various lat/lons to UTM
+        lon_0, lat_0, _, _=utm.from_latlon(S.grid_center[1],S.grid_center[0])
+        x_max, y_max, _, _=utm.from_latlon(y_max,x_max)
+        for tr in st:
+            tr.stats.longitude, tr.stats.latitude, _, _ = utm.from_latlon(
+            tr.stats.latitude, tr.stats.longitude)
+
     elif S.UTM:
         proj = ccrs.UTM(**S.UTM)
         transform = proj
@@ -62,9 +71,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
 
     fig, ax = plt.subplots(figsize=(10, 10),
                            subplot_kw=dict(projection=proj))
-    if dem is None:
-        _plot_geographic_context(ax=ax, utm=S.UTM, hires=hires)
-
+    
     # In either case, we convert from UTCDateTime to np.datetime64
     if time_slice:
         time_to_plot = np.datetime64(time_slice)
@@ -72,9 +79,16 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
         time_to_plot = np.datetime64(time_max)
 
     slice = S.sel(time=time_to_plot, method='nearest')
-
-    slice_plot_kwargs = dict(ax=ax, alpha=0.5, cmap='hot_r',
+    
+    if dem is None:
+        _plot_geographic_context(ax=ax, utm=S.UTM, hires=hires)
+        slice_plot_kwargs = dict(ax=ax, alpha=0.5, cmap='hot_r',
                              add_colorbar=False, transform=transform)
+    else:
+        slice_plot_kwargs = dict(ax=ax, alpha=0.5, cmap='hot_r',
+                             add_colorbar=False)
+        transform=ax.transData
+        plot_transform=ax.transData
 
     if S.UTM:
         # imshow works well here (no gridlines in translucent plot)
@@ -98,10 +112,10 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     h[1] = ax.scatter(x_max, y_max, s=100, color='red', marker='*',
                       edgecolor='black',
                       label=f'Stack maximum\n({y_max:.4f}, {x_max:.4f})',
-                      transform=ccrs.Geodetic())
+                      transform=plot_transform)
 
     # Plot stations
-    for tr in processed_st:
+    for tr in st:
         h[2] = ax.scatter(tr.stats.longitude,  tr.stats.latitude, marker='v',
                           color='white', edgecolor='black',
                           label='Infrasound sensor', transform=plot_transform)
