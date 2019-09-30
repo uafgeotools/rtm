@@ -93,7 +93,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
                                  add_colorbar=False)
         transform=ax.transData
         plot_transform=ax.transData
-
+        
     if S.UTM:
         # imshow works well here (no gridlines in translucent plot)
         sm = slice.plot.imshow(**slice_plot_kwargs)
@@ -105,6 +105,8 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     cbar = fig.colorbar(sm, label='Stack amplitude', aspect=30)
     cbar.solids.set_alpha(1)
 
+
+    
     # Initialize list of handles for legend
     h = [None, None, None]
 
@@ -127,7 +129,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
             ax.text(tr.stats.longitude, tr.stats.latitude,
                     '  {}.{}'.format(tr.stats.network, tr.stats.station),
                     verticalalignment='center_baseline',
-                    horizontalalignment='left', fontsize=10,
+                    horizontalalignment='left', fontsize=10, weight = 'bold',
                     transform=plot_transform)
 
     ax.legend(h, [handle.get_label() for handle in h], loc='best')
@@ -143,6 +145,16 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
 
     ax.set_title(title, pad=20)
 
+    if dem is not None:
+        xt, xtl = plt.xticks()
+        for i in range(len(xtl)):
+            #x, y = xtl[i].get_position()
+            #print(xtl[i].get_position())
+            xtl[i].set_text('%d' % (xt[i]-xt[0]) )
+            print(xtl[i])
+        plt.xticks(xt,xtl)
+        plt.xlim(xt[0],xt[-1])
+        
     fig.canvas.draw()  # Needed to make fig.tight_layout() work
     fig.tight_layout()
     fig.show()
