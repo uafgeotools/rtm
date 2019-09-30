@@ -79,14 +79,15 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
         time_to_plot = np.datetime64(time_max)
 
     slice = S.sel(time=time_to_plot, method='nearest')
-    levs = np.arange(0,700,10)
+
     if dem is None:
         _plot_geographic_context(ax=ax, utm=S.UTM, hires=hires)
         slice_plot_kwargs = dict(ax=ax, alpha=0.5, cmap='hot_r',
                              add_colorbar=False, transform=transform)
     else:
-        CS = dem.plot.contour(ax=ax,colors='k',levels=levs,add_labels=True,zorder=-1)
-        ax.clabel(CS, fontsize=9, fmt='%d', inline=1)
+        CS = dem.plot.contour(ax=ax, colors='k', levels=40, add_labels=True,
+                              zorder=-1)
+        ax.clabel(CS, CS.levels[::2], fontsize=9, fmt='%d', inline=1)
         
         slice_plot_kwargs = dict(ax=ax, alpha=0.5, cmap='hot_r',
                              add_colorbar=False)
