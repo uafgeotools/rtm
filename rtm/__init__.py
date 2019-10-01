@@ -29,7 +29,6 @@ warnings.formatwarning = _formatwarning
 # Clean up
 del _formatwarning
 del warnings
-del RTMWarning
 
 # -----------------------------------------------------------------------------
 # LOAD AVO INFRASOUND STATION DATA
