@@ -43,16 +43,17 @@ repository:
 ```
 conda create -n rtm -c conda-forge -c conda-forge/label/dev cartopy fiona gmt=6 obspy utm xarray
 ```
+Then install _waveform_collection_ into the above environment by following the
+steps in that repository's
+[README](https://github.com/uafgeotools/waveform_collection/blob/master/README.md).
 
 Usage
 -----
 
-To use _rtm_, clone or download this repository and any additional
-_uafgeotools_ repository dependencies and add them to your `PYTHONPATH`, e.g.
-in a script where you'd like to use _rtm_:
+To use _rtm_, clone or download this repository and add it to your
+`PYTHONPATH`, e.g. in a script where you'd like to use _rtm_:
 ```python
 import sys
-sys.path.append('/path/to/waveform_collection')
 sys.path.append('/path/to/rtm')
 ```
 Then you can access package functions with (for example)
