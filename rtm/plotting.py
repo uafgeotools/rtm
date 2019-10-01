@@ -1,3 +1,4 @@
+import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.transforms as transforms
 import cartopy.crs as ccrs
@@ -5,9 +6,9 @@ import cartopy.feature as cfeature
 from cartopy.io.img_tiles import Stamen
 from obspy import UTCDateTime
 from obspy.geodetics import gps2dist_azimuth
-import numpy as np
 from .stack import get_max_coordinates
 import utm
+from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
 
 
 def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
@@ -91,6 +92,18 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
 
         slice_plot_kwargs = dict(ax=ax, alpha=0.5, cmap='hot_r',
                                  add_colorbar=False)
+        
+        barlen = np.around(dem.x_radius/4, decimals=-1)
+        barlen_str = "%d m" % barlen
+        scalebar = AnchoredSizeBar(ax.transData,
+                           barlen, barlen_str, 'lower left', 
+                           pad=0.3,
+                           color='black',
+                           frameon=True,
+                           size_vertical=1)
+
+        ax.add_artist(scalebar)
+
         transform=ax.transData
         plot_transform=ax.transData
         
