@@ -145,17 +145,6 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
 
     ax.set_title(title, pad=20)
 
-    #set grid labels to x-y offsets if DEM supplied
-    if dem is not None:
-        ax.set_xlim(dem.x.data.min(),dem.x.data.max() )
-        xt = ax.get_xticks()
-        xtl = ax.get_xticklabels()
-        for i in range(len(xtl)):
-            xtl[i].set_text('%d' % (xt[i]-xt[0]))
-            print(xtl[i])
-        plt.xticks(xt,xtl)
-        ax.set_xlim(dem.x.data.min(),dem.x.data.max() )
-
     fig.canvas.draw()  # Needed to make fig.tight_layout() work
     fig.tight_layout()
     fig.show()
