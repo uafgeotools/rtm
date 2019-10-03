@@ -23,9 +23,9 @@ grid = define_grid(lon_0=LON_0, lat_0=LAT_0, x_radius=X_RADIUS,
 
 #%% (2) Grab and process the data
 
-import json
 from obspy import UTCDateTime
-from waveform_collection import gather_waveforms_bulk, INFRASOUND_CHANNELS
+from waveform_collection import gather_waveforms_bulk, load_json_file, \
+                                INFRASOUND_CHANNELS
 from rtm import calculate_time_buffer, process_waveforms
 
 # Start and end of time window containing (suspected) events
@@ -42,8 +42,7 @@ DECIMATION_RATE = 0.1   # [Hz] New sampling rate to use for decimation
 SMOOTH_WIN = 60         # [s] Smoothing window duration
 
 # watc_credentials.json contains a single line with format ["user", "password"]
-with open('watc_credentials.json') as f:
-    watc_username, watc_password = json.load(f)
+watc_username, watc_password = load_json_file('watc_credentials.json')
 
 time_buffer = calculate_time_buffer(grid, MAX_RADIUS)
 
