@@ -277,8 +277,8 @@ def produce_dem(grid, external_file=None, plot_output=True):
     dem = grid.copy()
     dem.data = np.flipud(ds.GetRasterBand(1).ReadAsArray())
     dem.data[dem.data == NODATA] = np.nan
-    dem.data[dem.data < 0] = 0
-    
+    dem.data[dem.data < 0] = np.nan
+
     ds = None  # Removes dataset from memory
 
     # Remove temporary tiff file if it was created
@@ -438,6 +438,10 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
 
             for tr in st:
                 time_shift = travel_times.sel(x=x, y=y, station=tr.id)  # [s]
+                # If there isn't a valid time shift value for this grid point,
+                # there was a DEM artifact or we're underwater - zero the Trace
+                if np.isnan(time_shift):
+                    tr.data = tr.data * 0
                 tr.stats.starttime = tr.stats.starttime - time_shift.data
 
             # Trim to time limits of global time axis
