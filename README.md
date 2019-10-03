@@ -50,13 +50,14 @@ steps in that repository's
 Usage
 -----
 
-To use _rtm_, clone or download this repository and add it to your
-`PYTHONPATH`, e.g. in a script where you'd like to use _rtm_:
-```python
-import sys
-sys.path.append('/path/to/rtm')
+To use _rtm_, first clone or download this repository. Then execute
 ```
-Then you can access package functions with (for example)
+$ conda activate rtm
+$ cd /path/to/rtm
+$ pip install -e .
+```
+(pip will check if you have _waveform_collection_ installed.) Then you can
+access package functions with (for example)
 ```python
 from waveform_collection import gather_waveforms
 from rtm import define_grid
