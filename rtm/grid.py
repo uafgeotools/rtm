@@ -277,7 +277,8 @@ def produce_dem(grid, external_file=None, plot_output=True):
     dem = grid.copy()
     dem.data = np.flipud(ds.GetRasterBand(1).ReadAsArray())
     dem.data[dem.data == NODATA] = np.nan
-
+    dem.data[dem.data < 0] = 0
+    
     ds = None  # Removes dataset from memory
 
     # Remove temporary tiff file if it was created
