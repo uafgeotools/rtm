@@ -19,6 +19,39 @@ Walker, K. T., Hedlin, M. A. H., de Groot‐Hedlin, C., Vergoz, J., Le Pichon, A
 using seismic networks and infrasound arrays. _Journal of Geophysical Research:
 Solid Earth_, 115, B12329. https://doi.org/10.1029/2010JB007863
 
+Installation
+------------
+
+It's recommended that you install this package into a new
+[conda](https://docs.conda.io/projects/conda/en/latest/index.html) environment
+containing all of the packages listed in the [Dependencies](#dependencies) section.
+
+To create a new conda environment for use with _rtm_, execute the following terminal command:
+```
+$ conda create -n rtm -c conda-forge -c conda-forge/label/dev cartopy fiona gmt=6 obspy utm xarray
+```
+This creates a new environment called `rtm` with all published _rtm_
+dependencies installed. In addition to published packages, _rtm_ requires the
+[_waveform_collection_](https://github.com/uafgeotools/waveform_collection)
+package.
+
+To install _rtm_, first activate the `rtm` environment with
+```
+$ conda activate rtm
+```
+and install the dependency _waveform_collection_ into this environment
+(instructions [here](https://github.com/uafgeotools/waveform_collection#installation)).
+
+Then execute the following terminal commands:
+```
+$ git clone https://github.com/liamtoney/rtm.git
+$ cd rtm
+$ pip install -e .
+```
+The final command installs the package in "editable" mode, which means that you
+can update it with a simple `git pull` in your local repository. This install
+command only needs to be run once.
+
 Dependencies
 ------------
 
@@ -36,28 +69,12 @@ Python packages:
 * [xarray](http://xarray.pydata.org/en/stable/)
 
 ...and their dependencies, which you don't really have to be concerned about if
-you're using [conda](https://docs.conda.io/projects/conda/en/latest/index.html)!
-
-It's recommended that you create a new conda environment to use with this
-repository:
-```
-conda create -n rtm -c conda-forge -c conda-forge/label/dev cartopy fiona gmt=6 obspy utm xarray
-```
-Then install _waveform_collection_ into the above environment by following the
-steps in that repository's
-[README](https://github.com/uafgeotools/waveform_collection/blob/master/README.md).
+you're using conda!
 
 Usage
 -----
 
-To use _rtm_, first clone or download this repository. Then execute
-```
-$ conda activate rtm
-$ cd /path/to/rtm
-$ pip install -e .
-```
-(pip will check if you have _waveform_collection_ installed.) Then you can
-access package functions with (for example)
+Access the package's functions with (for example)
 ```python
 from waveform_collection import gather_waveforms
 from rtm import define_grid
