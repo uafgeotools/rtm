@@ -1,8 +1,23 @@
-# Ignore JSON file containing WATC VPN username and password
+# JSON file containing WATC VPN username and password
 watc_credentials.json
 
-# Ignore PyCharm project settings folder
+# PyCharm project settings folder
 .idea/
 
-# Ignore all GeoTIFF files
-*.tif
+# macOS Finder things
+**/.DS_Store
+**/._.DS_Store
+
+# Python setup and runtime things
+**/__pycache__
+build/
+dist/
+*egg-info
+
+# Temporary/swap files from text editors
+**/*~
+**/*.swp
+**/._*
+
+# GeoTIFF files
+**/*.tif
