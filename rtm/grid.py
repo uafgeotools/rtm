@@ -276,8 +276,8 @@ def produce_dem(grid, external_file=None, plot_output=True):
     # Read resampled DEM into DataArray, set nodata values to np.nan
     dem = grid.copy()
     dem.data = np.flipud(ds.GetRasterBand(1).ReadAsArray())
-    dem.data[dem.data == NODATA] = np.nan
-    dem.data[dem.data < 0] = np.nan
+    dem.data[dem.data == NODATA] = np.nan  # Set NODATA values to np.nan
+    dem.data[dem.data < 0] = 0  # Set negative values (underwater?) to 0
 
     ds = None  # Removes dataset from memory
 
