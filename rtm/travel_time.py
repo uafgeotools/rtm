@@ -339,7 +339,11 @@ def celerity_travel_time(grid, st, celerity=343, dem=None):
     total_its = travel_times.size
     counter = 0
     tic = time.time()
-
+    
+    if dem is not None:
+        dem.data[dem.data<0] = 0
+        dem.data[np.isnan(dem.data)] = 0
+        
     for x in grid.x:
         for y in grid.y:
             for tr in st:
