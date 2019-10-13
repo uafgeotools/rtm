@@ -48,8 +48,8 @@ time_buffer = calculate_time_buffer(grid, MAX_RADIUS)
 
 st = gather_waveforms_bulk(LON_0, LAT_0, MAX_RADIUS, STARTTIME, ENDTIME,
                            INFRASOUND_CHANNELS, time_buffer=time_buffer,
-                           remove_response=True, watc_username=watc_username,
-                           watc_password=watc_password)
+                           remove_response=True, watc_username=False,
+                           watc_password=False)
 
 st_proc = process_waveforms(st, freqmin=FREQ_MIN, freqmax=FREQ_MAX,
                             envelope=True, smooth_win=SMOOTH_WIN,
@@ -81,14 +81,3 @@ time_max, y_max, x_max = get_max_coordinates(S, unproject=S.UTM)
 plot_record_section(st_proc, origin_time=time_max,
                     source_location=(y_max, x_max), plot_celerity=S.celerity,
                     label_waveforms=True)
-
-#%% DEM sandbox
-
-from rtm import define_grid, produce_dem
-
-EXTERNAL_FILE = 'DEM_Union_UAV_161116_sm101.tif'
-
-grid = define_grid(lon_0=169.447, lat_0=-19.532, x_radius=5000, y_radius=5000,
-                   spacing=5, projected=True)
-
-dem = produce_dem(grid, external_file=EXTERNAL_FILE)
