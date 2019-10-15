@@ -442,6 +442,7 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
                 # there was a DEM artifact or we're underwater - zero the Trace
                 if np.isnan(time_shift):
                     tr.data = tr.data * 0
+                    time_shift.data = 0  # Doesn't matter, since Trace is zeroed!
                 tr.stats.starttime = tr.stats.starttime - time_shift.data
 
             # Trim to time limits of global time axis
