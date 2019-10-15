@@ -5,20 +5,12 @@ from rtm import define_grid
 LON_0 = -152.238  # [deg] Longitude of grid center
 LAT_0 = 61.296    # [deg] Latitude of grid center
 
-PROJECTED = False
-
-if PROJECTED:
-    X_RADIUS = 250  # [m] E-W grid radius (half of grid "width")
-    Y_RADIUS = 250  # [m] N-S grid radius (half of grid "height")
-    SPACING = 50    # [m] Grid spacing
-
-else:
-    X_RADIUS = 1   # [deg] E-W grid radius (half of grid "width")
-    Y_RADIUS = 1   # [deg] N-S grid radius (half of grid "height")
-    SPACING = 0.1  # [deg] Grid spacing
+X_RADIUS = 1   # [deg] E-W grid radius (half of grid "width")
+Y_RADIUS = 1   # [deg] N-S grid radius (half of grid "height")
+SPACING = 0.1  # [deg] Grid spacing
 
 grid = define_grid(lon_0=LON_0, lat_0=LAT_0, x_radius=X_RADIUS,
-                   y_radius=Y_RADIUS, spacing=SPACING, projected=PROJECTED,
+                   y_radius=Y_RADIUS, spacing=SPACING, projected=False,
                    plot_preview=False)
 
 #%% (2) Grab and process the data
@@ -48,8 +40,7 @@ time_buffer = calculate_time_buffer(grid, MAX_RADIUS)
 
 st = gather_waveforms_bulk(LON_0, LAT_0, MAX_RADIUS, STARTTIME, ENDTIME,
                            INFRASOUND_CHANNELS, time_buffer=time_buffer,
-                           remove_response=True, watc_username=False,
-                           watc_password=False)
+                           remove_response=True)
 
 st_proc = process_waveforms(st, freqmin=FREQ_MIN, freqmax=FREQ_MAX,
                             envelope=True, smooth_win=SMOOTH_WIN,
@@ -74,7 +65,7 @@ S = grid_search(processed_st=st_proc, grid=grid, time_method=TIME_METHOD,
 
 from rtm import plot_time_slice, plot_record_section, get_max_coordinates
 
-plot_time_slice(S, st_proc, time_slice=None, label_stations=True, hires=True)
+plot_time_slice(S, st_proc, label_stations=True, hires=True)
 
 time_max, y_max, x_max = get_max_coordinates(S, unproject=S.UTM)
 
