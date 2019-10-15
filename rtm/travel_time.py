@@ -16,7 +16,7 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
     """
     Prepare and write RTM/FDTD files. Writes station, elevation, density, and
     sound speed file. Also parameter files for each station and shell script
-    for FDTD calculation
+    for FDTD calculation.
 
     Args:
         FDTD_DIR: output directory for FDTD run
@@ -25,7 +25,7 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
         dem: xarray.DataArray object containing the elevation values as well as
              grid coordinates and metadata
         H_MAX: max grid height [m]
-        TEMP: temerature for sound speed calculation [K]
+        TEMP: temperature for sound speed calculation [K]
         MAX_T: duration of FDTD simulation [s] (make sure it extends across
                your grid)
         DT: simulation time (dt <= dh/c*np.sqrt(3))
@@ -33,30 +33,30 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
                   dh)
         VSNAP: vertical output snapshot
         SURSNAP: surface pressure output snapshot
-        SNAPPOUT: snapshot output interval [s]
+        SNAPOUT: snapshot output interval [s]
     """
 
     print('--------------')
     print('CREATING RTM INPUT FILES FOR FDTD')
     print('--------------')
 
-    plotcheck=0 #plot stations on DEM as a check
+    plotcheck = 0  # plot stations on DEM as a check
 
     r = 287.058    # [J/mol*K]; universal gas constant
     rho = 101325/(r*TEMP)    # air density calculation
-    c = np.sqrt(1.402 * r * TEMP) # [m/s]; adiabatic sound speed
+    c = np.sqrt(1.402 * r * TEMP)  # [m/s]; adiabatic sound speed
 
-    #set up x/y grid and DEM
-    x=np.array(dem.x-dem.x.min())
-    y=np.array(dem.y-dem.y.min())
-    xmax=x.max()
-    ymax=y.max()
+    # set up x/y grid and DEM
+    x = np.array(dem.x-dem.x.min())
+    y = np.array(dem.y-dem.y.min())
+    xmax = x.max()
+    ymax = y.max()
 
-    print ('Max_x = ' + str(xmax))
+    print('Max_x = ' + str(xmax))
     print('Max_y = ' + str(ymax))
     print('Max Z = '  + str(H_MAX))
     print('Min H = 0')
-    print ('dh = ' + str(dem.spacing))
+    print('dh = ' + str(dem.spacing))
 
     # Save DEM into one-column text file from lower-left to upper-right, row by
     # row
@@ -64,66 +64,66 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
         os.makedirs(FDTD_DIR + 'input/')
     topo_file = FDTD_DIR + 'input/' + 'elev_' + FILENAME_ROOT + '.txt'
 
-    #unravel elevation to write to a file
-    elev=np.ravel(dem)
-    elev[elev<0]=0
+    # unravel elevation to write to a file
+    elev = np.ravel(dem)
+    elev[elev < 0] = 0
 
-    #now deal with stations
+    # now deal with stations
     station_file = FDTD_DIR + 'input/' + 'sta_' + FILENAME_ROOT + '.txt'
 
     with open('local_infra_coords.json') as f:
         LOCAL_INFRA_COORDS = json.load(f)
 
-    #get station lat/lon and utm coordinates
-    staloc={}   #lat,lon,z
-    stautm={}   #utmx,utmy,utmzone
-    staxyz_g={}   #x,y,z in FDTD grid
-    staxyz={}    #x,y,z actual values
-    for i,sta in enumerate(station):
+    # get station lat/lon and utm coordinates
+    staloc = {}   # lat,lon,z
+    stautm = {}   # utmx, utmy, utmzone
+    staxyz_g = {}   # x,y,z in FDTD grid
+    staxyz = {}    # x,y,z actual values
+    for i, sta in enumerate(station):
         try:
             staloc[i] = LOCAL_INFRA_COORDS[sta]
             stautm[i] = utm.from_latlon(staloc[i][0], staloc[i][1])
-            #find station x/y grid point closest to utm x/y
+            # find station x/y grid point closest to utm x/y
             staxyz_g[i] = [np.abs(dem.x.values-stautm[i][0]).argmin(),
-                  np.abs(dem.y.values-stautm[i][1]).argmin(),staloc[i][2]]
+                           np.abs(dem.y.values-stautm[i][1]).argmin(), staloc[i][2]]
             staxyz[i] = [dem.spacing*x for x in staxyz_g[i]]
         except KeyError:
-           print('Failed! No matching station coordinates found for %s'%sta)
-           raise
+            print('Failed! No matching station coordinates found for %s' % sta)
+            raise
 
-    #plot stations/etc on DEM as a check
+    # plot stations/etc on DEM as a check
     if plotcheck:
-        line_s = np.arange(0,H_MAX,20)
+        line_s = np.arange(0, H_MAX, 20)
 
-        fig1=plt.figure(1)
-        fig1.set_size_inches(4.5,6)
+        fig1 = plt.figure(1)
+        fig1.set_size_inches(4.5, 6)
         plt.clf()
-        ax=plt.subplot(111)
-        #ax2.contour(x,y,z,ls,colors='k',linewidths=.35)
-        ax.imshow(dem,origin='lower', extent=[min(x), max(x), min(y), max(y)],
+        ax = plt.subplot(111)
+        # ax2.contour(x,y,z,ls,colors='k', linewidths=.35)  <-- REMOVE?
+        ax.imshow(dem, origin='lower', extent=[min(x), max(x), min(y), max(y)],
                   cmap='jet')
-        ax.contour(x,y,dem,line_s,colors='k',linewidths=.35)
+        ax.contour(x, y, dem, line_s, colors='k', linewidths=.35)
         ax.set_aspect('equal')
-        for i,sta in enumerate(station):
-            ax.plot(x[staxyz[i][0]],y[staxyz[i][1]],'bo')
-            ax.text(x[staxyz[i][0]]+10,y[staxyz[i][1]]+10,sta)
+        for i, sta in enumerate(station):
+            ax.plot(x[staxyz[i][0]], y[staxyz[i][1]], 'bo')
+            ax.text(x[staxyz[i][0]]+10, y[staxyz[i][1]]+10, sta)
 
     # save files for FDTD input
-    print('Saving elevation file...%d values'%len(elev))
-    f = open(topo_file,'w')
-    #elevation header: x,y,dx,dy
+    print('Saving elevation file...%d values' % len(elev))
+    f = open(topo_file, 'w')
+    # elevation header: x,y,dx,dy
     f.write(str(len(x)) + ' ' + str(len(y)) + ' ' + str(float(dem.spacing)) +
-            ' ' + str(float(dem.spacing)) +'\n')
+            ' ' + str(float(dem.spacing)) + '\n')
     for ii in range(len(elev)):
-        #if np.remainder(temp_elev, grid.spacing) == 1:
-        #    temp_elev = temp_elev + 1
-        f.write(str(int(round(elev[ii]))) +'\n')
+        # if np.remainder(temp_elev, grid.spacing) == 1:  <-- REMOVE?
+        #    temp_elev = temp_elev + 1                    <-- REMOVE?
+        f.write(str(int(round(elev[ii]))) + '\n')
     f.close()
     print('Done')
 
     print('Saving station file')
-    f = open(station_file,'w')
-    for i,sta in enumerate(station):
+    f = open(station_file, 'w')
+    for i, sta in enumerate(station):
         temp_x = int(round(staxyz[i][0]))
         temp_y = int(round(staxyz[i][1]))
         temp_z = int(round(staxyz[i][2]))
@@ -133,13 +133,13 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
 
     # create vertical profiles for FDTD. Static values for now
     num_rows = int((H_MAX/dem.spacing) + 1)
-    h_array = np.arange(0,H_MAX+2,dem.spacing)
+    h_array = np.arange(0, H_MAX+2, dem.spacing)
 
-    c= '%.2f' % round(c, 2)    # Round to two decimal places
+    c = '%.2f' % round(c, 2)    # Round to two decimal places
     c_file = FDTD_DIR + 'input/' + 'vel_' + FILENAME_ROOT + '.txt'
     cid = open(c_file, 'w')
     for ii in range(0, num_rows):
-        cid.write(str(float(h_array[ii])) + ' ' + str(c) + '\n') #why is this a float?
+        cid.write(str(float(h_array[ii])) + ' ' + str(c) + '\n')  # why is this a float?
     cid.close()
 
     rho = '%.2f' % round(rho, 2)    # Round to two decimal places
@@ -157,41 +157,41 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
 
     # loop through every stations and make param file
 
-    sh_name='runall_'+FILENAME_ROOT+'_rtm.sh'
-    fsh=open(FDTD_DIR+sh_name,'w')
+    sh_name = 'runall_'+FILENAME_ROOT+'_rtm.sh'
+    fsh = open(FDTD_DIR+sh_name, 'w')
     fsh.write('#!/bin/sh\n')
     fsh.close()
 
     if not os.path.isdir(FDTD_DIR + 'input/'):
         os.makedirs(FDTD_DIR + 'input/')
 
-    for i,sta in enumerate(station):
-        foutnamenew=FILENAME_ROOT+'_'+sta+'.param'
+    for i, sta in enumerate(station):
+        foutnamenew = FILENAME_ROOT+'_'+sta+'.param'
 
-        #make sure relevant directories exist
-        OUTDIRtmp='output_'+sta
+        # make sure relevant directories exist
+        OUTDIRtmp = 'output_'+sta
         if not os.path.exists(FDTD_DIR+OUTDIRtmp):
             os.makedirs(FDTD_DIR+OUTDIRtmp)
 
-        #see infraFDTD manual for more info!
-        f=open(FDTD_DIR+foutnamenew,'w')
+        # see infraFDTD manual for more info!
+        f = open(FDTD_DIR+foutnamenew, 'w')
         f.write('PATH input=./input output=./'+OUTDIRtmp+'\n')
-        f.write('FDMESH x=%d y=%d max_elev=%d dh=%d \n' % (xmax,ymax,H_MAX,dem.spacing))
-        f.write('TIME T=%d dt=%.3f\n' % (MAX_T,DT))
+        f.write('FDMESH x=%d y=%d max_elev=%d dh=%d \n' % (xmax, ymax, H_MAX, dem.spacing))
+        f.write('TIME T=%d dt=%.3f\n' % (MAX_T, DT))
         f.write('TOPOGRAPHY elevfile=' + 'elev_' + FILENAME_ROOT + '.txt' + '\n')
         f.write('SOUND_SPEED profile=' + 'vel_' + FILENAME_ROOT + '.txt' + '\n')
         f.write('AIR_DENSITY profile=' + 'den_' + FILENAME_ROOT + '.txt' + '\n')
-        #set monopole source at the station!
+        # set monopole source at the station!
         f.write('MSOURCE x=%.1f y=%.1f height=0 func=bharris integral=1 freq=%.1f p0=1\n'
-                %(staxyz[i][0],staxyz[i][1],float(SRC_FREQ)))
-        f.write('SSNAPSHOT name=sur height=0 interval=%.3f\n'%(SNAPOUT))
-        f.write('STATION name=SRC x=%.1f y=%.1f height=0\n'%(staxyz[i][0],staxyz[i][1]))
+                % (staxyz[i][0], staxyz[i][1], float(SRC_FREQ)))
+        f.write('SSNAPSHOT name=sur height=0 interval=%.3f\n' % SNAPOUT)
+        f.write('STATION name=SRC x=%.1f y=%.1f height=0\n' % (staxyz[i][0], staxyz[i][1]))
         f.close()
         print('Saving station file '+foutnamenew)
 
-        #add station onto shell script
-        fsh=open(FDTD_DIR+sh_name,'a')
-        fsh.write('ifd '+ foutnamenew +' > run_' + FILENAME_ROOT+'_'+sta+'.txt \n')
+        # add station onto shell script
+        fsh = open(FDTD_DIR+sh_name, 'a')
+        fsh.write('ifd ' + foutnamenew + ' > run_' + FILENAME_ROOT+'_'+sta+'.txt \n')
         fsh.close()
 
     # Write DEM to pickle file for later use
@@ -210,7 +210,9 @@ def fdtd_travel_time(grid, st, FILENAME_ROOT, FDTD_DIR=os.getcwd()):
         FILENAME_ROOT: FDTD filename prefix
         FDTD_DIR: output directory for FDTD run (default: os.getcwd())
     Returns:
-        fdtd_interp: Blah blah blah
+        fdtd_interp: 3D array with dimensions (station, y, x) containing
+                     travel times from each station to each (x, y) point in
+                     seconds (interpolated to input grid)
     """
 
     print('--------------')
@@ -227,70 +229,70 @@ def fdtd_travel_time(grid, st, FILENAME_ROOT, FDTD_DIR=os.getcwd()):
         travel_times.assign_attrs(UTM=grid.UTM)
 
     else:
-        #get surface coordinates and elevations
-        indx3=np.loadtxt(FDTD_DIR+ 'output_'+stations[0]+'/sur_coords.txt',
-                         dtype = int)
+        # get surface coordinates and elevations
+        indx3 = np.loadtxt(FDTD_DIR + 'output_'+stations[0]+'/sur_coords.txt',
+                           dtype=int)
 
-        x=np.unique(indx3[:,0])
-        y=np.unique(indx3[:,1])
-        nx=len(x)
-        ny=len(y)
-        nvals=indx3.shape[0]
-        nsta=len(stations)
+        x = np.unique(indx3[:, 0])
+        y = np.unique(indx3[:, 1])
+        nx = len(x)
+        ny = len(y)
+        nvals = indx3.shape[0]
+        nsta = len(stations)
 
-        tprop=np.zeros((nsta,ny,nx))
+        tprop = np.zeros((nsta, ny, nx))
 
         # Get geospatial info for FDTD grid from pickle file
-        with open(FDTD_DIR + FILENAME_ROOT + '.pkl','rb') as f:
+        with open(FDTD_DIR + FILENAME_ROOT + '.pkl', 'rb') as f:
             travel_times = pickle.load(f)
 
-        #create empty xarray for travel times and all stations
-        travel_times=travel_times.expand_dims(station=[tr.id for tr in st]).copy()
+        # create empty xarray for travel times and all stations
+        travel_times = travel_times.expand_dims(station=[tr.id for tr in st]).copy()
 
-        #loop through each station and get propagation times to each grid point
-        for i,sta in enumerate(stations):
-            print('Running for %s'%sta)
+        # loop through each station and get propagation times to each grid point
+        for i, sta in enumerate(stations):
+            print('Running for %s' % sta)
 
-            OUTDIRtmp=FDTD_DIR+'output_'+sta+'/'
+            OUTDIRtmp = FDTD_DIR+'output_'+sta+'/'
 
-            #get monopole source time and data vector
-            src=np.genfromtxt(OUTDIRtmp+ 'monopole_src_1.txt') #'SRC_wav.txt')
-            srctvec=src[:,0]
-            srcdata=src[:,1]
+            # get monopole source time and data vector
+            src = np.genfromtxt(OUTDIRtmp + 'monopole_src_1.txt')  # 'SRC_wav.txt')
+            srctvec = src[:, 0]
+            srcdata = src[:, 1]
 
-            #find the delay in the sourc peak
-            samax=np.argmax(abs(np.diff(srcdata)))
-            srcdelay=srctvec[samax-1] #subtract 1 because of the diff
+            # find the delay in the sourc peak
+            samax = np.argmax(abs(np.diff(srcdata)))
+            srcdelay = srctvec[samax-1]  # subtract 1 because of the diff
 
-            #get surface snapshot filenames
-            fnames=glob.glob(OUTDIRtmp+'sur_pressure*.dat')
+            # get surface snapshot filenames
+            fnames = glob.glob(OUTDIRtmp+'sur_pressure*.dat')
 
-            #need to sort by name! this is tricky but seems to work
-            fnames.sort(key=lambda var:[int(x) if x.isdigit() else x for x in re.findall(r'[^0-9]|[0-9]+', var)])
+            # need to sort by name! this is tricky but seems to work
+            fnames.sort(key=lambda var: [int(x) if x.isdigit() else x for x in re.findall(r'[^0-9]|[0-9]+', var)])
 
-            nfiles=len(fnames)
-            print('Reading in %d files for %s and calculating travel times'%(nfiles,OUTDIRtmp))
+            nfiles = len(fnames)
+            print('Reading in %d files for %s and calculating travel times' % (nfiles, OUTDIRtmp))
 
-            #populate surface pressure
-            psurf=np.zeros((nfiles,ny,nx))
-            for ij,fnametmp in enumerate(fnames):
+            # populate surface pressure
+            psurf = np.zeros((nfiles, ny, nx))
+            for ij, fnametmp in enumerate(fnames):
 
-                f=open(fnametmp,'rb')
-                PP0=np.fromfile(f,dtype=np.float64,count=nvals)
-                #PP0=np.fromfile(f,dtype=np.float32,count=nvals) #32-bit float for old FDTD version
+                f = open(fnametmp, 'rb')
+                PP0 = np.fromfile(f, dtype=np.float64, count=nvals)
+                #PP0=np.fromfile(f,dtype=np.float32,count=nvals) #32-bit float for old FDTD version <-- REMOVE?
                 f.close()
-                psurf[ij,:,:]=np.reshape(PP0,(len(y),len(x)))
+                psurf[ij, :, :] = np.reshape(PP0, (len(y), len(x)))
 
-            tvec=np.linspace(srctvec[0],srctvec[-1],nfiles)
+            tvec = np.linspace(srctvec[0], srctvec[-1], nfiles)
 
-            #now determine time delays from each grid point to each station
+            # now determine time delays from each grid point to each station
             for ii in range(ny):
                 for jj in range(nx):
-                    amax=np.argmax(np.abs(psurf[:,ii,jj]))
-                    tprop[i,ii,jj]=tvec[amax]
+                    amax=np.argmax(np.abs(psurf[:, ii, jj]))
+                    tprop[i, ii, jj] = tvec[amax]
 
-            #remove delay from peak of src-time function to get propagation time
-            tprop[i,:,:]=tprop[i,:,:]-srcdelay
+            # remove delay from peak of src-time function to get propagation time
+            tprop[i, :, :] = tprop[i, :, :]-srcdelay
             print('done\n')
 
         # Assign to xarray.DataArray
@@ -300,22 +302,24 @@ def fdtd_travel_time(grid, st, FILENAME_ROOT, FDTD_DIR=os.getcwd()):
         del travel_times.attrs['UTM']
         travel_times.to_netcdf(FDTD_DIR+FILENAME_ROOT+'.nc')
 
-    #interpolate travel_times onto trial source grd
-    grid=grid.expand_dims(station=[tr.id for tr in st]).copy()
+    # interpolate travel_times onto trial source grid
+    grid = grid.expand_dims(station=[tr.id for tr in st]).copy()
 
-    fdtd_interp=grid.copy()
+    fdtd_interp = grid.copy()
     fdtd_interp = travel_times.interp_like(grid)
 
-    #copy over attrs as it doesn't by default? weird
-    fdtd_interp.attrs=grid.attrs
-    #fdtd_interp.coords=grid.coords
+    # copy over attrs as it doesn't by default? weird
+    fdtd_interp.attrs = grid.attrs
+    #fdtd_interp.coords=grid.coords <-- REMOVE?
 
     return fdtd_interp
 
 
 def celerity_travel_time(grid, st, celerity=343, dem=None):
     """
-    Blah blah blah
+    Compute travel times by dividing by a single celerity value. For projected
+    grids, distances can be 2-D or 3-D. For lat/lon grids, distances are great
+    circles.
 
     Args:
         grid: x, y grid to use <-- output of define_grid()
@@ -326,7 +330,9 @@ def celerity_travel_time(grid, st, celerity=343, dem=None):
              such as output from produce_dem(). If None, only performs 2-D
              Euclidian distance time removal (default: None)
     Returns:
-        travel_times: Blah blah blah
+        travel_times: 3-D array with dimensions (station, y, x) containing
+                      travel times from each station to each (x, y) point in
+                      seconds
     """
 
     # Expand the grid to a 3-D array of (station, y, x)
