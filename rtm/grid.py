@@ -162,13 +162,13 @@ def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
     return grid_out
 
 
-def produce_dem(grid, external_file=None, plot_output=True):
+def produce_dem(grid, external_file=None, plot_output=True, output_file=False):
     """
     Produce a digital elevation model (DEM) with the same extent, spacing, and
     UTM projection as an input projected RTM grid. The data source can be
     either a user-supplied file or global SRTM 1 arc-second (~30 m) data taken
-    from the GMT server. Both a GeoTIFF file and a DataArray are created.
-    Optionally plot the output DEM. Output GeoTIFF files are placed in
+    from the GMT server. A DataArray and (optionally) a GeoTIFF file are
+    created. Optionally plot the output DEM. Output GeoTIFF files are placed in
     ./rtm_dem (relative to where this function is called).
 
     NOTE 1:
@@ -189,6 +189,7 @@ def produce_dem(grid, external_file=None, plot_output=True):
                        data is used (default: None)
         plot_output: Toggle plotting a hillshade of the output DEM - useful for
                      identifying voids or artifacts (default: True)
+        output_file: Toggle creation of output GeoTIFF file (default: False)
     Returns:
         dem: 2-D xarray.DataArray of elevation values with identical shape to
              input grid.
@@ -264,15 +265,23 @@ def produce_dem(grid, external_file=None, plot_output=True):
         proj_string += ' +south'
     dest_srs.ImportFromProj4(proj_string)
 
-    # Create output raster filename/path
-    if not os.path.exists(OUTPUT_DIR):
-        os.makedirs(OUTPUT_DIR)
-    output_file = TEMPLATE.format(*grid.grid_center[::-1], grid.x_radius,
-                                  grid.y_radius, grid.spacing)
-    output_raster = os.path.join(OUTPUT_DIR, output_file)
+    # Control whether or not an output GeoTIFF is produced
+    if output_file:
+        # Create output raster filename/path
+        if not os.path.exists(OUTPUT_DIR):
+            os.makedirs(OUTPUT_DIR)
+        output_name = TEMPLATE.format(*grid.grid_center[::-1], grid.x_radius,
+                                      grid.y_radius, grid.spacing)
+        # Write to file
+        output = os.path.join(OUTPUT_DIR, output_name)
+        format = 'GTiff'
+    else:
+        # Write to memory (see https://stackoverflow.com/a/48706963)
+        output = ''
+        format = 'VRT'
 
     # Resample input raster, whether it be from an external file or SRTM
-    ds = gdal.Warp(output_raster, input_raster, dstSRS=dest_srs,
+    ds = gdal.Warp(output, input_raster, dstSRS=dest_srs, format=format,
                    dstNodata=NODATA,
                    outputBounds=(grid.x.min() - grid.spacing/2,
                                  grid.y.min() - grid.spacing/2,
@@ -299,7 +308,8 @@ def produce_dem(grid, external_file=None, plot_output=True):
     # Warn user about possible units ambiguity - we can't check this directly!
     warnings.warn('Elevation units are assumed to be in meters!', RTMWarning)
 
-    print(f'Created output DEM file:\n\t{os.path.abspath(output_raster)}')
+    if output_file:
+        print(f'Created output DEM file:\n\t{os.path.abspath(output)}')
 
     print('Done')
 
