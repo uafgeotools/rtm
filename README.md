@@ -79,8 +79,7 @@ Access the package's functions with (for example)
 from waveform_collection import gather_waveforms
 from rtm import define_grid
 ```
-and so on. Currently, documentation only exists in function docstrings. For a
-usage example, see [`example.py`](example.py).
+and so on. Currently, documentation only exists in function docstrings. For usage examples, see [`example_regional.py`](example_regional.py) or [`example_local.py`](example_local.py).
 
 Authors
 -------
