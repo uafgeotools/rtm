@@ -34,6 +34,9 @@ RESAMPLE_ALG = 'cubicspline'  # Algorithm to use for resampling
                               # Good options are 'bilinear', 'cubic',
                               # 'cubicspline', and 'lanczos'
 
+# Define some conversion factors
+KM2M = 1000     # [m/km]
+
 
 def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
                 plot_preview=False):
@@ -481,7 +484,7 @@ def calculate_time_buffer(grid, max_station_dist):
 
     Args:
         grid: x, y grid <-- output of define_grid()
-        max_station_dist: [m] The longest distance from the grid center to a
+        max_station_dist: [km] The longest distance from the grid center to a
                           station
     Returns:
         time_buffer: [s] Maximum travel time expected for a source anywhere in
@@ -506,7 +509,7 @@ def calculate_time_buffer(grid, max_station_dist):
     # Maximum distance a signal would have to travel is the longest distance
     # from the grid center to a station, PLUS the longest distance from the
     # grid center to a grid corner
-    max_propagation_dist = max_station_dist + grid_diagonal
+    max_propagation_dist = max_station_dist*KM2M + grid_diagonal  # [m]
 
     # Calculate maximum travel time
     time_buffer = max_propagation_dist / MIN_CELERITY  # [s]
