@@ -45,11 +45,12 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     lon_0, lat_0 = S.grid_center
 
     if dem is not None:
+
+        # Note that the below is a hacky way to use matplotlib instead of
+        # cartopy and should be edited once cartopy labeling is functional
         proj = None
         transform = None
         plot_transform = None
-
-        #convert various lat/lons to UTM
         lon_0, lat_0, _, _ = utm.from_latlon(S.grid_center[1], S.grid_center[0])
         x_max, y_max, _, _ = utm.from_latlon(y_max, x_max)
         for tr in st:
@@ -156,6 +157,10 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
         title = 'GLOBAL MAXIMUM\n\n' + title
 
     ax.set_title(title, pad=20)
+
+    # Another hack that can be removed once cartopy is improved
+    if dem is not None:
+        ax.set_aspect('equal')
 
     fig.canvas.draw()  # Needed to make fig.tight_layout() work
     fig.tight_layout()
