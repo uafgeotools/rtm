@@ -2,8 +2,8 @@
 
 from rtm import define_grid, produce_dem
 
-#change to DEM from opoentography at some point
-EXTERNAL_FILE = '/Users/dfee/Documents/vanuatu/DEM/DEM_Union_UAV_161116_sm101.tif'
+# Change to DEM from https://opentopography.org/ at some point
+EXTERNAL_FILE = 'DEM_Union_UAV_161116_sm101.tif'
 
 LON_0 = 169.448212  # [deg] Longitude of grid center
 LAT_0 = -19.527908   # [deg] Latitude of grid center
@@ -40,7 +40,7 @@ ENDTIME = STARTTIME + 10
 
 SOURCE = 'IRIS'
 NETWORK = '3E'
-STATION = ('YIF1', 'YIF2', 'YIF3', 'YIF4', 'YIF5', 'YIF6')
+STATION = 'YIF?'
 LOCATION = '*'
 CHANNEL = '*'
 
@@ -50,11 +50,9 @@ FREQ_MAX = 10            # [Hz] Upper bandpass corner
 DECIMATION_RATE = 10  # [Hz] New sampling rate to use for decimation
 SMOOTH_WIN = 1        # [s] Smoothing window duration
 
-st = Stream()
-for sta in STATION:
-    st += gather_waveforms(source=SOURCE, network=NETWORK, station=sta,
-                           location='*', channel='*', starttime=STARTTIME,
-                           endtime=ENDTIME)
+st = gather_waveforms(source=SOURCE, network=NETWORK, station=STATION,
+                      location=LOCATION, channel=CHANNEL, starttime=STARTTIME,
+                      endtime=ENDTIME)
 
 st_proc = process_waveforms(st, freqmin=FREQ_MIN, freqmax=FREQ_MAX,
                             envelope=True, smooth_win=SMOOTH_WIN,
@@ -67,7 +65,7 @@ from rtm import grid_search
 
 STACK_METHOD = 'sum'  # Choose either 'sum' or 'product'
 TIME_METHOD = 'celerity'  # Choose either 'celerity' or 'fdtd'
-TIME_KWARGS = {'celerity' : 343, 'dem' : search_dem}
+TIME_KWARGS = {'celerity': 343, 'dem': search_dem}
 
 Scel = grid_search(processed_st=st_proc, grid=search_grid,
                    time_method=TIME_METHOD, starttime=None, endtime=None,
@@ -77,12 +75,10 @@ Scel = grid_search(processed_st=st_proc, grid=search_grid,
 
 from rtm import plot_time_slice, plot_record_section, get_max_coordinates
 
+plot_time_slice(Scel, st_proc, label_stations=True, dem=source_dem)
+
 time_max, y_max, x_max = get_max_coordinates(Scel, unproject=Scel.UTM)
 
-fig = plot_time_slice(Scel, st_proc, time_slice=None, label_stations=True,
-                      hires=False, dem=source_dem)
-
-fig_rec = plot_record_section(st_proc, origin_time=time_max,
-                              source_location=(y_max, x_max),
-                              plot_celerity=Scel.celerity,
-                              label_waveforms=True)
+plot_record_section(st_proc, origin_time=time_max,
+                    source_location=(y_max, x_max),
+                    plot_celerity=Scel.celerity, label_waveforms=True)
