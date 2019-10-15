@@ -31,7 +31,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
         hires: If True, use higher-resolution background image/coastlines,
                which looks better but can be slow (default: False)
         dem: Overlay time slice on a user-supplied DEM from produce_dem
-                (default: None)
+             (default: None)
     Returns:
         fig: Output figure
     """
@@ -50,11 +50,11 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
         plot_transform = None
 
         #convert various lat/lons to UTM
-        lon_0, lat_0, _, _=utm.from_latlon(S.grid_center[1],S.grid_center[0])
-        x_max, y_max, _, _=utm.from_latlon(y_max,x_max)
+        lon_0, lat_0, _, _ = utm.from_latlon(S.grid_center[1], S.grid_center[0])
+        x_max, y_max, _, _ = utm.from_latlon(y_max, x_max)
         for tr in st:
             tr.stats.longitude, tr.stats.latitude, _, _ = utm.from_latlon(
-            tr.stats.latitude, tr.stats.longitude)
+                tr.stats.latitude, tr.stats.longitude)
 
     elif S.UTM:
         proj = ccrs.UTM(**S.UTM)
@@ -68,7 +68,6 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
                                                         S.y.values.max()))
         transform = ccrs.PlateCarree()
         plot_transform = ccrs.Geodetic()
-
 
     fig, ax = plt.subplots(figsize=(8, 8),
                            subplot_kw=dict(projection=proj))
@@ -84,29 +83,27 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     if dem is None:
         _plot_geographic_context(ax=ax, utm=S.UTM, hires=hires)
         slice_plot_kwargs = dict(ax=ax, alpha=0.5, cmap='hot_r',
-                             add_colorbar=False, transform=transform)
+                                 add_colorbar=False, transform=transform)
     else:
-        cs = dem.plot.contour(ax=ax, colors='k', levels=50, add_labels=True,
-                              zorder=-1)
-        ax.clabel(cs, cs.levels[::2], fontsize=9, fmt='%d', inline=1)
+        cs = dem.plot.contour(ax=ax, colors='k', levels=50, zorder=-1,
+                              linewidths=0.5)
+        ax.clabel(cs, cs.levels[::2], fontsize=9, fmt='%d', inline=True)
+
+        ax.set_xlabel('UTM Easting (m)')
+        ax.set_ylabel('UTM Northing (m)')
 
         slice_plot_kwargs = dict(ax=ax, alpha=0.5, cmap='hot_r',
-                                 add_colorbar=False)
-        
-        barlen = np.around(dem.x_radius/4, decimals=-1)
-        barlen_str = "%d m" % barlen
-        scalebar = AnchoredSizeBar(ax.transData,
-                           barlen, barlen_str, 'lower left', 
-                           pad=0.3,
-                           color='black',
-                           frameon=True,
-                           size_vertical=1)
+                                 add_colorbar=False, add_labels=False)
 
+        bar_length = np.around(dem.x_radius/4, decimals=-1)
+        bar_label = f'{bar_length:g} m'
+        scalebar = AnchoredSizeBar(ax.transData, bar_length, bar_label,
+                                   'lower left', pad=0.3, color='black',
+                                   frameon=True, size_vertical=1, borderpad=1)
         ax.add_artist(scalebar)
 
-        transform=ax.transData
-        plot_transform=ax.transData
-        
+        plot_transform = ax.transData
+
     if S.UTM:
         # imshow works well here (no gridlines in translucent plot)
         sm = slice.plot.imshow(**slice_plot_kwargs)
@@ -118,26 +115,27 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     cbar = fig.colorbar(sm, label='Stack amplitude', aspect=30)
     cbar.solids.set_alpha(1)
 
-
-    
     # Initialize list of handles for legend
     h = [None, None, None]
+    scatter_zorder = 5
 
     # Plot center of grid
     h[0] = ax.scatter(lon_0, lat_0, s=50, color='limegreen', edgecolor='black',
-                      label='Grid center', transform=plot_transform)
+                      label='Grid center', transform=plot_transform,
+                      zorder=scatter_zorder)
 
     # Plot stack maximum
     h[1] = ax.scatter(x_max, y_max, s=100, color='red', marker='*',
                       edgecolor='black',
                       label=f'Stack maximum\n({y_max:.4f}, {x_max:.4f})',
-                      transform=plot_transform)
+                      transform=plot_transform, zorder=scatter_zorder)
 
     # Plot stations
     for tr in st:
         h[2] = ax.scatter(tr.stats.longitude,  tr.stats.latitude, marker='v',
                           color='blue', edgecolor='black',
-                          label='Infrasound sensor', transform=plot_transform)
+                          label='Infrasound sensor', transform=plot_transform,
+                          zorder=scatter_zorder)
         if label_stations:
             ax.text(tr.stats.longitude, tr.stats.latitude,
                     '  {}.{}'.format(tr.stats.network, tr.stats.station),
@@ -145,7 +143,8 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
                     horizontalalignment='left', fontsize=10, weight = 'bold',
                     transform=plot_transform)
 
-    ax.legend(h, [handle.get_label() for handle in h], loc='best')
+    ax.legend(h, [handle.get_label() for handle in h], loc='best',
+              framealpha=1)
 
     title = f'Time: {UTCDateTime(slice.time.values.astype(str)).datetime}'
 
