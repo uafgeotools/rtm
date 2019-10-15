@@ -247,7 +247,13 @@ def produce_dem(grid, external_file=None, plot_output=True):
     # If an external DEM file was supplied, use it
     else:
 
-        print(f'Using external DEM file:\n\t{os.path.abspath(external_file)}')
+        abs_path = os.path.abspath(external_file)
+
+        # Check if file actually exists
+        if not os.path.exists(abs_path):
+            raise FileNotFoundError(abs_path)
+
+        print(f'Using external DEM file:\n\t{abs_path}')
 
         input_raster = external_file
 
