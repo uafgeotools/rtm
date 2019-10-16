@@ -141,7 +141,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
             ax.text(tr.stats.longitude, tr.stats.latitude,
                     '  {}.{}'.format(tr.stats.network, tr.stats.station),
                     verticalalignment='center_baseline',
-                    horizontalalignment='left', fontsize=10, weight = 'bold',
+                    horizontalalignment='left', fontsize=10, weight='bold',
                     transform=plot_transform)
 
     ax.legend(h, [handle.get_label() for handle in h], loc='best',
