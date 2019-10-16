@@ -2,12 +2,12 @@
 
 from rtm import define_grid
 
-LON_0 = -152.238  # [deg] Longitude of grid center
-LAT_0 = 61.296    # [deg] Latitude of grid center
+LON_0 = 172.4  # [deg] Longitude of grid center
+LAT_0 = 56.9   # [deg] Latitude of grid center
 
-X_RADIUS = 1   # [deg] E-W grid radius (half of grid "width")
-Y_RADIUS = 1   # [deg] N-S grid radius (half of grid "height")
-SPACING = 0.1  # [deg] Grid spacing
+X_RADIUS = 10  # [deg] E-W grid radius (half of grid "width")
+Y_RADIUS = 5   # [deg] N-S grid radius (half of grid "height")
+SPACING = 1    # [deg] Grid spacing
 
 grid = define_grid(lon_0=LON_0, lat_0=LAT_0, x_radius=X_RADIUS,
                    y_radius=Y_RADIUS, spacing=SPACING, projected=False,
@@ -17,13 +17,15 @@ grid = define_grid(lon_0=LON_0, lat_0=LAT_0, x_radius=X_RADIUS,
 
 from obspy import UTCDateTime
 from waveform_collection import gather_waveforms_bulk, INFRASOUND_CHANNELS
-from rtm import process_waveforms, calculate_time_buffer
+from rtm import process_waveforms
 
 # Start and end of time window containing (suspected) events
-STARTTIME = UTCDateTime('2019-07-15T16:10')
-ENDTIME = STARTTIME + 60*60
+STARTTIME = UTCDateTime('2018-12-18T23:30')
+ENDTIME = UTCDateTime('2018-12-19T00:10')
 
-MAX_RADIUS = 500  # [km] Radius within which to search for stations
+FBX_LON = -147.7164  # [deg] Longitude of station search center
+FBX_LAT = 64.8378    # [deg] Latitude of station search center
+MAX_RADIUS = 1000    # [km] Radius within which to search for stations
 
 FREQ_MIN = 0.5  # [Hz] Lower bandpass corner
 FREQ_MAX = 2    # [Hz] Upper bandpass corner
@@ -31,11 +33,10 @@ FREQ_MAX = 2    # [Hz] Upper bandpass corner
 DECIMATION_RATE = 0.1  # [Hz] New sampling rate to use for decimation
 SMOOTH_WIN = 60        # [s] Smoothing window duration
 
-# Automatically determine appropriate time buffer in s
-time_buffer = calculate_time_buffer(grid, MAX_RADIUS)
+TIME_BUFFER = 120*60  # [s] Manually defined buffer time
 
-st = gather_waveforms_bulk(LON_0, LAT_0, MAX_RADIUS, STARTTIME, ENDTIME,
-                           INFRASOUND_CHANNELS, time_buffer=time_buffer,
+st = gather_waveforms_bulk(FBX_LON, FBX_LAT, MAX_RADIUS, STARTTIME, ENDTIME,
+                           INFRASOUND_CHANNELS, time_buffer=TIME_BUFFER,
                            remove_response=True)
 
 st_proc = process_waveforms(st, freqmin=FREQ_MIN, freqmax=FREQ_MAX,
@@ -48,7 +49,7 @@ from rtm import grid_search
 
 STACK_METHOD = 'sum'  # Choose either 'sum' or 'product'
 TIME_METHOD = 'celerity'  # Choose either 'celerity' or 'fdtd'
-CELERITY = 295  # [m/s]
+CELERITY = 300  # [m/s]
 
 S = grid_search(processed_st=st_proc, grid=grid, time_method=TIME_METHOD,
                 starttime=STARTTIME, endtime=ENDTIME,
