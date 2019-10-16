@@ -62,7 +62,6 @@ _uafgeotools_ repositories:
 Python packages:
 
 * [cartopy](https://scitools.org.uk/cartopy/docs/latest/)
-* [Fiona](https://fiona.readthedocs.io/en/latest/)
 * [GMT](https://docs.generic-mapping-tools.org/dev/index.html)
 * [ObsPy](http://docs.obspy.org/)
 * [utm](https://github.com/Turbo87/utm)
