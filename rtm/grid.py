@@ -450,8 +450,8 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
     counter = 0
     tic = time.time()
 
-    for x in S.x:
-        for y in S.y:
+    for x in S.x.values:
+        for y in S.y.values:
 
             st = processed_st.copy()
 

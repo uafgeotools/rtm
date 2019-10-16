@@ -346,8 +346,8 @@ def celerity_travel_time(grid, st, celerity=343, dem=None):
     counter = 0
     tic = time.time()
 
-    for x in grid.x:
-        for y in grid.y:
+    for x in grid.x.values:
+        for y in grid.y.values:
             for tr in st:
 
                 if grid.UTM:  # This is a UTM grid
