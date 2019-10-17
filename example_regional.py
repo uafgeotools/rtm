@@ -16,7 +16,8 @@ grid = define_grid(lon_0=LON_0, lat_0=LAT_0, x_radius=X_RADIUS,
 #%% (2) Grab and process the data
 
 from obspy import UTCDateTime
-from waveform_collection import gather_waveforms_bulk, INFRASOUND_CHANNELS
+from waveform_collection import gather_waveforms, gather_waveforms_bulk, \
+                                INFRASOUND_CHANNELS
 from rtm import process_waveforms
 
 # Start and end of time window containing (suspected) events
@@ -33,11 +34,16 @@ FREQ_MAX = 2    # [Hz] Upper bandpass corner
 DECIMATION_RATE = 0.1  # [Hz] New sampling rate to use for decimation
 SMOOTH_WIN = 60        # [s] Smoothing window duration
 
-TIME_BUFFER = 120*60  # [s] Manually defined buffer time
+TIME_BUFFER = 3*60*60  # [s] Manually defined buffer time
 
+# Bulk waveform gather
 st = gather_waveforms_bulk(FBX_LON, FBX_LAT, MAX_RADIUS, STARTTIME, ENDTIME,
                            INFRASOUND_CHANNELS, time_buffer=TIME_BUFFER,
                            remove_response=True)
+
+# Add in AVO's Sand Point infrasound array
+st += gather_waveforms('AVO', 'AV', 'SDPI', '0?', 'BDF', STARTTIME, ENDTIME,
+                       time_buffer=TIME_BUFFER, remove_response=True)
 
 st_proc = process_waveforms(st, freqmin=FREQ_MIN, freqmax=FREQ_MAX,
                             envelope=True, smooth_win=SMOOTH_WIN,
@@ -59,10 +65,11 @@ S = grid_search(processed_st=st_proc, grid=grid, time_method=TIME_METHOD,
 
 from rtm import plot_time_slice, plot_record_section, get_max_coordinates
 
-plot_time_slice(S, st_proc, label_stations=True, hires=True)
+plot_time_slice(S, st_proc, label_stations=False, hires=True)
 
 time_max, y_max, x_max = get_max_coordinates(S, unproject=S.UTM)
 
-plot_record_section(st_proc, origin_time=time_max,
-                    source_location=(y_max, x_max), plot_celerity=S.celerity,
-                    label_waveforms=True)
+fig = plot_record_section(st_proc, origin_time=time_max,
+                          source_location=(y_max, x_max),
+                          plot_celerity='range', label_waveforms=False)
+fig.axes[0].set_ylim(bottom=1100)  # Start at this distance (km) from source
