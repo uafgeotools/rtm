@@ -44,7 +44,7 @@ and install the dependency _waveform_collection_ into this environment
 
 Then execute the following terminal commands:
 ```
-$ git clone https://github.com/liamtoney/rtm.git
+$ git clone https://github.com/uafgeotools/rtm.git
 $ cd rtm
 $ pip install -e .
 ```
