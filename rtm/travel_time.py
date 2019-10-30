@@ -12,7 +12,7 @@ import xarray as xr
 
 
 def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
-                     DT, SRC_FREQ, VSNAP, SURSNAP, SNAPOUT):
+                     DT, SRC_FREQ, SNAPOUT):
     """
     Prepare and write RTM/FDTD files. Writes station, elevation, density, and
     sound speed file. Also parameter files for each station and shell script
@@ -159,7 +159,7 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
 
     if not os.path.isdir(FDTD_DIR + 'input/'):
         os.makedirs(FDTD_DIR + 'input/')
-        
+
     # loop through every stations and make param file
     for i, sta in enumerate(station):
         foutnamenew = FILENAME_ROOT+'_'+sta+'.param'
@@ -252,7 +252,7 @@ def fdtd_travel_time(grid, st, FILENAME_ROOT, FDTD_DIR=os.getcwd()):
             OUTDIRtmp = FDTD_DIR+'output_'+sta+'/'
 
             # get monopole source time and data vector
-            src = np.genfromtxt(OUTDIRtmp + 'monopole_src_1.txt')  
+            src = np.genfromtxt(OUTDIRtmp + 'monopole_src_1.txt')
             srctvec = src[:, 0]
             srcdata = src[:, 1]
 
