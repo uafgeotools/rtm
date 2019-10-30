@@ -99,7 +99,6 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
         fig1.set_size_inches(4.5, 6)
         plt.clf()
         ax = plt.subplot(111)
-        # ax2.contour(x,y,z,ls,colors='k', linewidths=.35)  <-- REMOVE?
         ax.imshow(dem, origin='lower', extent=[min(x), max(x), min(y), max(y)],
                   cmap='jet')
         ax.contour(x, y, dem, line_s, colors='k', linewidths=.35)
@@ -115,9 +114,7 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
     f.write(str(len(x)) + ' ' + str(len(y)) + ' ' + str(float(dem.spacing)) +
             ' ' + str(float(dem.spacing)) + '\n')
     for ii in range(len(elev)):
-        # if np.remainder(temp_elev, grid.spacing) == 1:  <-- REMOVE?
-        #    temp_elev = temp_elev + 1                    <-- REMOVE?
-        f.write(str(int(round(elev[ii]))) + '\n')
+         f.write(str(int(round(elev[ii]))) + '\n')
     f.close()
     print('Done')
 
@@ -155,8 +152,6 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
     print('STA_FN = ' + str(station_file))
     print('STA_NUM = ' + str(len(station)))
 
-    # loop through every stations and make param file
-
     sh_name = 'runall_'+FILENAME_ROOT+'_rtm.sh'
     fsh = open(FDTD_DIR+sh_name, 'w')
     fsh.write('#!/bin/sh\n')
@@ -164,7 +159,8 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
 
     if not os.path.isdir(FDTD_DIR + 'input/'):
         os.makedirs(FDTD_DIR + 'input/')
-
+        
+    # loop through every stations and make param file
     for i, sta in enumerate(station):
         foutnamenew = FILENAME_ROOT+'_'+sta+'.param'
 
@@ -173,7 +169,7 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
         if not os.path.exists(FDTD_DIR+OUTDIRtmp):
             os.makedirs(FDTD_DIR+OUTDIRtmp)
 
-        # see infraFDTD manual for more info!
+        # see infraFDTD manual for more info
         f = open(FDTD_DIR+foutnamenew, 'w')
         f.write('PATH input=./input output=./'+OUTDIRtmp+'\n')
         f.write('FDMESH x=%d y=%d max_elev=%d dh=%d \n' % (xmax, ymax, H_MAX, dem.spacing))
@@ -181,7 +177,7 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
         f.write('TOPOGRAPHY elevfile=' + 'elev_' + FILENAME_ROOT + '.txt' + '\n')
         f.write('SOUND_SPEED profile=' + 'vel_' + FILENAME_ROOT + '.txt' + '\n')
         f.write('AIR_DENSITY profile=' + 'den_' + FILENAME_ROOT + '.txt' + '\n')
-        # set monopole source at the station!
+        # set monopole source at the station
         f.write('MSOURCE x=%.1f y=%.1f height=0 func=bharris integral=1 freq=%.1f p0=1\n'
                 % (staxyz[i][0], staxyz[i][1], float(SRC_FREQ)))
         f.write('SSNAPSHOT name=sur height=0 interval=%.3f\n' % SNAPOUT)
@@ -256,7 +252,7 @@ def fdtd_travel_time(grid, st, FILENAME_ROOT, FDTD_DIR=os.getcwd()):
             OUTDIRtmp = FDTD_DIR+'output_'+sta+'/'
 
             # get monopole source time and data vector
-            src = np.genfromtxt(OUTDIRtmp + 'monopole_src_1.txt')  # 'SRC_wav.txt')
+            src = np.genfromtxt(OUTDIRtmp + 'monopole_src_1.txt')  
             srctvec = src[:, 0]
             srcdata = src[:, 1]
 
@@ -279,7 +275,6 @@ def fdtd_travel_time(grid, st, FILENAME_ROOT, FDTD_DIR=os.getcwd()):
 
                 f = open(fnametmp, 'rb')
                 PP0 = np.fromfile(f, dtype=np.float64, count=nvals)
-                #PP0=np.fromfile(f,dtype=np.float32,count=nvals) #32-bit float for old FDTD version <-- REMOVE?
                 f.close()
                 psurf[ij, :, :] = np.reshape(PP0, (len(y), len(x)))
 
@@ -308,9 +303,8 @@ def fdtd_travel_time(grid, st, FILENAME_ROOT, FDTD_DIR=os.getcwd()):
     fdtd_interp = grid.copy()
     fdtd_interp = travel_times.interp_like(grid)
 
-    # copy over attrs as it doesn't by default? weird
+    # copy over attrs as it doesn't by default
     fdtd_interp.attrs = grid.attrs
-    #fdtd_interp.coords=grid.coords <-- REMOVE?
 
     return fdtd_interp
 
