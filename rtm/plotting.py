@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.transforms as transforms
+from matplotlib import dates
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from cartopy.io.img_tiles import Stamen
@@ -144,7 +145,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     for tr in st:
         h[2] = ax.scatter(tr.stats.longitude,  tr.stats.latitude, marker='v',
                           color='blue', edgecolor='black',
-                          label='Infrasound sensor', transform=plot_transform,
+                          label='Station', transform=plot_transform,
                           zorder=scatter_zorder)
         if label_stations:
             ax.text(tr.stats.longitude, tr.stats.latitude,
@@ -283,6 +284,71 @@ def plot_record_section(st, origin_time, source_location, plot_celerity=None,
 
     return fig
 
+def plot_st(st, FILT, equal_scale=False, rem_resp=False,
+            label_waveforms=True):
+    """
+    Plot stream waveforms in a publication-quality figure. Multiple plotting
+    options, including filtering.
+
+    Args:
+        st: Any Stream object
+        filt: A 2 element list of lower and upper corner frequencies for
+        filtering. Insert None if no filtering desired.
+        equal_scale: Set equal scale for all waveforms (default: False)
+        rem_resp: Remove response by apply sensitivity
+        label_waveforms: Toggle labeling waveforms with network and station
+                         codes (default: True)
+    Returns:
+        fig: Output figure
+    """
+
+    st_plot = st.copy()
+    ntra = len(st)
+    tvec = dates.date2num(st_plot[0].stats.starttime.datetime) + st_plot[0].times()/86400
+
+    if rem_resp:
+        print('Applying sensitivity')
+        st_plot.remove_sensitivity()
+
+    if FILT:
+        print('Filtering between %.1f-%.1f Hz' % (FILT[0], FILT[1]))
+
+        st_plot.detrend(type='linear')
+        st_plot.taper(max_percentage=.01)
+        st_plot.filter("bandpass", freqmin=FILT[0], freqmax=FILT[1], corners=2,
+                   zerophase=True)
+
+    if equal_scale:
+        ym = np.max(st_plot.max())
+
+    fig, ax = plt.subplots(figsize=(8, 6), nrows=ntra, ncols=1)
+
+    for i, tr in enumerate(st_plot):
+        ax[i].plot(tvec, tr.data, 'k-')
+        ax[i].set_xlim(tvec[0], tvec[-1])
+        if equal_scale:
+            ax[i].set_ylim(-ym, ym)
+        else:
+            ax[i].set_ylim(-tr.data.max(), tr.data.max())
+        plt.locator_params(axis='y', nbins=4)
+        ax[i].tick_params(axis='y', labelsize=8)
+        ax[i].ticklabel_format(useOffset=False, style='plain')
+
+        ax[i].xaxis_date()
+        if i < ntra-1:
+            ax[i].set_xticklabels('')
+
+        if label_waveforms:
+            ax[i].text(.9, .9, f'{tr.stats.network}.{tr.stats.station}',
+                    verticalalignment='center', transform=ax[i].transAxes,
+                    fontsize=10)
+
+    ax[-1].set_xlabel('UTC Time')
+
+    fig.tight_layout()
+    fig.show()
+
+    return fig
 
 def _plot_geographic_context(ax, utm, hires=False):
     """
