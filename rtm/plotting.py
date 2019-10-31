@@ -9,6 +9,7 @@ from obspy.geodetics import gps2dist_azimuth
 from .stack import get_max_coordinates
 import utm
 from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
 def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
@@ -87,7 +88,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
                                  add_colorbar=False, transform=transform)
     else:
         cs = dem.plot.contour(ax=ax, colors='k', levels=50, zorder=-1,
-                              linewidths=0.5)
+                              linewidths=0.3)
         ax.clabel(cs, cs.levels[::2], fontsize=9, fmt='%d', inline=True)
 
         ax.set_xlabel('UTM Easting (m)')
@@ -113,7 +114,10 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
         # pcolormesh instead (gridlines will show in translucent plot)
         sm = slice.plot.pcolormesh(**slice_plot_kwargs)
 
-    cbar = fig.colorbar(sm, label='Stack amplitude', aspect=30)
+    divider = make_axes_locatable(ax)
+    cax1 = divider.append_axes("right", size="3%", pad=0.05)
+
+    cbar = fig.colorbar(sm, cax = cax1, label='Stack amplitude')
     cbar.solids.set_alpha(1)
 
     # Initialize list of handles for legend
