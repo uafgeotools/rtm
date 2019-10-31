@@ -284,7 +284,7 @@ def plot_record_section(st, origin_time, source_location, plot_celerity=None,
 
     return fig
 
-def plot_st(st, FILT, equal_scale=False, rem_resp=False,
+def plot_st(st, filt, equal_scale=False, rem_resp=False,
             label_waveforms=True):
     """
     Plot stream waveforms in a publication-quality figure. Multiple plotting
@@ -310,12 +310,12 @@ def plot_st(st, FILT, equal_scale=False, rem_resp=False,
         print('Applying sensitivity')
         st_plot.remove_sensitivity()
 
-    if FILT:
-        print('Filtering between %.1f-%.1f Hz' % (FILT[0], FILT[1]))
+    if filt:
+        print('Filtering between %.1f-%.1f Hz' % (filt[0], filt[1]))
 
         st_plot.detrend(type='linear')
         st_plot.taper(max_percentage=.01)
-        st_plot.filter("bandpass", freqmin=FILT[0], freqmax=FILT[1], corners=2,
+        st_plot.filter("bandpass", freqmin=filt[0], freqmax=filt[1], corners=2,
                    zerophase=True)
 
     if equal_scale:
@@ -347,6 +347,30 @@ def plot_st(st, FILT, equal_scale=False, rem_resp=False,
 
     fig.tight_layout()
     fig.show()
+
+    return fig
+
+def plot_stack_peak(S, max_plot=False):
+    """
+    Plot the peak of the stack as a function of time.
+
+    Args:
+        S: xarray.DataArray containing the stack function S
+        plot_max: Plot maximum value with red circle (default: None):
+    Returns:
+        fig: Output figure
+    """
+
+    s_peak = S.max(axis=(1,2)).data
+
+    fig, ax = plt.subplots(figsize=(8, 4), nrows=1, ncols=1)
+    ax.plot(S.time, s_peak, 'k-')
+    if max_plot:
+        stack_maximum = S.where(S == S.max(), drop=True).squeeze()
+        ax.plot(stack_maximum.time, stack_maximum.data, 'ro')
+    ax.set_xlim(S.time[0].data, S.time[-1].data)
+    ax.set_xlabel('UTC Time')
+    ax.set_ylabel('Peak Stack Amplitude')
 
     return fig
 
