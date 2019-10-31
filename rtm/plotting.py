@@ -334,14 +334,20 @@ def plot_st(st, filt, equal_scale=False, rem_resp=False,
         ax[i].tick_params(axis='y', labelsize=8)
         ax[i].ticklabel_format(useOffset=False, style='plain')
 
+        if tr.stats.channel[1] == 'D':
+            ax[i].set_ylabel('Pressure [Pa]]')
+        else:
+            ax[i].set_ylabel('Velocity [m/s]')
+
         ax[i].xaxis_date()
         if i < ntra-1:
             ax[i].set_xticklabels('')
 
         if label_waveforms:
-            ax[i].text(.9, .9, f'{tr.stats.network}.{tr.stats.station}',
+            ax[i].text(.85, .9,
+              f'{tr.stats.network}.{tr.stats.station}.{tr.stats.channel}',
                     verticalalignment='center', transform=ax[i].transAxes,
-                    fontsize=10)
+                    fontsize=9)
 
     ax[-1].set_xlabel('UTC Time')
 
