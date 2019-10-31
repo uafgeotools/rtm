@@ -130,9 +130,14 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
                       zorder=scatter_zorder)
 
     # Plot stack maximum
+    if S.UTM:
+        # UTM formatting
+        label = f'Stack maximum\n({x_max:.0f}, {y_max:.0f})'
+    else:
+        # Lat/lon formatting
+        label = f'Stack maximum\n({y_max:.4f}, {x_max:.4f})'
     h[1] = ax.scatter(x_max, y_max, s=100, color='red', marker='*',
-                      edgecolor='black',
-                      label=f'Stack maximum\n({y_max:.4f}, {x_max:.4f})',
+                      edgecolor='black', label=label,
                       transform=plot_transform, zorder=scatter_zorder)
 
     # Plot stations
