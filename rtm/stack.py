@@ -64,7 +64,7 @@ def get_max_coordinates(S, unproject=False):
 
     return time_max, y_max, x_max
 
-def get_peak_coordinates(S, height, min_time, unproject=False):
+def get_peak_coordinates(S, height, min_time, global_max=True, unproject=False):
     """
     Find the values of the coordinates corresponding to the maxima (peaks) in
     a stack function S.  Optionally "unprojects" UTM coordinates to (latitude,
@@ -74,6 +74,8 @@ def get_peak_coordinates(S, height, min_time, unproject=False):
         S: xarray.DataArray containing the stack function S
         height: Minimum peak height in stack function.
         min_time: Minimum time (distance) between peaks in stack function [s].
+        global_max: Return the values for only the max of the stack function
+                    (default: True)
         unproject: If True and if S is a projected grid, unprojects the UTM
                    coordinates to (latitude, longitude) (default: False)
     Returns:
@@ -91,6 +93,15 @@ def get_peak_coordinates(S, height, min_time, unproject=False):
     #find peaks in stack function
     peaks, props = find_peaks(s_peak, height, distance=min_time/peak_dt)
     npeaks = len(peaks)
+
+    print('Found %d peaks in stack for height=%.1f and min_time=%.1f s' %
+          (npeaks, height, min_time/peak_dt))
+
+    #Use just the global max. Argmax returns the first max if multiple are present
+    if global_max:
+        peaks = np.array([peaks[props['peak_heights'].argmax()]])
+        npeaks = len(peaks)
+        print('Returning just global max!')
 
     time_max = [UTCDateTime(S['time'][i].values.astype(str)) for i in peaks]
     x_max = [S.where(S[i] == S[i].max(), drop=True).squeeze()['x'].values.tolist() \
