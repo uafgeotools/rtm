@@ -358,7 +358,7 @@ def plot_st(st, filt, equal_scale=False, rem_resp=False,
     return fig
 
 
-def plot_stack_peak(S, max_plot=False):
+def plot_stack_peak(S, plot_max=False):
     """
     Plot the peak of the stack as a function of time.
 
@@ -373,7 +373,7 @@ def plot_stack_peak(S, max_plot=False):
 
     fig, ax = plt.subplots(figsize=(8, 4), nrows=1, ncols=1)
     ax.plot(S.time, s_peak, 'k-')
-    if max_plot:
+    if plot_max:
         stack_maximum = S.where(S == S.max(), drop=True).squeeze()
         ax.plot(stack_maximum.time, stack_maximum.data, 'ro')
     ax.set_xlim(S.time[0].data, S.time[-1].data)
