@@ -72,10 +72,8 @@ you're using conda!
 
 Optional (for automatic DEM downloading):
 
-* [GMT](https://docs.generic-mapping-tools.org/latest/)
-
-  Install GMT by following the
-  [official GMT install instructions](https://github.com/GenericMappingTools/gmt/blob/master/INSTALL.md).
+* [GMT](https://docs.generic-mapping-tools.org/latest/) (install by following
+  the [official GMT install instructions](https://github.com/GenericMappingTools/gmt/blob/master/INSTALL.md))
 
 Usage
 -----
