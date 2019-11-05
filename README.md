@@ -28,7 +28,7 @@ containing all of the packages listed in the [Dependencies](#dependencies) secti
 
 To create a new conda environment for use with _rtm_, execute the following terminal command:
 ```
-$ conda create -n rtm -c conda-forge -c conda-forge/label/dev cartopy gmt=6 obspy utm xarray
+$ conda create -n rtm -c conda-forge cartopy gdal obspy utm xarray
 ```
 This creates a new environment called `rtm` with all published _rtm_
 dependencies installed. In addition to published packages, _rtm_ requires the
@@ -62,13 +62,20 @@ _uafgeotools_ repositories:
 Python packages:
 
 * [cartopy](https://scitools.org.uk/cartopy/docs/latest/)
-* [GMT](https://docs.generic-mapping-tools.org/dev/index.html)
+* [GDAL](https://gdal.org/)
 * [ObsPy](http://docs.obspy.org/)
 * [utm](https://github.com/Turbo87/utm)
 * [xarray](http://xarray.pydata.org/en/stable/)
 
 ...and their dependencies, which you don't really have to be concerned about if
 you're using conda!
+
+Optional (for automatic DEM downloading):
+
+* [GMT](https://docs.generic-mapping-tools.org/latest/)
+
+  Install GMT by following the
+  [official GMT install instructions](https://github.com/GenericMappingTools/gmt/blob/master/INSTALL.md).
 
 Usage
 -----

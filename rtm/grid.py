@@ -7,6 +7,7 @@ from osgeo import gdal, osr
 from obspy.geodetics import gps2dist_azimuth
 import utm
 import time
+import shutil
 import os
 import subprocess
 import warnings
@@ -202,8 +203,22 @@ def produce_dem(grid, external_file=None, plot_output=True, output_file=False):
     # If an external DEM file was not supplied, use SRTM data
     if not external_file:
 
-        print('No external DEM file provided. Using 1 arc-second SRTM data '
-              'from GMT server.')
+        print('No external DEM file provided. Will use 1 arc-second SRTM data '
+              'from GMT server. Checking for GMT 6...')
+
+        # Check for GMT 6
+        if shutil.which('gmt') is not None:
+            # GMT exists! Now check version
+            gmt_version = subprocess.check_output(['gmt', '--version'],
+                                                  text=True).strip()
+            if gmt_version[0] < '6':
+                raise ValueError('GMT 6 is required, but you\'re using GMT '
+                                 f'{gmt_version}.')
+        else:
+            raise OSError('GMT not found on your system. Install GMT 6 and '
+                          'try again.')
+
+        print(f'GMT version {gmt_version} found.')
 
         # Find corners going clockwise from SW (in UTM coordinates)
         corners_utm = [(grid.x.values.min(), grid.y.values.min()),
