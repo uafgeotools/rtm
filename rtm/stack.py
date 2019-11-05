@@ -28,6 +28,8 @@ def get_peak_coordinates(S, global_max=True, height=None, min_time=None,
         time_max: Time (UTCDateTime) corresponding to peaks in S
         y_max: [deg lat. or m N] y-coordinates corresponding to peaks in S
         x_max: [deg lon. or m E] x-coordinates corresponding to peaks in S
+        peaks: Peak indices [ndarray]
+        props: Dict containing peak properties [dict]
     """
 
     # Create peak stack function over time
@@ -61,6 +63,8 @@ def get_peak_coordinates(S, global_max=True, height=None, min_time=None,
                           'in S. Using first occurrence.', RTMWarning)
 
         peaks = np.array(peaks[max_args])[0]
+        npeaks = len(peaks)
+
     else:
 
         if (height is None) or (min_time is None):
@@ -82,11 +86,6 @@ def get_peak_coordinates(S, global_max=True, height=None, min_time=None,
     y_max = [S.where(S[i] == S[i].max(), drop=True).squeeze()['y'].values.tolist()
              for i in peaks]
 
-    if global_max:
-        time_max = time_max[0]
-        x_max = x_max[0]
-        y_max = y_max[0]
-
     if unproject:
         # If the grid is projected
         if S.UTM:
@@ -101,4 +100,10 @@ def get_peak_coordinates(S, global_max=True, height=None, min_time=None,
             print('unproject=True is set but coordinates are already in '
                   '(latitude, longitude). Doing nothing.')
 
-    return time_max, y_max, x_max
+    #return just a single float for global_max
+    if global_max:
+        time_max = time_max[0]
+        x_max = x_max[0]
+        y_max = y_max[0]
+
+    return time_max, y_max, x_max, peaks, props

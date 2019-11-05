@@ -6,11 +6,12 @@ from rtm import define_grid, produce_dem
 To obtain the below file from OpenTopography, run the command
 
     $ curl https://cloud.sdsc.edu/v1/AUTH_opentopography/hosted_data/OTDS.072019.4326.1/raster/DEM_WGS84.tif -o DEM_WGS84.tif
-    
+
 or simply paste the above URL in a web browser. Alternatively, specify None to
 automatically download and use 1 arc-second STRM data.
 """
 EXTERNAL_FILE = 'DEM_WGS84.tif'
+EXTERNAL_FILE = '/Users/dfee/Documents/vanuatu/DEM/DEM_Union_UAV_161116_sm101.tif'
 
 LON_0 = 169.448212  # [deg] Longitude of grid center
 LAT_0 = -19.527908  # [deg] Latitude of grid center
@@ -73,12 +74,20 @@ S = grid_search(processed_st=st_proc, grid=grid, time_method=TIME_METHOD,
 
 #%% (4) Plot
 
-from rtm import plot_time_slice, plot_record_section, get_peak_coordinates
+from rtm import plot_time_slice, plot_record_section, get_peak_coordinates, plot_stack_peak, plot_st
 
-fig = plot_time_slice(S, st_proc, label_stations=True, dem=dem)
+fig_st = plot_st(st, filt=[FREQ_MIN, FREQ_MAX], equal_scale=False, rem_resp=True,
+            label_waveforms=True)
 
-time_max, y_max, x_max = get_peak_coordinates(S, unproject=S.UTM)
+fig_peak = plot_stack_peak(S, max_plot=True)
 
-plot_record_section(st_proc, origin_time=time_max,
-                    source_location=(y_max, x_max),
+fig_slice = plot_time_slice(S, st_proc, label_stations=True, dem=dem)
+
+
+time_max, y_max, x_max, peaks, props = get_peak_coordinates(S, global_max=False,
+                                                            height=3, min_time=2,
+                                                            unproject=S.UTM)
+
+fig = plot_record_section(st_proc, origin_time=time_max[1],
+                    source_location=(y_max[1], x_max[1]),
                     plot_celerity=S.celerity, label_waveforms=True)

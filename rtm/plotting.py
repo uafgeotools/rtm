@@ -41,7 +41,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     st = processed_st.copy()
 
     # Get coordinates of stack maximum in (latitude, longitude)
-    time_max, y_max, x_max = get_peak_coordinates(S, unproject=S.UTM)
+    time_max, y_max, x_max, peaks, props = get_peak_coordinates(S, unproject=S.UTM)
 
     # Gather coordinates of grid center
     lon_0, lat_0 = S.grid_center
@@ -336,9 +336,9 @@ def plot_st(st, filt, equal_scale=False, rem_resp=False,
         ax[i].ticklabel_format(useOffset=False, style='plain')
 
         if tr.stats.channel[1] == 'D':
-            ax[i].set_ylabel('Pressure [Pa]]')
+            ax[i].set_ylabel('Pressure [Pa]', fontsize=8)
         else:
-            ax[i].set_ylabel('Velocity [m/s]')
+            ax[i].set_ylabel('Velocity [m/s]', fontsize=8)
 
         ax[i].xaxis_date()
         if i < ntra-1:
@@ -347,12 +347,12 @@ def plot_st(st, filt, equal_scale=False, rem_resp=False,
         if label_waveforms:
             ax[i].text(.85, .9,
               f'{tr.stats.network}.{tr.stats.station}.{tr.stats.channel}',
-                    verticalalignment='center', transform=ax[i].transAxes,
-                    fontsize=9)
+                    verticalalignment='center', transform=ax[i].transAxes)
 
     ax[-1].set_xlabel('UTC Time')
 
     fig.tight_layout()
+    plt.subplots_adjust(hspace=.12)
     fig.show()
 
     return fig
