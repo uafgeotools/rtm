@@ -26,21 +26,21 @@ def get_peak_coordinates(S, height, min_time, global_max=True, unproject=False):
         x_max: [deg lon. or m E] x-coordinates corresponding to peaks in S
     """
 
-    #create peak stack function over time
+    # Create peak stack function over time
     s_peak = S.max(axis=(1, 2)).data
 
-    peak_dt = (np.datetime64(S['time'][1].data) - np.datetime64(S['time'][0].data)) \
-    / np.timedelta64(1, 's')
+    peak_dt = (np.datetime64(S['time'][1].data) -
+               np.datetime64(S['time'][0].data)) / np.timedelta64(1, 's')
 
-    #find peaks in stack function
+    # Find peaks in stack function
     peaks, props = find_peaks(s_peak, height, distance=min_time/peak_dt)
     npeaks = len(peaks)
 
-    print('Found %d peaks in stack for height=%.1f and min_time=%.1f s' %
-          (npeaks, height, min_time/peak_dt))
+    print(f'Found {npeaks} peaks in stack for height = {height:.1f} and '
+          f'min_time = {min_time/peak_dt:.1f} s.')
 
-    #Return just the global max. check for multiple maxima along each dimension
-    #and across the stack function
+    # Return just the global max. check for multiple maxima along each dimension
+    # and across the stack function
     if global_max:
         print('Returning just global max!')
 
@@ -65,9 +65,9 @@ def get_peak_coordinates(S, height, min_time, global_max=True, unproject=False):
         npeaks = len(peaks)
 
     time_max = [UTCDateTime(S['time'][i].values.astype(str)) for i in peaks]
-    x_max = [S.where(S[i] == S[i].max(), drop=True).squeeze()['x'].values.tolist() \
+    x_max = [S.where(S[i] == S[i].max(), drop=True).squeeze()['x'].values.tolist()
              for i in peaks]
-    y_max = [S.where(S[i] == S[i].max(), drop=True).squeeze()['y'].values.tolist() \
+    y_max = [S.where(S[i] == S[i].max(), drop=True).squeeze()['y'].values.tolist()
              for i in peaks]
 
     if unproject:
