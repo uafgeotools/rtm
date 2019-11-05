@@ -11,7 +11,6 @@ or simply paste the above URL in a web browser. Alternatively, specify None to
 automatically download and use 1 arc-second STRM data.
 """
 EXTERNAL_FILE = 'DEM_WGS84.tif'
-EXTERNAL_FILE = '/Users/dfee/Documents/vanuatu/DEM/DEM_Union_UAV_161116_sm101.tif'
 
 LON_0 = 169.448212  # [deg] Longitude of grid center
 LAT_0 = -19.527908  # [deg] Latitude of grid center
