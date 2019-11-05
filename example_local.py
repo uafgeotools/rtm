@@ -73,11 +73,11 @@ S = grid_search(processed_st=st_proc, grid=grid, time_method=TIME_METHOD,
 
 #%% (4) Plot
 
-from rtm import plot_time_slice, plot_record_section, get_max_coordinates
+from rtm import plot_time_slice, plot_record_section, get_peak_coordinates
 
 fig = plot_time_slice(S, st_proc, label_stations=True, dem=dem)
 
-time_max, y_max, x_max = get_max_coordinates(S, unproject=S.UTM)
+time_max, y_max, x_max = get_peak_coordinates(S, unproject=S.UTM)
 
 plot_record_section(st_proc, origin_time=time_max,
                     source_location=(y_max, x_max),

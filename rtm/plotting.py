@@ -7,7 +7,7 @@ import cartopy.feature as cfeature
 from cartopy.io.img_tiles import Stamen
 from obspy import UTCDateTime
 from obspy.geodetics import gps2dist_azimuth
-from .stack import get_max_coordinates
+from .stack import get_peak_coordinates
 import utm
 from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -41,7 +41,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     st = processed_st.copy()
 
     # Get coordinates of stack maximum in (latitude, longitude)
-    time_max, y_max, x_max = get_max_coordinates(S, unproject=S.UTM)
+    time_max, y_max, x_max = get_peak_coordinates(S, unproject=S.UTM)
 
     # Gather coordinates of grid center
     lon_0, lat_0 = S.grid_center
@@ -284,6 +284,7 @@ def plot_record_section(st, origin_time, source_location, plot_celerity=None,
 
     return fig
 
+
 def plot_st(st, filt, equal_scale=False, rem_resp=False,
             label_waveforms=True):
     """
@@ -356,6 +357,7 @@ def plot_st(st, filt, equal_scale=False, rem_resp=False,
 
     return fig
 
+
 def plot_stack_peak(S, max_plot=False):
     """
     Plot the peak of the stack as a function of time.
@@ -379,6 +381,7 @@ def plot_stack_peak(S, max_plot=False):
     ax.set_ylabel('Peak Stack Amplitude')
 
     return fig
+
 
 def _plot_geographic_context(ax, utm, hires=False):
     """
