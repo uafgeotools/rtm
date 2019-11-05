@@ -82,6 +82,11 @@ def get_peak_coordinates(S, global_max=True, height=None, min_time=None,
     y_max = [S.where(S[i] == S[i].max(), drop=True).squeeze()['y'].values.tolist()
              for i in peaks]
 
+    if global_max:
+        time_max = time_max[0]
+        x_max = x_max[0]
+        y_max = y_max[0]
+
     if unproject:
         # If the grid is projected
         if S.UTM:
