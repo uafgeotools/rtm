@@ -5,6 +5,7 @@ import utm
 from scipy.signal import find_peaks
 from . import RTMWarning
 
+
 def get_peak_coordinates(S, global_max=True, height=None, min_time=None,
                          unproject=False):
     """
@@ -40,7 +41,7 @@ def get_peak_coordinates(S, global_max=True, height=None, min_time=None,
     if global_max:
         print('Returning just global max!')
 
-        #get global max
+        # Get global max
         stack_maximum = S.where(S == S.max(), drop=True)
 
         # Warn if we have multiple maxima along any dimension
@@ -50,10 +51,10 @@ def get_peak_coordinates(S, global_max=True, height=None, min_time=None,
                 warnings.warn(f'Multiple maxima ({num_dim_maxima}) present in S '
                               f'along the {dim} dimension.', RTMWarning)
 
-        # return all peaks
+        # Return all peaks
         peaks, props = find_peaks(s_peak, (None, None))
 
-        # check for multiple global maxima
+        # Check for multiple global maxima
         max_args = np.argwhere(props['peak_heights'] ==
                                np.amax(props['peak_heights']))
 
@@ -68,13 +69,13 @@ def get_peak_coordinates(S, global_max=True, height=None, min_time=None,
     else:
 
         if (height is None) or (min_time is None):
-            raise ValueError('height and min_time must be supplied for ' \
-                             'peak detection when global_max=False!')
+            raise ValueError('height and min_time must be supplied for peak '
+                             'detection when global_max=False!')
 
-        peak_dt = (np.datetime64(S['time'][1].data) -
-               np.datetime64(S['time'][0].data)) / np.timedelta64(1, 's')
+        # [s] Time sampling interval of S
+        peak_dt = (S.time.data[1] - S.time.data[0]) / np.timedelta64(1, 's')
 
-        peaks, props = find_peaks (s_peak, height, distance=min_time/peak_dt)
+        peaks, props = find_peaks(s_peak, height, distance=min_time/peak_dt)
 
         npeaks = len(peaks)
         print(f'Found {npeaks} peaks in stack for height > {height:.1f} and '
@@ -100,7 +101,7 @@ def get_peak_coordinates(S, global_max=True, height=None, min_time=None,
             print('unproject=True is set but coordinates are already in '
                   '(latitude, longitude). Doing nothing.')
 
-    #return just a single float for global_max
+    # Return just a single float for global_max
     if global_max:
         time_max = time_max[0]
         x_max = x_max[0]
