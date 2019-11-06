@@ -597,13 +597,8 @@ def calculate_semblance(st):
         raise ValueError('Traces in stream must have same length!')
 
     n = len(st)
-    m = len(st[0].data)
 
-    data = np.empty((m,n))
-    for i, tr in enumerate(st):
-        data[:,i] = tr.data
-
-    beam = np.sum(data, axis=1) / n
+    beam = np.sum([tr.data for tr in st], axis=0) / n
     beampower = n * np.sum(beam**2)
 
     avg_power = np.sum(np.sum([d**2 for d in data], axis=0))
