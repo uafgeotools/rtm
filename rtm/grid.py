@@ -601,7 +601,7 @@ def calculate_semblance(st):
     beam = np.sum([tr.data for tr in st], axis=0) / n
     beampower = n * np.sum(beam**2)
 
-    avg_power = np.sum(np.sum([d**2 for d in data], axis=0))
+    avg_power = np.sum(np.sum([tr.data**2 for tr in st], axis=0))
 
     semblance = beampower / avg_power
 
