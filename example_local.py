@@ -83,11 +83,10 @@ fig_peak = plot_stack_peak(S, plot_max=True)
 
 fig_slice = plot_time_slice(S, st_proc, label_stations=True, dem=dem)
 
+time_max, y_max, x_max, _, _ = get_peak_coordinates(S, global_max=False,
+                                                    height=3, min_time=2,
+                                                    unproject=S.UTM)
 
-time_max, y_max, x_max, peaks, props = get_peak_coordinates(S, global_max=False,
-                                                            height=3, min_time=2,
-                                                            unproject=S.UTM)
-
-fig = plot_record_section(st_proc, origin_time=time_max[1],
-                          source_location=(y_max[1], x_max[1]),
+fig = plot_record_section(st_proc, origin_time=time_max[0],
+                          source_location=(y_max[0], x_max[0]),
                           plot_celerity=S.celerity, label_waveforms=True)
