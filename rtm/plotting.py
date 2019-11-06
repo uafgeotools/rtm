@@ -115,10 +115,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
         # pcolormesh instead (gridlines will show in translucent plot)
         sm = slice.plot.pcolormesh(**slice_plot_kwargs)
 
-    divider = make_axes_locatable(ax)
-    cax1 = divider.append_axes("right", size="3%", pad=0.05)
-
-    cbar = fig.colorbar(sm, cax = cax1, label='Stack amplitude')
+    cbar = fig.colorbar(sm, label='Stack amplitude')
     cbar.solids.set_alpha(1)
 
     # Initialize list of handles for legend
