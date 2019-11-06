@@ -76,8 +76,8 @@ S = grid_search(processed_st=st_proc, grid=grid, time_method=TIME_METHOD,
 from rtm import (plot_time_slice, plot_record_section, get_peak_coordinates,
                  plot_stack_peak, plot_st)
 
-fig_st = plot_st(st, filt=[FREQ_MIN, FREQ_MAX], equal_scale=False, rem_resp=True,
-                 label_waveforms=True)
+fig_st = plot_st(st, filt=[FREQ_MIN, FREQ_MAX], equal_scale=False,
+                 remove_response=True, label_waveforms=True)
 
 fig_peak = plot_stack_peak(S, plot_max=True)
 

@@ -282,7 +282,7 @@ def plot_record_section(st, origin_time, source_location, plot_celerity=None,
     return fig
 
 
-def plot_st(st, filt, equal_scale=False, rem_resp=False,
+def plot_st(st, filt, equal_scale=False, remove_response=False,
             label_waveforms=True):
     """
     Plot stream waveforms in a publication-quality figure. Multiple plotting
@@ -291,9 +291,9 @@ def plot_st(st, filt, equal_scale=False, rem_resp=False,
     Args:
         st: Any Stream object
         filt: A 2 element list of lower and upper corner frequencies for
-        filtering. Insert None if no filtering desired.
+              filtering. Specify None if no filtering is desired.
         equal_scale: Set equal scale for all waveforms (default: False)
-        rem_resp: Remove response by apply sensitivity
+        remove_response: Remove response by applying sensitivity
         label_waveforms: Toggle labeling waveforms with network and station
                          codes (default: True)
     Returns:
@@ -304,7 +304,7 @@ def plot_st(st, filt, equal_scale=False, rem_resp=False,
     ntra = len(st)
     tvec = dates.date2num(st_plot[0].stats.starttime.datetime) + st_plot[0].times()/86400
 
-    if rem_resp:
+    if remove_response:
         print('Applying sensitivity')
         st_plot.remove_sensitivity()
 
