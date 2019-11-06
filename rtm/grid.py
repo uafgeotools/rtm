@@ -577,3 +577,37 @@ def _project_station_to_utm(tr, grid):
                       'grid.', RTMWarning)
 
     return station_utm
+
+
+def calculate_semblance(st):
+    """
+    Calculates the semblance, a measure of multi-channel coherence, following
+    the defintion of Neidell & Taner [1971. Assume traces are already
+    time-shifted to construct the beam.
+
+    Args:
+        st: time-shifted Stream
+
+    Returns:
+        semblance: [0-1] Multi-channel coherence
+    """
+
+    # check that all traces have the same length
+    if len(set([len(tr) for tr in st])) != 1:
+        raise ValueError('Traces in stream must have same length!')
+
+    n = len(st)
+    m = len(st[0].data)
+
+    data = np.empty((m,n))
+    for i, tr in enumerate(st):
+        data[:,i] = tr.data
+
+    beam = np.sum(data, axis=1) / n
+    beampower = n * np.sum(beam**2)
+
+    avg_power = np.sum(np.sum([d**2 for d in data], axis=0))
+
+    semblance = beampower / avg_power
+
+    return semblance
