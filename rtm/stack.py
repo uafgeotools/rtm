@@ -108,3 +108,32 @@ def get_peak_coordinates(S, global_max=True, height=None, min_time=None,
         y_max = y_max[0]
 
     return time_max, y_max, x_max, peaks, props
+
+
+def calculate_semblance(st):
+    """
+    Calculates the semblance, a measure of multi-channel coherence, following
+    the defintion of Neidell & Taner [1971. Assume traces are already
+    time-shifted to construct the beam.
+
+    Args:
+        st: time-shifted Stream
+
+    Returns:
+        semblance: [0-1] Multi-channel coherence
+    """
+
+    # check that all traces have the same length
+    if len(set([len(tr) for tr in st])) != 1:
+        raise ValueError('Traces in stream must have same length!')
+
+    n = len(st)
+
+    beam = np.sum([tr.data for tr in st], axis=0) / n
+    beampower = n * np.sum(beam**2)
+
+    avg_power = np.sum(np.sum([tr.data**2 for tr in st], axis=0))
+
+    semblance = beampower / avg_power
+
+    return semblance
