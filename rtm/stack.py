@@ -36,6 +36,13 @@ def get_peak_coordinates(S, global_max=True, height=None, min_time=None,
     # Create peak stack function over time
     s_peak = S.max(axis=(1, 2)).data
 
+    # If there is less than three? values, use global_max as find_peaks fails
+    if len(s_peak) < 3:
+        #change this to temporarily add values to S
+        print('Stack function contains <2 time samples, using global_max!')
+        global_max = True
+        s_peak = np.hstack((0, 0, s_peak, 0))
+
     # Return just the global max or desired peaks. Check for multiple maxima
     # along each dimension and across the stack function
     if global_max:
@@ -64,6 +71,7 @@ def get_peak_coordinates(S, global_max=True, height=None, min_time=None,
                           'in S. Using first occurrence.', RTMWarning)
 
         peaks = np.array(peaks[max_args])[0]
+        props = {'peak_heights': props['peak_heights'][max_args][0]}
         npeaks = len(peaks)
 
     else:
@@ -79,7 +87,7 @@ def get_peak_coordinates(S, global_max=True, height=None, min_time=None,
 
         npeaks = len(peaks)
         print(f'Found {npeaks} peaks in stack for height > {height:.1f} and '
-              f'min_time > {min_time/peak_dt:.1f} s.')
+              f'min_time > {min_time:.1f} s.')
 
     time_max = [UTCDateTime(S['time'][i].values.astype(str)) for i in peaks]
     x_max = [S.where(S[i] == S[i].max(), drop=True).squeeze()['x'].values.tolist()
