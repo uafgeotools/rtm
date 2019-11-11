@@ -476,7 +476,7 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
 
     print('----------------------')
     print('PERFORMING GRID SEARCH')
-    print(f'Method =  \'{stack_method}\'')
+    print(f'Method = \'{stack_method}\'')
     print('----------------------')
 
     total_its = np.product(S.shape[1:])  # Don't count time dimension
