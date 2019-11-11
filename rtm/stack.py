@@ -37,9 +37,9 @@ def get_peak_coordinates(S, global_max=True, height=None, min_time=None,
     # Create peak stack function over time
     s_peak = S.max(axis=(1, 2)).data
 
-    # If there is less than three? values, use global_max as find_peaks fails
+    # If there are less than three values, use global_max as find_peaks fails
     if len(s_peak) < 3:
-        print('Stack function contains <3 time samples, using global_max!')
+        print('Stack function contains < 3 time samples, using global_max!')
         global_max = True
         s_peak = np.hstack((0, 0, s_peak, 0))
 

@@ -378,7 +378,8 @@ def produce_dem(grid, external_file=None, plot_output=True, output_file=False):
     return dem
 
 
-def grid_search(processed_st, grid, time_method, starttime=None, endtime=None, stack_method='sum', window=None, **time_kwargs):
+def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
+                stack_method='sum', window=None, **time_kwargs):
     """
     Perform a grid search over x and y and return a 3-D object with dimensions
     x, y, and t. If a UTM grid is used, then the UTM (x, y) coordinates for
@@ -413,13 +414,11 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None, s
 
           'semblance' Multi-channel coherence computed over defined time windows
 
-             'window: time window [s] needed for 'semblance' stacking (default:
-                      None)
+        window: Time window [s] needed for 'semblance' stacking (default: None)
 
-         **time_kwargs: Keyword arguments to be passed on to
+        **time_kwargs: Keyword arguments to be passed on to
                        celerity_travel_time() or fdtd_travel_time() functions.
                        For details, see the docstrings of those functions.
-
     Returns:
         S: xarray.DataArray object containing the 3-D (t, y, x) stack function
     """
@@ -441,8 +440,8 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None, s
     # Use Stream times to define global time axis for S
     if stack_method == 'semblance':
         if window == None:
-            raise ValueError(f'Window must be defined for method '
-                         '{stack_method}\'.')
+            raise ValueError('Window must be defined for method '
+                             f'\'{stack_method}\'.')
         times = np.arange(starttime, endtime, window)
         # Add final window since arange and linspace don't like to add final
         # window, but potentially results in uneven sampling.
@@ -512,8 +511,8 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None, s
                 # Loop over time windows. Need to use st.copy() to ensure
                 # all traces have the same length
                 for t in times:
-                    st_window = st.copy().trim(t, t + window,
-                                       pad=True, fill_value=0)
+                    st_window = st.copy().trim(t, t + window, pad=True,
+                                               fill_value=0)
                     semb.append(calculate_semblance(st_window))
                 stack = np.array(semb)
 
