@@ -38,8 +38,7 @@ def get_peak_coordinates(S, global_max=True, height=None, min_time=None,
 
     # If there is less than three? values, use global_max as find_peaks fails
     if len(s_peak) < 3:
-        #change this to temporarily add values to S
-        print('Stack function contains <2 time samples, using global_max!')
+        print('Stack function contains <3 time samples, using global_max!')
         global_max = True
         s_peak = np.hstack((0, 0, s_peak, 0))
 
@@ -58,21 +57,22 @@ def get_peak_coordinates(S, global_max=True, height=None, min_time=None,
                 warnings.warn(f'Multiple maxima ({num_dim_maxima}) present in S '
                               f'along the {dim} dimension.', RTMWarning)
 
-        # Return all peaks
-        peaks, props = find_peaks(s_peak, (None, None))
+        max_indices = np.argwhere(~np.isnan(stack_maximum.data))
+        num_global_maxima = max_indices.shape[0]
 
-        # Check for multiple global maxima
-        max_args = np.argwhere(props['peak_heights'] ==
-                               np.amax(props['peak_heights']))
-
-        num_global_maxima = max_args.shape[0]
-        if num_global_maxima > 1:
+        if num_global_maxima != 1:
             warnings.warn(f'Multiple global maxima ({num_global_maxima}) present '
-                          'in S. Using first occurrence.', RTMWarning)
+                      'in S. Using first occurrence.', RTMWarning)
 
-        peaks = np.array(peaks[max_args])[0]
-        props = {'peak_heights': props['peak_heights'][max_args][0]}
+        # Find time index and values of first occurence
+        first_max = np.where(stack_maximum[tuple(max_indices[0])]['time'] == S['time'])[0]
+        peaks = np.array(first_max)
+        props = {'peak_heights': stack_maximum[tuple(max_indices[0])].data}
         npeaks = len(peaks)
+
+        time_max = [UTCDateTime(stack_maximum[tuple(max_indices[0])]['time'].values.astype(str))]
+        x_max = [stack_maximum[tuple(max_indices[0])]['x'].values.tolist()]
+        y_max = [stack_maximum[tuple(max_indices[0])]['y'].values.tolist()]
 
     else:
 
@@ -89,11 +89,11 @@ def get_peak_coordinates(S, global_max=True, height=None, min_time=None,
         print(f'Found {npeaks} peaks in stack for height > {height:.1f} and '
               f'min_time > {min_time:.1f} s.')
 
-    time_max = [UTCDateTime(S['time'][i].values.astype(str)) for i in peaks]
-    x_max = [S.where(S[i] == S[i].max(), drop=True).squeeze()['x'].values.tolist()
-             for i in peaks]
-    y_max = [S.where(S[i] == S[i].max(), drop=True).squeeze()['y'].values.tolist()
-             for i in peaks]
+        time_max = [UTCDateTime(S['time'][i].values.astype(str)) for i in peaks]
+        x_max = [S.where(S[i] == S[i].max(), drop=True).squeeze()['x'].values.tolist()
+                 for i in peaks]
+        y_max = [S.where(S[i] == S[i].max(), drop=True).squeeze()['y'].values.tolist()
+                 for i in peaks]
 
     if unproject:
         # If the grid is projected
