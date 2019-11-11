@@ -480,7 +480,7 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
                 tr.stats.starttime = tr.stats.starttime - time_shift.data
 
             # Trim to time limits of global time axis
-            st.trim(times[0], times[-1], pad=True, fill_value=0)
+            st.trim(starttime, endtime, pad=True, fill_value=0)
 
             if stack_method == 'sum':
                 stack = np.sum([tr.data for tr in st], axis=0)
