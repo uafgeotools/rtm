@@ -11,7 +11,8 @@ def get_peak_coordinates(S, global_max=True, height=None, min_time=None,
     """
     Find the values of the coordinates corresponding to the maxima (peaks) in
     a stack function S. Function will return all peaks above the "height" and
-    separated by greater than "min_time" in the stack function. Optionally
+    separated by greater than "min_time" in the stack function. Returns just
+    global max if there are less than three time segments. Optionally
     "unprojects" UTM coordinates to (latitude, longitude) for projected grids.
 
     Args:
@@ -36,6 +37,12 @@ def get_peak_coordinates(S, global_max=True, height=None, min_time=None,
     # Create peak stack function over time
     s_peak = S.max(axis=(1, 2)).data
 
+    # If there are less than three values, use global_max as find_peaks fails
+    if len(s_peak) < 3:
+        print('Stack function contains < 3 time samples, using global_max!')
+        global_max = True
+        s_peak = np.hstack((0, 0, s_peak, 0))
+
     # Return just the global max or desired peaks. Check for multiple maxima
     # along each dimension and across the stack function
     if global_max:
@@ -51,20 +58,22 @@ def get_peak_coordinates(S, global_max=True, height=None, min_time=None,
                 warnings.warn(f'Multiple maxima ({num_dim_maxima}) present in S '
                               f'along the {dim} dimension.', RTMWarning)
 
-        # Return all peaks
-        peaks, props = find_peaks(s_peak, (None, None))
+        max_indices = np.argwhere(~np.isnan(stack_maximum.data))
+        num_global_maxima = max_indices.shape[0]
 
-        # Check for multiple global maxima
-        max_args = np.argwhere(props['peak_heights'] ==
-                               np.amax(props['peak_heights']))
-
-        num_global_maxima = max_args.shape[0]
-        if num_global_maxima > 1:
+        if num_global_maxima != 1:
             warnings.warn(f'Multiple global maxima ({num_global_maxima}) present '
                           'in S. Using first occurrence.', RTMWarning)
 
-        peaks = np.array(peaks[max_args])[0]
+        # Find time index and values of first occurence
+        first_max = np.where(stack_maximum[tuple(max_indices[0])]['time'] == S['time'])[0]
+        peaks = np.array(first_max)
+        props = {'peak_heights': stack_maximum[tuple(max_indices[0])].data}
         npeaks = len(peaks)
+
+        time_max = [UTCDateTime(stack_maximum[tuple(max_indices[0])]['time'].values.astype(str))]
+        x_max = [stack_maximum[tuple(max_indices[0])]['x'].values.tolist()]
+        y_max = [stack_maximum[tuple(max_indices[0])]['y'].values.tolist()]
 
     else:
 
@@ -75,17 +84,18 @@ def get_peak_coordinates(S, global_max=True, height=None, min_time=None,
         # [s] Time sampling interval of S
         peak_dt = (S.time.data[1] - S.time.data[0]) / np.timedelta64(1, 's')
 
+        # Find all peaks based on set thresholds
         peaks, props = find_peaks(s_peak, height, distance=min_time/peak_dt)
 
         npeaks = len(peaks)
         print(f'Found {npeaks} peaks in stack for height > {height:.1f} and '
-              f'min_time > {min_time/peak_dt:.1f} s.')
+              f'min_time > {min_time:.1f} s.')
 
-    time_max = [UTCDateTime(S['time'][i].values.astype(str)) for i in peaks]
-    x_max = [S.where(S[i] == S[i].max(), drop=True).squeeze()['x'].values.tolist()
-             for i in peaks]
-    y_max = [S.where(S[i] == S[i].max(), drop=True).squeeze()['y'].values.tolist()
-             for i in peaks]
+        time_max = [UTCDateTime(S['time'][i].values.astype(str)) for i in peaks]
+        x_max = [S.where(S[i] == S[i].max(), drop=True).squeeze()['x'].values.tolist()
+                 for i in peaks]
+        y_max = [S.where(S[i] == S[i].max(), drop=True).squeeze()['y'].values.tolist()
+                 for i in peaks]
 
     if unproject:
         # If the grid is projected
@@ -108,3 +118,32 @@ def get_peak_coordinates(S, global_max=True, height=None, min_time=None,
         y_max = y_max[0]
 
     return time_max, y_max, x_max, peaks, props
+
+
+def calculate_semblance(st):
+    """
+    Calculates the semblance, a measure of multi-channel coherence, following
+    the defintion of Neidell & Taner [1971. Assume traces are already
+    time-shifted to construct the beam.
+
+    Args:
+        st: time-shifted Stream
+
+    Returns:
+        semblance: [0-1] Multi-channel coherence
+    """
+
+    # check that all traces have the same length
+    if len(set([len(tr) for tr in st])) != 1:
+        raise ValueError('Traces in stream must have same length!')
+
+    n = len(st)
+
+    beam = np.sum([tr.data for tr in st], axis=0) / n
+    beampower = n * np.sum(beam**2)
+
+    avg_power = np.sum(np.sum([tr.data**2 for tr in st], axis=0))
+
+    semblance = beampower / avg_power
+
+    return semblance

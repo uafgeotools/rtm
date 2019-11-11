@@ -13,6 +13,7 @@ import subprocess
 import warnings
 from .travel_time import celerity_travel_time, fdtd_travel_time
 from .plotting import _plot_geographic_context
+from .stack import calculate_semblance
 from . import RTMWarning
 
 
@@ -378,7 +379,7 @@ def produce_dem(grid, external_file=None, plot_output=True, output_file=False):
 
 
 def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
-                stack_method='sum', **time_kwargs):
+                stack_method='sum', window=None, **time_kwargs):
     """
     Perform a grid search over x and y and return a 3-D object with dimensions
     x, y, and t. If a UTM grid is used, then the UTM (x, y) coordinates for
@@ -411,6 +412,10 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
             'product' Multiply the aligned waveforms sample-by-sample. Results
                       in a more spatially concentrated stack maximum.
 
+          'semblance' Multi-channel coherence computed over defined time windows
+
+        window: Time window [s] needed for 'semblance' stacking (default: None)
+
         **time_kwargs: Keyword arguments to be passed on to
                        celerity_travel_time() or fdtd_travel_time() functions.
                        For details, see the docstrings of those functions.
@@ -433,8 +438,20 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
         endtime = timing_st[0].stats.endtime
 
     # Use Stream times to define global time axis for S
-    timing_st.trim(starttime, endtime, pad=True, fill_value=0)
-    times = timing_st[0].times(type='utcdatetime')
+    if stack_method == 'semblance':
+        if window == None:
+            raise ValueError('Window must be defined for method '
+                             f'\'{stack_method}\'.')
+        times = np.arange(starttime, endtime, window)
+        # Add final window since arange and linspace don't like to add final
+        # window, but potentially results in uneven sampling.
+        if window < (endtime - starttime):
+            times = np.hstack((times, endtime))
+
+    else:
+        # sample by sample-based stack
+        timing_st.trim(starttime, endtime, pad=True, fill_value=0)
+        times = timing_st[0].times(type='utcdatetime')
 
     # Expand grid dimensions in time
     S = grid.expand_dims(time=times.astype('datetime64[ns]')).copy()
@@ -459,6 +476,7 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
 
     print('----------------------')
     print('PERFORMING GRID SEARCH')
+    print(f'Method = \'{stack_method}\'')
     print('----------------------')
 
     total_its = np.product(S.shape[1:])  # Don't count time dimension
@@ -488,10 +506,23 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
             elif stack_method == 'product':
                 stack = np.product([tr.data for tr in st], axis=0)
 
+            elif stack_method == 'semblance':
+                semb = []
+                # Loop over time windows. Need to use st.copy() to ensure
+                # all traces have the same length
+                for t in times:
+                    st_window = st.copy().trim(t, t + window, pad=True,
+                                               fill_value=0)
+                    semb.append(calculate_semblance(st_window))
+                stack = np.array(semb)
+
             else:
                 raise ValueError(f'Stack method \'{stack_method}\' not '
                                  'recognized. Method must be either '
                                  '\'sum\' or \'product\'.')
+
+            # Set nans to zero for later processing
+            stack[np.where(np.isnan(stack))] = 0
 
             # Assign stacked time series to this latitude/longitude point
             S.loc[dict(x=x, y=y)] = stack
@@ -577,32 +608,3 @@ def _project_station_to_utm(tr, grid):
                       'grid.', RTMWarning)
 
     return station_utm
-
-
-def calculate_semblance(st):
-    """
-    Calculates the semblance, a measure of multi-channel coherence, following
-    the defintion of Neidell & Taner [1971. Assume traces are already
-    time-shifted to construct the beam.
-
-    Args:
-        st: time-shifted Stream
-
-    Returns:
-        semblance: [0-1] Multi-channel coherence
-    """
-
-    # check that all traces have the same length
-    if len(set([len(tr) for tr in st])) != 1:
-        raise ValueError('Traces in stream must have same length!')
-
-    n = len(st)
-
-    beam = np.sum([tr.data for tr in st], axis=0) / n
-    beampower = n * np.sum(beam**2)
-
-    avg_power = np.sum(np.sum([tr.data**2 for tr in st], axis=0))
-
-    semblance = beampower / avg_power
-
-    return semblance
