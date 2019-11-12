@@ -68,7 +68,7 @@ STACK_METHOD = 'sum'  # Choose either 'sum' or 'product'
 TIME_METHOD = 'celerity'  # Choose either 'celerity' or 'fdtd'
 TIME_KWARGS = {'celerity': 343, 'dem': dem}
 
-S = grid_search(processed_st=st_proc, grid=grid, time_method=TIME_METHOD,
+S = grid_search_np(processed_st=st_proc, grid=grid, time_method=TIME_METHOD,
                 stack_method=STACK_METHOD, **TIME_KWARGS)
 
 #%% (4) Plot

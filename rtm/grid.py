@@ -5,6 +5,7 @@ import cartopy.crs as ccrs
 from cartopy.io.srtm import add_shading
 from osgeo import gdal, osr
 from obspy.geodetics import gps2dist_azimuth
+from numba import jit
 import utm
 import time
 import shutil
@@ -536,6 +537,158 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
 
     return S
 
+def grid_search_np(processed_st, grid, time_method, starttime=None, endtime=None,
+                stack_method='sum', window=None, **time_kwargs):
+    """
+    Perform a grid search over x and y and return a 3-D object with dimensions
+    x, y, and t. If a UTM grid is used, then the UTM (x, y) coordinates for
+    each station (tr.stats.utm_x, tr.stats.utm_y) are added to processed_st.
+    Optionally provide a 2-D array of elevation values to enable 3-D distance
+    computation.
+
+    Args:
+        processed_st: Pre-processed Stream <-- output of process_waveforms()
+        grid: x, y grid to use <-- output of define_grid()
+        time_method: Method to use for calculating travel times. One of
+                     'celerity' or 'fdtd'
+
+          'celerity' A single celerity is assumed for propagation. Distances
+                     are either 2-D or 3-D (if a DEM is supplied)
+
+              'fdtd' Travel times are calculated using a finite-difference
+                     time-domain algorithim which accounts for wave
+                     interactions with topography. Only valid for UTM grids.
+
+        starttime: Start time for grid search (UTCDateTime) (default: None,
+                   which translates to processed_st[0].stats.starttime)
+        endtime: End time for grid search (UTCDateTime) (default: None,
+                 which translates to processed_st[0].stats.endtime)
+        stack_method: Method to use for stacking aligned waveforms. One of
+                      'sum' or 'product' (default: 'sum')
+
+                'sum' Sum the aligned waveforms sample-by-sample.
+
+            'product' Multiply the aligned waveforms sample-by-sample. Results
+                      in a more spatially concentrated stack maximum.
+
+        window: Time window [s] needed for 'semblance' stacking (default: None)
+
+        **time_kwargs: Keyword arguments to be passed on to
+                       celerity_travel_time() or fdtd_travel_time() functions.
+                       For details, see the docstrings of those functions.
+    Returns:
+        S: xarray.DataArray object containing the 3-D (t, y, x) stack function
+    """
+
+    # Check that the requested method works with the provided grid
+    if time_method == 'fdtd' and not grid.UTM:
+        raise NotImplementedError('The FDTD method is not implemented for '
+                                  'unprojected (regional) grids.')
+
+    timing_st = processed_st.copy()
+
+    if not starttime:
+        # Define stack start time using first Trace of input Stream
+        starttime = timing_st[0].stats.starttime
+    if not endtime:
+        # Define stack end time using first Trace of input Stream
+        endtime = timing_st[0].stats.endtime
+
+    # Use Stream times to define global time axis for S
+    if stack_method == 'semblance':
+        if window == None:
+            raise ValueError('Window must be defined for method '
+                             f'\'{stack_method}\'.')
+        times = np.arange(starttime, endtime, window)
+        # Add final window since arange and linspace don't like to add final
+        # window, but potentially results in uneven sampling.
+        if window < (endtime - starttime):
+            times = np.hstack((times, endtime))
+
+    else:
+        # sample by sample-based stack
+        timing_st.trim(starttime, endtime, pad=True, fill_value=0)
+        times = timing_st[0].times(type='utcdatetime')
+
+    # Expand grid dimensions in time
+    S = grid.expand_dims(time=times.astype('datetime64[ns]')).copy()
+
+    # Project stations in processed_st to UTM if necessary
+    if grid.UTM:
+        for tr in processed_st:
+            tr.stats.utm_x, tr.stats.utm_y = _project_station_to_utm(tr, grid)
+            tr.stats.utm_zone = grid.UTM['zone']
+
+    # Call appropriate travel time array creation function
+    if time_method == 'celerity':
+        travel_times = celerity_travel_time(grid, processed_st, **time_kwargs)
+        # Store celerity in S attributes
+        S.attrs['celerity'] = time_kwargs['celerity']
+    elif time_method == 'fdtd':
+        travel_times = fdtd_travel_time(grid, processed_st, **time_kwargs)
+    else:
+        raise ValueError(f'Travel time calculation method \'{time_method}\' '
+                         'not recognized. Method must be either \'celerity\' '
+                         'or \'fdtd\'.')
+
+    print('----------------------')
+    print('PERFORMING GRID SEARCH')
+    print(f'Method = \'{stack_method}\'')
+    print('----------------------')
+
+    total_its = np.product(S.shape[1:])  # Don't count time dimension
+    counter = 0
+    tic = time.time()
+
+    st = processed_st.copy()
+    npts_st = st[0].count()
+    nsta = len(st)
+
+    # Determine the number of samples to be subtracted from travel times
+    remove_samp = np.round(np.abs(travel_times.data) *
+                          st[0].stats.sampling_rate).astype(int)
+    remove_samp[remove_samp > npts_st] = 0
+
+    dtmp = np.zeros((nsta, npts_st))
+    _, nx, ny = S.shape
+    stk = np.empty((nx, ny, npts_st))
+
+    for i, x in enumerate(S.x.values):
+        for j, y in enumerate(S.y.values):
+            for k, tr in enumerate(st):
+
+                # Number of samples to subtract
+                nrem = remove_samp[k, j, i]
+
+                if nrem > 0:
+                    # Number of zeroes for padding
+                    nrem_zero = np.zeros((1, nrem))[0]
+                    dtmp[k, :] = np.hstack((tr.data[nrem:], nrem_zero))
+
+                else:
+                    dtmp[k,: ] = tr.data
+
+            if stack_method == 'sum':
+                stk[i, j, :] = np.sum(dtmp, axis=0)
+
+            elif stack_method == 'product':
+                stk[i, j, :] = np.product(dtmp, axis=0)
+
+            else:
+                raise ValueError(f'Stack method \'{stack_method}\' not '
+                                 'recognized. Method must be either '
+                                 '\'sum\' or \'product\'.')
+
+            S.loc[dict(x=x, y=y)] = stk[i, j, :]
+
+        # Print grid search progress
+        counter += 1
+        print('{:.1f}%'.format((counter / total_its) * 100), end='\r')
+
+    toc = time.time()
+    print(f'Done (elapsed time = {toc-tic:.1f} s)')
+
+    return S
 
 def calculate_time_buffer(grid, max_station_dist):
     """
