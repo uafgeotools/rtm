@@ -5,7 +5,7 @@ from rtm import define_grid, produce_dem
 """
 To obtain the below file from OpenTopography, run the command
 
-    $ curl https://cloud.sdsc.edu/v1/AUTH_opentopography/hosted_data/OTDS.072019.4326.1/raster/DEM_WGS84.tif -o DEM_WGS84.tif
+$ curl https://cloud.sdsc.edu/v1/AUTH_opentopography/hosted_data/OTDS.072019.4326.1/raster/DEM_WGS84.tif -o DEM_WGS84.tif
 
 or simply paste the above URL in a web browser. Alternatively, specify None to
 automatically download and use 1 arc-second STRM data.
@@ -62,19 +62,20 @@ st_proc = process_waveforms(st, freqmin=FREQ_MIN, freqmax=FREQ_MAX,
 
 #%% (3) Perform grid search
 
-from rtm import grid_search_np
+from rtm import grid_search
 
 STACK_METHOD = 'sum'  # Choose either 'sum' or 'product'
 TIME_METHOD = 'celerity'  # Choose either 'celerity' or 'fdtd'
 TIME_KWARGS = {'celerity': 343, 'dem': dem}
 
-S = grid_search_np(processed_st=st_proc, grid=grid, time_method=TIME_METHOD,
+S = grid_search(processed_st=st_proc, grid=grid, time_method=TIME_METHOD,
                 stack_method=STACK_METHOD, **TIME_KWARGS)
 
 #%% (4) Plot
 
 from rtm import (plot_time_slice, plot_record_section, get_peak_coordinates,
                  plot_stack_peak, plot_st)
+import numpy as np
 
 fig_st = plot_st(st, filt=[FREQ_MIN, FREQ_MAX], equal_scale=False,
                  remove_response=True, label_waveforms=True)
@@ -83,10 +84,12 @@ fig_peak = plot_stack_peak(S, plot_max=True)
 
 fig_slice = plot_time_slice(S, st_proc, label_stations=True, dem=dem)
 
-time_max, y_max, x_max, _, _ = get_peak_coordinates(S, global_max=False,
-                                                    height=3, min_time=2,
-                                                    unproject=S.UTM)
+time_max, y_max, x_max, peaks, props = get_peak_coordinates(S, global_max=False,
+                                                            height=3, min_time=2,
+                                                            unproject=S.UTM)
 
-fig = plot_record_section(st_proc, origin_time=time_max[0],
-                          source_location=(y_max[0], x_max[0]),
+peak_ind = np.argmax(props['peak_heights'])
+
+fig = plot_record_section(st_proc, origin_time=time_max[peak_ind],
+                          source_location=(y_max[peak_ind], x_max[peak_ind]),
                           plot_celerity=S.celerity, label_waveforms=True)
