@@ -62,7 +62,7 @@ st_proc = process_waveforms(st, freqmin=FREQ_MIN, freqmax=FREQ_MAX,
 
 #%% (3) Perform grid search
 
-from rtm import grid_search
+from rtm import grid_search_np
 
 STACK_METHOD = 'sum'  # Choose either 'sum' or 'product'
 TIME_METHOD = 'celerity'  # Choose either 'celerity' or 'fdtd'

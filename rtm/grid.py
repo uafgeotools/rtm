@@ -5,7 +5,6 @@ import cartopy.crs as ccrs
 from cartopy.io.srtm import add_shading
 from osgeo import gdal, osr
 from obspy.geodetics import gps2dist_azimuth
-from numba import jit
 import utm
 import time
 import shutil
@@ -538,7 +537,7 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
     return S
 
 def grid_search_np(processed_st, grid, time_method, starttime=None, endtime=None,
-                stack_method='sum', window=None, **time_kwargs):
+                   stack_method='sum', window=None, **time_kwargs):
     """
     Perform a grid search over x and y and return a 3-D object with dimensions
     x, y, and t. If a UTM grid is used, then the UTM (x, y) coordinates for
@@ -571,6 +570,8 @@ def grid_search_np(processed_st, grid, time_method, starttime=None, endtime=None
             'product' Multiply the aligned waveforms sample-by-sample. Results
                       in a more spatially concentrated stack maximum.
 
+          'semblance' Multi-channel coherence computed over defined time windows
+
         window: Time window [s] needed for 'semblance' stacking (default: None)
 
         **time_kwargs: Keyword arguments to be passed on to
@@ -599,11 +600,13 @@ def grid_search_np(processed_st, grid, time_method, starttime=None, endtime=None
         if window == None:
             raise ValueError('Window must be defined for method '
                              f'\'{stack_method}\'.')
-        times = np.arange(starttime, endtime, window)
-        # Add final window since arange and linspace don't like to add final
-        # window, but potentially results in uneven sampling.
-        if window < (endtime - starttime):
-            times = np.hstack((times, endtime))
+        times = np.arange(starttime, endtime+window, window)
+        samples_stack = np.arange(0, timing_st[0].count(),
+                                  window*timing_st[0].stats.sampling_rate)
+        # Add final window to account for potential uneven number of samples
+        if samples_stack[-1] < timing_st[0].count():
+            samples_stack = np.hstack((samples_stack, timing_st[0].count()))
+        samples_stack = samples_stack.astype(np.int, copy=False)
 
     else:
         # sample by sample-based stack
@@ -646,11 +649,11 @@ def grid_search_np(processed_st, grid, time_method, starttime=None, endtime=None
 
     # Determine the number of samples to be subtracted from travel times
     remove_samp = np.round(np.abs(travel_times.data) *
-                          st[0].stats.sampling_rate).astype(int)
+                           st[0].stats.sampling_rate).astype(int)
     remove_samp[remove_samp > npts_st] = 0
 
     dtmp = np.zeros((nsta, npts_st))
-    _, nx, ny = S.shape
+    _, ny, nx = S.shape
     stk = np.empty((nx, ny, npts_st))
 
     for i, x in enumerate(S.x.values):
@@ -666,13 +669,20 @@ def grid_search_np(processed_st, grid, time_method, starttime=None, endtime=None
                     dtmp[k, :] = np.hstack((tr.data[nrem:], nrem_zero))
 
                 else:
-                    dtmp[k,: ] = tr.data
+                    dtmp[k, :] = tr.data
 
             if stack_method == 'sum':
                 stk[i, j, :] = np.sum(dtmp, axis=0)
 
             elif stack_method == 'product':
                 stk[i, j, :] = np.product(dtmp, axis=0)
+
+            elif stack_method == 'semblance':
+                for t in range(len(samples_stack)-1):
+                    semb = []
+                    semb.append(calculate_semblance(
+                        dtmp[:, samples_stack[t]:samples_stack[t+1]]))
+                stk[i, j, :] = np.array(semb)
 
             else:
                 raise ValueError(f'Stack method \'{stack_method}\' not '
