@@ -30,7 +30,7 @@ del warnings
 # EXPOSE PUBLIC MODULES
 # -----------------------------------------------------------------------------
 
-from .grid import define_grid, produce_dem, grid_search, grid_search_np, calculate_time_buffer
+from .grid import define_grid, produce_dem, grid_search, calculate_time_buffer
 from .waveform import process_waveforms
 from .plotting import plot_time_slice, plot_record_section, plot_st, plot_stack_peak
 from .stack import get_peak_coordinates
