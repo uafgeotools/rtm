@@ -374,10 +374,12 @@ def plot_stack_peak(S, plot_max=False):
     ax.plot(S.time, s_peak, 'k-')
     if plot_max:
         stack_maximum = S.where(S == S.max(), drop=True).squeeze()
-        if len(stack_maximum.data) > 1:
+        if stack_maximum.size > 1:
+            ax.plot(stack_maximum[0].time, stack_maximum[0].data, 'ro')
             warnings.warn(f'Multiple maxima ({len(stack_maximum.data)}) present'
                           ' in S!', RTMWarning)
-        ax.plot(stack_maximum[0].time, stack_maximum[0].data, 'ro')
+        ax.plot(stack_maximum.time, stack_maximum.data, 'ro')
+
     ax.set_xlim(S.time[0].data, S.time[-1].data)
     ax.set_xlabel('UTC Time')
     ax.set_ylabel('Peak Stack Amplitude')
