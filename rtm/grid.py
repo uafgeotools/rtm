@@ -481,10 +481,6 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
     print(f'Method = \'{stack_method}\'')
     print('----------------------')
 
-    total_its = np.product(S.shape[1:])  # Don't count time dimension
-    counter = 0
-    tic = time.time()
-
     st = processed_st.copy()
     npts_st = st[0].count()
     nsta = len(st)
@@ -495,8 +491,12 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
     remove_samp[remove_samp > npts_st] = 0
 
     dtmp = np.zeros((nsta, npts_st))
-    _, ny, nx = S.shape
+    ny, nx = S.shape[1::]  # Don't count time dimension
     stk = np.empty((nx, ny, npts_st))
+
+    total_its = nx * ny
+    counter = 0
+    tic = time.time()
 
     for i, x in enumerate(S.x.values):
         for j, y in enumerate(S.y.values):
@@ -533,9 +533,9 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
 
             S.loc[dict(x=x, y=y)] = stk[i, j, :]
 
-        # Print grid search progress
-        counter += 1
-        print('{:.1f}%'.format((counter / total_its) * 100), end='\r')
+            # Print grid search progress
+            counter += 1
+            print('{:.1f}%'.format((counter / total_its) * 100), end='\r')
 
     toc = time.time()
     print(f'Done (elapsed time = {toc-tic:.1f} s)')
