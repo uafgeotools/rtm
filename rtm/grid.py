@@ -507,7 +507,7 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
 
                 if nrem > 0:
                     # Number of zeroes for padding
-                    nrem_zero = np.zeros((1, nrem))[0]
+                    nrem_zero = np.zeros(nrem)
                     dtmp[k, :] = np.hstack((tr.data[nrem:], nrem_zero))
 
                 else:
