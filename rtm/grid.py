@@ -379,7 +379,7 @@ def produce_dem(grid, external_file=None, plot_output=True, output_file=False):
 
 
 def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
-                   stack_method='sum', window=None, **time_kwargs):
+                stack_method='sum', window=None, **time_kwargs):
     """
     Perform a grid search over x and y and return a 3-D object with dimensions
     x, y, and t. If a UTM grid is used, then the UTM (x, y) coordinates for
@@ -430,19 +430,13 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
 
     timing_st = processed_st.copy()
 
-    if not starttime:
-        # Define stack start time using first Trace of input Stream
-        starttime = timing_st[0].stats.starttime
-    if not endtime:
-        # Define stack end time using first Trace of input Stream
-        endtime = timing_st[0].stats.endtime
-
     # Use Stream times to define global time axis for S
     if stack_method == 'semblance':
-        if window == None:
+        if window is None:
             raise ValueError('Window must be defined for method '
                              f'\'{stack_method}\'.')
-        times = np.arange(starttime, endtime+window, window)
+        times = np.arange(timing_st[0].stats.starttime,
+                          timing_st[0].stats.endtime+window, window)
         samples_stack = np.arange(0, timing_st[0].count(),
                                   window*timing_st[0].stats.sampling_rate)
         # Add final window to account for potential uneven number of samples
@@ -452,7 +446,6 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
 
     else:
         # sample by sample-based stack
-        timing_st.trim(starttime, endtime, pad=True, fill_value=0)
         times = timing_st[0].times(type='utcdatetime')
 
     # Expand grid dimensions in time
@@ -490,9 +483,10 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
                            st[0].stats.sampling_rate).astype(int)
     remove_samp[remove_samp > npts_st] = 0
 
+    # Create empty temporary data and stack arrays
     dtmp = np.zeros((nsta, npts_st))
     ny, nx = S.shape[1::]  # Don't count time dimension
-    stk = np.empty((nx, ny, npts_st))
+    stk = np.empty((nx, ny, len(times)))
 
     total_its = nx * ny
     counter = 0
@@ -520,8 +514,8 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
                 stk[i, j, :] = np.product(dtmp, axis=0)
 
             elif stack_method == 'semblance':
+                semb = []
                 for t in range(len(samples_stack)-1):
-                    semb = []
                     semb.append(calculate_semblance(
                         dtmp[:, samples_stack[t]:samples_stack[t+1]]))
                 stk[i, j, :] = np.array(semb)
@@ -536,6 +530,12 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
             # Print grid search progress
             counter += 1
             print('{:.1f}%'.format((counter / total_its) * 100), end='\r')
+
+    # Remap for specified start and end times if provided
+    if starttime:
+        S = S.where((S.time >= np.datetime64(starttime)), drop=True)
+    if endtime:
+        S = S.where((S.time <= np.datetime64(endtime)), drop=True)
 
     toc = time.time()
     print(f'Done (elapsed time = {toc-tic:.1f} s)')
