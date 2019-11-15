@@ -376,7 +376,7 @@ def plot_stack_peak(S, plot_max=False):
         stack_maximum = S.where(S == S.max(), drop=True).squeeze()
         if len(stack_maximum.data) > 1:
             warnings.warn(f'Multiple maxima ({len(stack_maximum.data)}) present'
-                          f' in S!', RTMWarning)
+                          ' in S!', RTMWarning)
         ax.plot(stack_maximum[0].time, stack_maximum[0].data, 'ro')
     ax.set_xlim(S.time[0].data, S.time[-1].data)
     ax.set_xlabel('UTC Time')
