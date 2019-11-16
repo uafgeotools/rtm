@@ -332,6 +332,9 @@ def celerity_travel_time(grid, st, celerity=343, dem=None):
     # Expand the grid to a 3-D array of (station, y, x)
     travel_times = grid.expand_dims(station=[tr.id for tr in st]).copy()
 
+    # Pre-define this boolean for speed
+    projected = grid.UTM
+
     print('-------------------------------------------------')
     print(f'CALCULATING TRAVEL TIMES USING CELERITY = {celerity:g} M/S')
     print('-------------------------------------------------')
@@ -340,11 +343,11 @@ def celerity_travel_time(grid, st, celerity=343, dem=None):
     counter = 0
     tic = time.time()
 
-    for x in grid.x.values:
-        for y in grid.y.values:
-            for tr in st:
+    for i, x in enumerate(grid.x.values):
+        for j, y in enumerate(grid.y.values):
+            for k, tr in enumerate(st):
 
-                if grid.UTM:  # This is a UTM grid
+                if projected:  # This is a UTM grid
 
                     # Define x-y coordinate vectors
                     tr_coords = [tr.stats.utm_x, tr.stats.utm_y]
@@ -366,8 +369,7 @@ def celerity_travel_time(grid, st, celerity=343, dem=None):
 
                 # Store travel time for this station and source grid point
                 # in seconds
-                travel_times.loc[dict(x=x, y=y,
-                                      station=tr.id)] = distance / celerity
+                travel_times.data[k, j, i] = distance / celerity
 
                 # Print progress
                 counter += 1
