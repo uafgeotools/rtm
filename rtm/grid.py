@@ -474,6 +474,14 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
                          'not recognized. Method must be either \'celerity\' '
                          'or \'fdtd\'.')
 
+    # Remove the tr.stats.response attribute, since this greatly slows copying
+    st_without_response = processed_st.copy()
+    for tr in st_without_response:
+        try:
+            del tr.stats.response
+        except KeyError:
+            pass
+
     print('----------------------')
     print('PERFORMING GRID SEARCH')
     print(f'Method = \'{stack_method}\'')
@@ -483,19 +491,19 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
     counter = 0
     tic = time.time()
 
-    for x in S.x.values:
-        for y in S.y.values:
+    for i, x in enumerate(S.x.values):
+        for j, y in enumerate(S.y.values):
 
-            st = processed_st.copy()
+            st = st_without_response.copy()
 
-            for tr in st:
-                time_shift = travel_times.sel(x=x, y=y, station=tr.id)  # [s]
+            for k, tr in enumerate(st):
+                time_shift = travel_times.data[k, j, i]  # [s]
                 # If there isn't a valid time shift value for this grid point,
                 # there was a DEM artifact or we're underwater - zero the Trace
                 if np.isnan(time_shift):
                     tr.data = tr.data * 0
-                    time_shift.data = 0  # Doesn't matter, since Trace is zeroed!
-                tr.stats.starttime = tr.stats.starttime - time_shift.data
+                    time_shift = 0  # Doesn't matter, since Trace is zeroed!
+                tr.stats.starttime = tr.stats.starttime - time_shift
 
             # Trim to time limits of global time axis
             st.trim(starttime, endtime, pad=True, fill_value=0)
@@ -525,7 +533,7 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
             stack[np.where(np.isnan(stack))] = 0
 
             # Assign stacked time series to this latitude/longitude point
-            S.loc[dict(x=x, y=y)] = stack
+            S.data[:, j, i] = stack
 
             # Print grid search progress
             counter += 1
