@@ -147,7 +147,7 @@ def calculate_semblance(data_in):
         avg_power = np.sum(np.sum([tr.data**2 for tr in data_in], axis=0))
 
     elif isinstance(data_in, np.ndarray):
-        n = data_in.shape[1]
+        n = data_in.shape[0]
 
         beam = np.sum(data_in, axis=0) / n
         beampower = n * np.sum(beam**2)
