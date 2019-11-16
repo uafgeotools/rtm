@@ -356,7 +356,7 @@ def celerity_travel_time(grid, st, celerity=343, dem=None):
                     if dem is not None:
                         # Add the z-coordinates onto the coordinate vectors
                         tr_coords.append(tr.stats.elevation)
-                        grid_coords.append(dem.sel(x=x, y=y))
+                        grid_coords.append(dem.data[j, i])
 
                     # 2-D or 3-D Euclidean distance in meters
                     distance = np.linalg.norm(np.array(tr_coords) -
