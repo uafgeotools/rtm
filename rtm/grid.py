@@ -540,6 +540,10 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
     toc = time.time()
     print(f'Done (elapsed time = {toc-tic:.1f} s)')
 
+    if stack_method == 'product':
+        warnings.warn('Watch out for zeros in the stack function due to zeroed '
+                      'Traces with this stack method!', RTMWarning)
+
     return S
 
 
