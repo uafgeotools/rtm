@@ -428,25 +428,23 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
         raise NotImplementedError('The FDTD method is not implemented for '
                                   'unprojected (regional) grids.')
 
-    timing_st = processed_st.copy()
-
     # Use Stream times to define global time axis for S
     if stack_method == 'semblance':
         if window is None:
             raise ValueError('Window must be defined for method '
                              f'\'{stack_method}\'.')
-        times = np.arange(timing_st[0].stats.starttime,
-                          timing_st[0].stats.endtime+window, window)
-        samples_stack = np.arange(0, timing_st[0].count(),
-                                  window*timing_st[0].stats.sampling_rate)
+        times = np.arange(processed_st[0].stats.starttime,
+                          processed_st[0].stats.endtime+window, window)
+        samples_stack = np.arange(0, processed_st[0].count(),
+                                  window * processed_st[0].stats.sampling_rate)
         # Add final window to account for potential uneven number of samples
-        if samples_stack[-1] < timing_st[0].count():
-            samples_stack = np.hstack((samples_stack, timing_st[0].count()))
+        if samples_stack[-1] < processed_st[0].count():
+            samples_stack = np.hstack((samples_stack, processed_st[0].count()))
         samples_stack = samples_stack.astype(np.int, copy=False)
 
     else:
         # sample by sample-based stack
-        times = timing_st[0].times(type='utcdatetime')
+        times = processed_st[0].times(type='utcdatetime')
 
     # Expand grid dimensions in time
     S = grid.expand_dims(time=times.astype('datetime64[ns]')).copy()
@@ -541,6 +539,7 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
     print(f'Done (elapsed time = {toc-tic:.1f} s)')
 
     return S
+
 
 def calculate_time_buffer(grid, max_station_dist):
     """
