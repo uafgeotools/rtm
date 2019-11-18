@@ -471,14 +471,6 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
                          'not recognized. Method must be either \'celerity\' '
                          'or \'fdtd\'.')
 
-    # Remove the tr.stats.response attribute, since this greatly slows copying
-    st_without_response = processed_st.copy()
-    for tr in st_without_response:
-        try:
-            del tr.stats.response
-        except KeyError:
-            pass
-
     print('----------------------')
     print('PERFORMING GRID SEARCH')
     print(f'Method = \'{stack_method}\'')
