@@ -1,5 +1,6 @@
 import warnings
 from obspy import UTCDateTime
+from obspy.core import Stream
 import numpy as np
 import utm
 from scipy.signal import find_peaks
@@ -92,10 +93,10 @@ def get_peak_coordinates(S, global_max=True, height=None, min_time=None,
               f'min_time > {min_time:.1f} s.')
 
         time_max = [UTCDateTime(S['time'][i].values.astype(str)) for i in peaks]
-        x_max = [S.where(S[i] == S[i].max(), drop=True).squeeze()['x'].values.tolist()
-                 for i in peaks]
-        y_max = [S.where(S[i] == S[i].max(), drop=True).squeeze()['y'].values.tolist()
-                 for i in peaks]
+        x_max = [S.where(S[i] == S[i].max(),
+                         drop=True)['x'].values[0].tolist() for i in peaks]
+        y_max = [S.where(S[i] == S[i].max(),
+                         drop=True)['y'].values[0].tolist() for i in peaks]
 
     if unproject:
         # If the grid is projected
@@ -120,29 +121,38 @@ def get_peak_coordinates(S, global_max=True, height=None, min_time=None,
     return time_max, y_max, x_max, peaks, props
 
 
-def calculate_semblance(st):
+def calculate_semblance(data_in):
     """
     Calculates the semblance, a measure of multi-channel coherence, following
-    the defintion of Neidell & Taner [1971. Assume traces are already
+    the defintion of Neidell & Taner [1971. Assume data are already
     time-shifted to construct the beam.
 
     Args:
-        st: time-shifted Stream
+        data: time-shifted Stream or time-shifted numpy array
 
     Returns:
         semblance: [0-1] Multi-channel coherence
     """
 
-    # check that all traces have the same length
-    if len(set([len(tr) for tr in st])) != 1:
-        raise ValueError('Traces in stream must have same length!')
+    if isinstance(data_in, Stream):
+        # check that all traces have the same length
+        if len(set([len(tr) for tr in data_in])) != 1:
+            raise ValueError('Traces in stream must have same length!')
 
-    n = len(st)
+        n = len(data_in)
 
-    beam = np.sum([tr.data for tr in st], axis=0) / n
-    beampower = n * np.sum(beam**2)
+        beam = np.sum([tr.data for tr in data_in], axis=0) / n
+        beampower = n * np.sum(beam**2)
 
-    avg_power = np.sum(np.sum([tr.data**2 for tr in st], axis=0))
+        avg_power = np.sum(np.sum([tr.data**2 for tr in data_in], axis=0))
+
+    elif isinstance(data_in, np.ndarray):
+        n = data_in.shape[0]
+
+        beam = np.sum(data_in, axis=0) / n
+        beampower = n * np.sum(beam**2)
+
+        avg_power = np.sum(np.sum([data_in**2], axis=0))
 
     semblance = beampower / avg_power
 

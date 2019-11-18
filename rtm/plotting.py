@@ -1,3 +1,4 @@
+import warnings
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.transforms as transforms
@@ -11,6 +12,7 @@ from .stack import get_peak_coordinates
 import utm
 from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from . import RTMWarning
 
 
 def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
@@ -115,7 +117,10 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
         # pcolormesh instead (gridlines will show in translucent plot)
         sm = slice.plot.pcolormesh(**slice_plot_kwargs)
 
-    cbar = fig.colorbar(sm, label='Stack amplitude')
+    ax_pos = ax.get_position()
+    cloc = [ax_pos.x1+.02, ax_pos.y0, .02, ax_pos.height]
+    cbaxes = fig.add_axes(cloc)
+    cbar = fig.colorbar(sm, cax=cbaxes, label='Stack amplitude')
     cbar.solids.set_alpha(1)
 
     # Initialize list of handles for legend
@@ -140,7 +145,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
 
     # Plot stations
     for tr in st:
-        h[2] = ax.scatter(tr.stats.longitude,  tr.stats.latitude, marker='v',
+        h[2] = ax.scatter(tr.stats.longitude, tr.stats.latitude, marker='v',
                           color='blue', edgecolor='black',
                           label='Station', transform=plot_transform,
                           zorder=scatter_zorder)
@@ -169,8 +174,6 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     if dem is not None:
         ax.set_aspect('equal')
 
-    fig.canvas.draw()  # Needed to make fig.tight_layout() work
-    fig.tight_layout()
     fig.show()
 
     return fig
@@ -314,7 +317,7 @@ def plot_st(st, filt, equal_scale=False, remove_response=False,
         st_plot.detrend(type='linear')
         st_plot.taper(max_percentage=.01)
         st_plot.filter("bandpass", freqmin=filt[0], freqmax=filt[1], corners=2,
-                   zerophase=True)
+                       zerophase=True)
 
     if equal_scale:
         ym = np.max(st_plot.max())
@@ -343,8 +346,8 @@ def plot_st(st, filt, equal_scale=False, remove_response=False,
 
         if label_waveforms:
             ax[i].text(.85, .9,
-              f'{tr.stats.network}.{tr.stats.station}.{tr.stats.channel}',
-                    verticalalignment='center', transform=ax[i].transAxes)
+                       f'{tr.stats.network}.{tr.stats.station}.{tr.stats.channel}',
+                       verticalalignment='center', transform=ax[i].transAxes)
 
     ax[-1].set_xlabel('UTC Time')
 
@@ -366,13 +369,21 @@ def plot_stack_peak(S, plot_max=False):
         fig: Output figure
     """
 
-    s_peak = S.max(axis=(1,2)).data
+    s_peak = S.max(axis=(1, 2)).data
 
     fig, ax = plt.subplots(figsize=(8, 4), nrows=1, ncols=1)
     ax.plot(S.time, s_peak, 'k-')
     if plot_max:
         stack_maximum = S.where(S == S.max(), drop=True).squeeze()
-        ax.plot(stack_maximum.time, stack_maximum.data, 'ro')
+        if stack_maximum.size > 1:
+            max_indices = np.argwhere(~np.isnan(stack_maximum.data))
+            ax.plot(stack_maximum[tuple(max_indices[0])].time,
+                    stack_maximum[tuple(max_indices[0])].data, 'ro')
+            warnings.warn(f'Multiple global maxima ({len(stack_maximum.data)}) '
+                          'present in S!', RTMWarning)
+        else:
+            ax.plot(stack_maximum.time, stack_maximum.data, 'ro')
+
     ax.set_xlim(S.time[0].data, S.time[-1].data)
     ax.set_xlabel('UTC Time')
     ax.set_ylabel('Peak Stack Amplitude')

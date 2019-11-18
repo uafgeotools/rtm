@@ -428,30 +428,27 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
         raise NotImplementedError('The FDTD method is not implemented for '
                                   'unprojected (regional) grids.')
 
-    timing_st = processed_st.copy()
-
-    if not starttime:
-        # Define stack start time using first Trace of input Stream
-        starttime = timing_st[0].stats.starttime
-    if not endtime:
-        # Define stack end time using first Trace of input Stream
-        endtime = timing_st[0].stats.endtime
+    # Get data dimensions
+    npts_st = processed_st[0].stats.npts
+    nsta = processed_st.count()
 
     # Use Stream times to define global time axis for S
     if stack_method == 'semblance':
-        if window == None:
+        if not window:
             raise ValueError('Window must be defined for method '
                              f'\'{stack_method}\'.')
-        times = np.arange(starttime, endtime, window)
-        # Add final window since arange and linspace don't like to add final
-        # window, but potentially results in uneven sampling.
-        if window < (endtime - starttime):
-            times = np.hstack((times, endtime))
+        times = np.arange(processed_st[0].stats.starttime,
+                          processed_st[0].stats.endtime + window, window)
+        samples_stack = np.arange(0, npts_st,
+                                  window * processed_st[0].stats.sampling_rate)
+        # Add final window to account for potential uneven number of samples
+        if samples_stack[-1] < npts_st:
+            samples_stack = np.hstack((samples_stack, npts_st))
+        samples_stack = samples_stack.astype(np.int, copy=False)
 
     else:
         # sample by sample-based stack
-        timing_st.trim(starttime, endtime, pad=True, fill_value=0)
-        times = timing_st[0].times(type='utcdatetime')
+        times = processed_st[0].times(type='utcdatetime')
 
     # Expand grid dimensions in time
     S = grid.expand_dims(time=times.astype('datetime64[ns]')).copy()
@@ -474,70 +471,71 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
                          'not recognized. Method must be either \'celerity\' '
                          'or \'fdtd\'.')
 
-    # Remove the tr.stats.response attribute, since this greatly slows copying
-    st_without_response = processed_st.copy()
-    for tr in st_without_response:
-        try:
-            del tr.stats.response
-        except KeyError:
-            pass
-
     print('----------------------')
     print('PERFORMING GRID SEARCH')
     print(f'Method = \'{stack_method}\'')
     print('----------------------')
 
-    total_its = np.product(S.shape[1:])  # Don't count time dimension
+    st = processed_st.copy()
+
+    # Determine the number of samples to be subtracted from travel times
+    remove_samp = np.round(np.abs(travel_times.data) *
+                           st[0].stats.sampling_rate).astype(int)
+    remove_samp[remove_samp > npts_st] = 0
+
+    # Create empty temporary data and stack arrays
+    dtmp = np.zeros((nsta, npts_st))
+    ny, nx = S.shape[1::]  # Don't count time dimension
+    stk = np.empty((nx, ny, len(times)))
+
+    total_its = nx * ny
     counter = 0
     tic = time.time()
 
     for i, x in enumerate(S.x.values):
         for j, y in enumerate(S.y.values):
-
-            st = st_without_response.copy()
-
             for k, tr in enumerate(st):
-                time_shift = travel_times.data[k, j, i]  # [s]
-                # If there isn't a valid time shift value for this grid point,
-                # there was a DEM artifact or we're underwater - zero the Trace
-                if np.isnan(time_shift):
-                    tr.data = tr.data * 0
-                    time_shift = 0  # Doesn't matter, since Trace is zeroed!
-                tr.stats.starttime = tr.stats.starttime - time_shift
 
-            # Trim to time limits of global time axis
-            st.trim(starttime, endtime, pad=True, fill_value=0)
+                # Number of samples to subtract
+                nrem = remove_samp[k, j, i]
+
+                if nrem > 0:
+                    # Number of zeroes for padding
+                    nrem_zero = np.zeros(nrem)
+                    dtmp[k, :] = np.hstack((tr.data[nrem:], nrem_zero))
+
+                else:
+                    dtmp[k, :] = tr.data
 
             if stack_method == 'sum':
-                stack = np.sum([tr.data for tr in st], axis=0)
+                stk[i, j, :] = np.sum(dtmp, axis=0)
 
             elif stack_method == 'product':
-                stack = np.product([tr.data for tr in st], axis=0)
+                stk[i, j, :] = np.product(dtmp, axis=0)
 
             elif stack_method == 'semblance':
                 semb = []
-                # Loop over time windows. Need to use st.copy() to ensure
-                # all traces have the same length
-                for t in times:
-                    st_window = st.copy().trim(t, t + window, pad=True,
-                                               fill_value=0)
-                    semb.append(calculate_semblance(st_window))
-                stack = np.array(semb)
+                for t in range(len(samples_stack)-1):
+                    semb.append(calculate_semblance(
+                        dtmp[:, samples_stack[t]:samples_stack[t+1]]))
+                stk[i, j, :] = np.array(semb)
 
             else:
                 raise ValueError(f'Stack method \'{stack_method}\' not '
                                  'recognized. Method must be either '
                                  '\'sum\' or \'product\'.')
 
-            # Set nans to zero for later processing
-            stack[np.where(np.isnan(stack))] = 0
-
-            # Assign stacked time series to this latitude/longitude point
-            S.data[:, j, i] = stack
+            S.loc[dict(x=x, y=y)] = stk[i, j, :]
 
             # Print grid search progress
             counter += 1
             print('{:.1f}%'.format((counter / total_its) * 100), end='\r')
+
+    # Remap for specified start and end times if provided
+    if starttime:
+        S = S.where((S.time >= np.datetime64(starttime)), drop=True)
+    if endtime:
+        S = S.where((S.time <= np.datetime64(endtime)), drop=True)
 
     toc = time.time()
     print(f'Done (elapsed time = {toc-tic:.1f} s)')
