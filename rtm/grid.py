@@ -428,18 +428,22 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
         raise NotImplementedError('The FDTD method is not implemented for '
                                   'unprojected (regional) grids.')
 
+    # Get data dimensions
+    npts_st = processed_st[0].stats.npts
+    nsta = processed_st.count()
+
     # Use Stream times to define global time axis for S
     if stack_method == 'semblance':
-        if window is None:
+        if not window:
             raise ValueError('Window must be defined for method '
                              f'\'{stack_method}\'.')
         times = np.arange(processed_st[0].stats.starttime,
-                          processed_st[0].stats.endtime+window, window)
-        samples_stack = np.arange(0, processed_st[0].count(),
+                          processed_st[0].stats.endtime + window, window)
+        samples_stack = np.arange(0, npts_st,
                                   window * processed_st[0].stats.sampling_rate)
         # Add final window to account for potential uneven number of samples
-        if samples_stack[-1] < processed_st[0].count():
-            samples_stack = np.hstack((samples_stack, processed_st[0].count()))
+        if samples_stack[-1] < npts_st:
+            samples_stack = np.hstack((samples_stack, npts_st))
         samples_stack = samples_stack.astype(np.int, copy=False)
 
     else:
@@ -473,8 +477,6 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
     print('----------------------')
 
     st = processed_st.copy()
-    npts_st = st[0].count()
-    nsta = len(st)
 
     # Determine the number of samples to be subtracted from travel times
     remove_samp = np.round(np.abs(travel_times.data) *
