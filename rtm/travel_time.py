@@ -43,7 +43,7 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
     plotcheck = 0  # plot stations on DEM as a check
 
     r = 287.058    # [J/(kg*K)]; universal gas constant
-    rho = 101325/(r*TEMP)    # air density calculation
+    rho = 101325/(r*TEMP)    # [kg/m^3]; air density calculation
     c = np.sqrt(1.402 * r * TEMP)  # [m/s]; adiabatic sound speed
 
     # set up x/y grid and DEM
