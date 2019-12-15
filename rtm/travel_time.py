@@ -31,8 +31,6 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
         DT: simulation time (dt <= dh/c*np.sqrt(3))
         SRC_FREQ: source frequency [Hz] (make sure at least 20 wavelength per
                   dh)
-        VSNAP: vertical output snapshot
-        SURSNAP: surface pressure output snapshot
         SNAPOUT: snapshot output interval [s]
     """
 
@@ -40,7 +38,7 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
     print('CREATING RTM INPUT FILES FOR FDTD')
     print('--------------')
 
-    plotcheck = 0  # plot stations on DEM as a check
+    plotcheck = 1  # plot stations on DEM as a check
 
     r = 287.058    # [J/(kg*K)]; universal gas constant
     rho = 101325/(r*TEMP)    # [kg/m^3]; air density calculation
@@ -66,6 +64,7 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
 
     # unravel elevation to write to a file
     elev = np.ravel(dem)
+    elev[np.where(np.isnan(elev))] = 0
     elev[elev < 0] = 0
 
     # now deal with stations
@@ -104,8 +103,9 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
         ax.contour(x, y, dem, line_s, colors='k', linewidths=.35)
         ax.set_aspect('equal')
         for i, sta in enumerate(station):
-            ax.plot(x[staxyz[i][0]], y[staxyz[i][1]], 'bo')
-            ax.text(x[staxyz[i][0]]+10, y[staxyz[i][1]]+10, sta)
+            ax.plot(staxyz[i][0], staxyz[i][1], 'wo')
+            ax.text(staxyz[i][0]+10, staxyz[i][1]+10, sta)
+
 
     # save files for FDTD input
     print('Saving elevation file...%d values' % len(elev))
@@ -301,6 +301,7 @@ def fdtd_travel_time(grid, st, FILENAME_ROOT, FDTD_DIR=os.getcwd()):
     grid = grid.expand_dims(station=[tr.id for tr in st]).copy()
 
     fdtd_interp = grid.copy()
+    travel_times['station'] = grid['station']
     fdtd_interp = travel_times.interp_like(grid)
 
     # copy over attrs as it doesn't by default
