@@ -17,7 +17,7 @@ EarthScope Transportable Array. _Journal of Geophysical Research: Solid Earth_.
 Walker, K. T., Hedlin, M. A. H., de Groot‐Hedlin, C., Vergoz, J., Le Pichon, A.,
 & Drob, D. P. (2010). Source location of the 19 February 2008 Oregon bolide
 using seismic networks and infrasound arrays. _Journal of Geophysical Research:
-Solid Earth_, 115, B12329. https://doi.org/10.1029/2010JB007863
+Solid Earth_, 115, B12329. [https://doi.org/10.1029/2010JB007863](https://doi.org/10.1029/2010JB007863)
 
 Installation
 ------------
@@ -73,7 +73,7 @@ you're using conda!
 Optional (for automatic DEM downloading):
 
 * [GMT 6](https://docs.generic-mapping-tools.org/latest/) (install by following
-  the [official GMT install instructions](https://github.com/GenericMappingTools/gmt/blob/master/INSTALL.md))
+  the [official GMT install instructions](https://github.com/GenericMappingTools/gmt/blob/master/INSTALL.md/))
 
 Usage
 -----
@@ -83,7 +83,7 @@ Access the package's functions with (for example)
 from waveform_collection import gather_waveforms
 from rtm import define_grid
 ```
-and so on. Currently, documentation only exists in function docstrings. For usage examples, see [`example_regional.py`](example_regional.py) or [`example_local.py`](example_local.py).
+and so on. Currently, documentation only exists in function docstrings. For usage examples, see [`example_regional.py`](https://github.com/uafgeotools/rtm/blob/master/example_regional.py) or [`example_local.py`](https://github.com/uafgeotools/rtm/blob/master/example_local.py).
 
 Authors
 -------
