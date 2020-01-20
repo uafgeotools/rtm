@@ -17,3 +17,7 @@ extensions = ['sphinx.ext.autodoc', 'sphinx.ext.napoleon',
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 html_theme = 'sphinx_rtd_theme'
+
+napoleon_numpy_docstring = False
+
+master_doc = 'index'
