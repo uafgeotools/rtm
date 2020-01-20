@@ -22,4 +22,4 @@ napoleon_numpy_docstring = False
 
 master_doc = 'index'
 
-autodoc_mock_imports = ['rtm']
+autodoc_mock_imports = ['waveform_collection']
