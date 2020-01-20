@@ -23,4 +23,5 @@ dist/
 **/*.tif
 
 # Documentation things
-doc/_build
+doc/_build/
+doc/api/
