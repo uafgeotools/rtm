@@ -21,3 +21,6 @@ dist/
 
 # GeoTIFF files
 **/*.tif
+
+# Documentation things
+doc/_build
