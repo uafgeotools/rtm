@@ -50,10 +50,10 @@ def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
     Args:
         lon_0 (int or float): [deg] Longitude of grid center
         lat_0 (int or float): [deg] Latitude of grid center
-        x_radius (int or float): [deg or m] Distance from lon_0 to edge of grid
-            (i.e., radius)
-        y_radius (int or float): [deg or m] Distance from lat_0 to edge of grid
-            (i.e., radius)
+        x_radius (int or float): [deg or m] Distance from `lon_0` to edge of
+            grid (i.e., radius)
+        y_radius (int or float): [deg or m] Distance from `lat_0` to edge of
+            grid (i.e., radius)
         spacing (int or float): [deg or m] Desired grid spacing
         projected (bool): Toggle whether a latitude/longitude or UTM grid is
             used. If `True`, a UTM grid is used and the units of `x_radius`,
@@ -191,8 +191,8 @@ def produce_dem(grid, external_file=None, plot_output=True, output_file=False):
     be created again the next time an SRTM tile is requested.
 
     Args:
-        grid (:class:`~xarray.DataArray`): Projected x, y grid; i.e., output of
-            :func:`define_grid` with `projected=True`
+        grid (:class:`~xarray.DataArray`): Projected :math:`(x, y)` grid; i.e.,
+            output of :func:`define_grid` with `projected=True`
         external_file (str): Filename of external DEM file to use. If `None`,
             then SRTM data is used (default: `None`)
         plot_output (bool): Toggle plotting a hillshade of the output DEM -
@@ -389,16 +389,16 @@ def produce_dem(grid, external_file=None, plot_output=True, output_file=False):
 def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
                 stack_method='sum', window=None, **time_kwargs):
     """
-    Perform a grid search over x and y and return a 3-D object with dimensions
-    x, y, and t. If a UTM grid is used, then the UTM (x, y) coordinates for
-    each station (`tr.stats.utm_x`, `tr.stats.utm_y`) are added to
-    `processed_st`. Optionally provide a 2-D array of elevation values to
-    enable 3-D distance computation.
+    Perform a grid search over :math:`x` and :math:`y` and return a 3-D object
+    with dimensions :math:`(t, y, x)`. If a UTM grid is used, then the UTM
+    :math:`(x, y)` coordinates for each station (`tr.stats.utm_x`,
+    `tr.stats.utm_y`) are added to `processed_st`. Optionally provide a 2-D
+    array of elevation values to enable 3-D distance computation.
 
     Args:
         processed_st (:class:`~obspy.core.stream.Stream`): Pre-processed data;
             output of :func:`~rtm.waveform.process_waveforms`
-        grid (:class:`~xarray.DataArray`): x, y grid to use; output of
+        grid (:class:`~xarray.DataArray`): Grid to use; output of
             :func:`define_grid`
         time_method (str): Method to use for calculating travel times. One of
             `'celerity'` or `'fdtd'`
@@ -439,7 +439,8 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
             see the docstrings of those functions.
 
     Returns:
-        :class:`~xarray.DataArray` containing the 3-D (t, y, x) stack function
+        :class:`~xarray.DataArray` containing the 3-D :math:`(t, y, x)` stack
+        function
     """
 
     # Check that the requested method works with the provided grid
@@ -574,7 +575,7 @@ def calculate_time_buffer(grid, max_station_dist):
     ensure that enough data is downloaded.
 
     Args:
-        grid (:class:`~xarray.DataArray`): x, y grid to use; output of
+        grid (:class:`~xarray.DataArray`): Grid to use; output of
             :func:`define_grid`
         max_station_dist (int or float): [km] The longest distance from the
             grid center to a station
@@ -613,14 +614,14 @@ def calculate_time_buffer(grid, max_station_dist):
 def _project_station_to_utm(tr, grid):
     """
     Projects `tr.latitude`, `tr.longitude` into the UTM zone of the input grid.
-    Issues a warning if the coordinates of `re` would locate to another UTM
+    Issues a warning if the coordinates of `tr` would locate to another UTM
     grid instead. (The implication here is that the user is trying to use an
     oversized UTM grid and is better off using an unprojected grid instead.)
 
     Args:
         tr: A :class:`~obspy.core.trace.Trace` containing station coordinates
-        grid (:class:`~xarray.DataArray`): Projected x, y grid; i.e., output of
-            :func:`define_grid` with `projected=True`
+        grid (:class:`~xarray.DataArray`): Projected :math:`(x, y)` grid; i.e.,
+            output of :func:`define_grid` with `projected=True`
 
     Returns:
         List of [`utm_x`, `utm_y`] coordinates for station associated with `tr`
