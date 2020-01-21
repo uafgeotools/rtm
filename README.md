@@ -100,5 +100,5 @@ Authors
 
 (_Alphabetical order by last name._)
 
-David Fee  
+David Fee<br>
 Liam Toney
