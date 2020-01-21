@@ -11,28 +11,35 @@ def get_peak_coordinates(S, global_max=True, height=None, min_time=None,
                          unproject=False):
     """
     Find the values of the coordinates corresponding to the maxima (peaks) in
-    a stack function S. Function will return all peaks above the "height" and
-    separated by greater than "min_time" in the stack function. Returns just
-    global max if there are less than three time segments. Optionally
-    "unprojects" UTM coordinates to (latitude, longitude) for projected grids.
+    a stack function :math:`S`. Function will return all peaks above the
+    `height` and separated by greater than `min_time` in the stack function.
+    Returns just global max if there are less than three time segments.
+    Optionally "unprojects" UTM coordinates to (latitude, longitude) for
+    projected grids.
 
     Args:
-        S: xarray.DataArray containing the stack function S
-        global_max: Return the values for only the max of the stack function
-                    (default: True)
-        height: Minimum threshold for the value of a detection (peak) in
-                the stack function S (default: None). Only used if
-                global_max=False.
-        min_time: Minimum time (distance) between peaks in stack function S [s]
-            (default: None). Only used if global_max=False.
-        unproject: If True and if S is a projected grid, unprojects the UTM
-                   coordinates to (latitude, longitude) (default: False)
+        S (:class:`~xarray.DataArray`): The stack function :math:`S`
+        global_max (bool): Only return values for the max of the stack function
+            (default: `True`)
+        height (int or float): Minimum threshold for the value of a detection
+            (peak) in :math:`S` (default: `None`). Only used if
+            `global_max=False`.
+        min_time (int or float): Minimum time (distance) between peaks in
+            :math:`S` [s] (default: `None`). Only used if `global_max=False`.
+        unproject (bool): If `True` and if `S` is a projected grid, unprojects
+            the UTM coordinates to (latitude, longitude) (default: `False`)
+
     Returns:
-        time_max: Time (UTCDateTime) corresponding to peaks in S
-        y_max: [deg lat. or m N] y-coordinates corresponding to peaks in S
-        x_max: [deg lon. or m E] x-coordinates corresponding to peaks in S
-        peaks: Peak indices [ndarray]
-        props: Dict containing peak properties [dict]
+        tuple: Tuple containing:
+
+        - **time_max** (:class:`~obspy.core.utcdatetime.UTCDateTime`) – Time(s)
+          corresponding to peak(s) in :math:`S`
+        - **y_max** – [deg lat. or m N] :math:`y`-coordinate(s) corresponding
+          to peak(s) in S
+        - **x_max** – [deg lon. or m E] :math:`x`-coordinate(s) corresponding
+          to peak(s) in S
+        - **peaks** (:class:`numpy.ndarray`) – Peak indices
+        - **props** – Dictionary containing peak properties
     """
 
     # Create peak stack function over time
@@ -124,14 +131,16 @@ def get_peak_coordinates(S, global_max=True, height=None, min_time=None,
 def calculate_semblance(data_in):
     """
     Calculates the semblance, a measure of multi-channel coherence, following
-    the defintion of Neidell & Taner [1971. Assume data are already
+    the definition of Neidell & Taner (1971). Assumes data are already
     time-shifted to construct the beam.
 
     Args:
-        data: time-shifted Stream or time-shifted numpy array
+        data_in: Time-shifted :class:`~obspy.core.stream.Stream` or
+            time-shifted :class:`numpy.ndarray`
 
     Returns:
-        semblance: [0-1] Multi-channel coherence
+        :class:`numpy.ndarray`: Multi-channel coherence, defined on
+        :math:`[0, 1]`
     """
 
     if isinstance(data_in, Stream):
