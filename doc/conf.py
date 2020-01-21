@@ -43,3 +43,5 @@ apidoc_module_dir = '../rtm'
 apidoc_output_dir = 'api'
 
 apidoc_separate_modules = True
+
+apidoc_toc_file = False
