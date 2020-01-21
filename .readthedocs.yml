@@ -1,8 +1,5 @@
 version: 2
 
-formats:
-  - pdf
-
 python:
    install:
       - method: setuptools
