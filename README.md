@@ -84,13 +84,15 @@ Optional (for automatic DEM downloading):
 Usage
 -----
 
+Documentation is available online
+[here](https://uaf-rtm.readthedocs.io/en/docs/).
+
 Access the package's functions with (for example)
 ```python
 from waveform_collection import gather_waveforms
 from rtm import define_grid
 ```
-and so on. Currently, documentation only exists in function docstrings. For
-usage examples, see
+and so on. For usage examples, see
 [`example_regional.py`](https://github.com/uafgeotools/rtm/blob/master/example_regional.py)
 or
 [`example_local.py`](https://github.com/uafgeotools/rtm/blob/master/example_local.py).
