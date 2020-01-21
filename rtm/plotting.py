@@ -11,7 +11,6 @@ from obspy.geodetics import gps2dist_azimuth
 from .stack import get_peak_coordinates
 import utm
 from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 from . import RTMWarning
 
 
