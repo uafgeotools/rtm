@@ -18,26 +18,30 @@ from . import RTMWarning
 def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
                     hires=False, dem=None):
     """
-    Plot a time slice through S to produce a map-view plot. If time is not
-    specified, then the slice corresponds to the maximum of S in the time
-    direction.
+    Plot a time slice through :math:`S` to produce a map-view plot. If time is
+    not specified, then the slice corresponds to the maximum of :math:`S` in
+    the time direction.
 
     Args:
-        S: xarray.DataArray containing the stack function S
-        processed_st: Pre-processed Stream <-- output of process_waveforms()
-                      (This is need because Trace metadata from this Stream are
-                      used to plot stations on the map)
-        time_slice: UTCDateTime of desired time slice. The nearest time in S to
-                    this specified time will be plotted. If None, the time
-                    corresponding to max(S) is used (default: None)
-        label_stations: Toggle labeling stations with network and station codes
-                        (default: True)
-        hires: If True, use higher-resolution background image/coastlines,
-               which looks better but can be slow (default: False)
-        dem: Overlay time slice on a user-supplied DEM from produce_dem
-             (default: None)
+        S (:class:`~xarray.DataArray`): The stack function :math:`S`
+        processed_st (:class:`~obspy.core.stream.Stream`): Pre-processed
+            Stream; output of :func:`~rtm.waveform.process_waveforms` (This is
+            needed because Trace metadata from this Stream are used to plot
+            stations on the map)
+        time_slice (:class:`~obspy.core.utcdatetime.UTCDateTime`): Time of
+            desired time slice. The nearest time in :math:`S` to this specified
+            time will be plotted. If `None`, the time corresponding to
+            :math:`\max(S)` is used (default: `None`)
+        label_stations (bool): Toggle labeling stations with network and
+            station codes (default: `True`)
+        hires (bool): If `True`, use higher-resolution background
+            image/coastlines, which looks better but can be slow (default:
+            `False`)
+        dem (:class:`~xarray.DataArray`): Overlay time slice on a user-supplied
+            DEM from :class:`~rtm.grid.produce_dem` (default: `None`)
+
     Returns:
-        fig: Output figure
+        :class:`~matplotlib.figure.Figure`: Output figure
     """
 
     st = processed_st.copy()
@@ -186,18 +190,21 @@ def plot_record_section(st, origin_time, source_location, plot_celerity=None,
     time. Optionally plot celerity for reference, with two plotting options.
 
     Args:
-        st: Any Stream object with tr.stats.latitude, tr.stats.longitude data
-        origin_time: UTCDateTime specifying the origin time
-        source_location: Tuple of (lat, lon) specifying source location
-        plot_celerity: Can be either 'range' or a single celerity or a list of
-                       celerities. If 'range', plots a continuous swatch of
-                       celerities from 260-380 m/s. Otherwise, plots specific
-                       celerities. If None, does not plot any celerities
-                       (default: None)
-        label_waveforms: Toggle labeling waveforms with network and station
-                         codes (default: True)
+        st (:class:`~obspy.core.stream.Stream`): Any Stream object with
+            `tr.stats.latitude`, `tr.stats.longitude` attached
+        origin_time (:class:`~obspy.core.utcdatetime.UTCDateTime`): Origin time
+            for record section
+        source_location (tuple): Tuple of (`lat`, `lon`) specifying source
+            location
+        plot_celerity: Can be either `'range'` or a single celerity or a list
+            of celerities. If `'range'`, plots a continuous swatch of
+            celerities from 260-380 m/s. Otherwise, plots specific celerities.
+            If `None`, does not plot any celerities (default: `None`)
+        label_waveforms (bool): Toggle labeling waveforms with network and
+            station codes (default: `True`)
+
     Returns:
-        fig: Output figure
+        :class:`~matplotlib.figure.Figure`: Output figure
     """
 
     st_edit = st.copy()
@@ -288,19 +295,21 @@ def plot_record_section(st, origin_time, source_location, plot_celerity=None,
 def plot_st(st, filt, equal_scale=False, remove_response=False,
             label_waveforms=True):
     """
-    Plot stream waveforms in a publication-quality figure. Multiple plotting
+    Plot Stream waveforms in a publication-quality figure. Multiple plotting
     options, including filtering.
 
     Args:
-        st: Any Stream object
-        filt: A 2 element list of lower and upper corner frequencies for
-              filtering. Specify None if no filtering is desired.
-        equal_scale: Set equal scale for all waveforms (default: False)
-        remove_response: Remove response by applying sensitivity
-        label_waveforms: Toggle labeling waveforms with network and station
-                         codes (default: True)
+        st (:class:`~obspy.core.stream.Stream`): Any Stream object
+        filt (list): A two-element list of lower and upper corner frequencies
+            for filtering. Specify `None` if no filtering is desired.
+        equal_scale (bool): Set equal scale for all waveforms (default:
+            `False`)
+        remove_response (bool): Remove response by applying sensitivity
+        label_waveforms (bool): Toggle labeling waveforms with network and
+            station codes (default: `True`)
+
     Returns:
-        fig: Output figure
+        :class:`~matplotlib.figure.Figure`: Output figure
     """
 
     st_plot = st.copy()
@@ -363,10 +372,11 @@ def plot_stack_peak(S, plot_max=False):
     Plot the peak of the stack as a function of time.
 
     Args:
-        S: xarray.DataArray containing the stack function S
-        plot_max: Plot maximum value with red circle (default: None):
+        S: :class:`~xarray.DataArray` containing the stack function :math:`S`
+        plot_max (bool): Plot maximum value with red circle (default: `False`)
+
     Returns:
-        fig: Output figure
+        :class:`~matplotlib.figure.Figure`: Output figure
     """
 
     s_peak = S.max(axis=(1, 2)).data
@@ -397,10 +407,10 @@ def _plot_geographic_context(ax, utm, hires=False):
     for UTM-projected plots and simple coastlines for unprojected plots.
 
     Args:
-        ax: Existing GeoAxes to plot into
-        utm: Flag specifying if the axis is projected to UTM or not
-        hires: If True, use higher-resolution images/coastlines (default:
-               False)
+        ax (:class:`~cartopy.mpl.geoaxes.GeoAxes`): Existing axis to plot into
+        utm (bool): Flag specifying if the axis is projected to UTM or not
+        hires (bool): If `True`, use higher-resolution images/coastlines
+            (default: `False`)
     """
 
     # Since projected grids cover less area and may not include coastlines,
