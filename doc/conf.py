@@ -12,7 +12,8 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.napoleon',
               'sphinx.ext.intersphinx',
               'recommonmark',
-              'sphinx.ext.viewcode'
+              'sphinx.ext.viewcode',
+              'sphinxcontrib.apidoc'
               ]
 
 # List of patterns, relative to source directory, that match files and
@@ -36,3 +37,6 @@ autodoc_mock_imports = ['numpy',
                         'scipy',
                         'mpl_toolkits'
                         ]
+
+apidoc_module_dir = '../rtm'
+apidoc_separate_modules = True
