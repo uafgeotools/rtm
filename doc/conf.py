@@ -45,3 +45,9 @@ apidoc_output_dir = 'api'
 apidoc_separate_modules = True
 
 apidoc_toc_file = False
+
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3/', None),
+    'obspy': ('https://docs.obspy.org/', None),
+    'xarray': ('http://xarray.pydata.org/en/stable/', None)
+}
