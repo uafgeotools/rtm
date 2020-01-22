@@ -35,9 +35,9 @@ def get_peak_coordinates(S, global_max=True, height=None, min_time=None,
         - **time_max** (:class:`~obspy.core.utcdatetime.UTCDateTime`) – Time(s)
           corresponding to peak(s) in :math:`S`
         - **y_max** – [deg lat. or m N] :math:`y`-coordinate(s) corresponding
-          to peak(s) in S
+          to peak(s) in :math:`S`
         - **x_max** – [deg lon. or m E] :math:`x`-coordinate(s) corresponding
-          to peak(s) in S
+          to peak(s) in :math:`S`
         - **peaks** (:class:`numpy.ndarray`) – Peak indices
         - **props** – Dictionary containing peak properties
     """
