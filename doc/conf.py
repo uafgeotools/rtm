@@ -4,9 +4,7 @@ sys.path.insert(0, os.path.abspath('../rtm'))
 
 project = 'rtm'
 
-copyright = '2020, David Fee & Liam Toney'
-
-author = 'David Fee & Liam Toney'
+html_show_copyright = False
 
 extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.napoleon',
