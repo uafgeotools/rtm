@@ -55,5 +55,3 @@ intersphinx_mapping = {
     'cartopy': ('https://scitools.org.uk/cartopy/docs/latest/', None),
     'matplotlib': ('https://matplotlib.org/', None)
 }
-
-autodoc_default_flags = ['members', 'undoc-members', 'private-members', 'special-members', 'inherited-members', 'show-inheritance']
