@@ -19,19 +19,20 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
     for FDTD calculation.
 
     Args:
-        FDTD_DIR: output directory for FDTD run
-        FILENAME_ROOT: FDTD input filename prefix
-        station: SEED station code
-        dem: xarray.DataArray object containing the elevation values as well as
-             grid coordinates and metadata
-        H_MAX: max grid height [m]
-        TEMP: temperature for sound speed calculation [K]
-        MAX_T: duration of FDTD simulation [s] (make sure it extends across
-               your grid)
-        DT: simulation time (dt <= dh/c*np.sqrt(3))
-        SRC_FREQ: source frequency [Hz] (make sure at least 20 wavelength per
-                  dh)
-        SNAPOUT: snapshot output interval [s]
+        FDTD_DIR (str): Output directory for FDTD run
+        FILENAME_ROOT (str): FDTD input filename prefix
+        station (str): SEED station code
+        dem (:class:`~xarray.DataArray`): Grid containing the elevation values
+            as well as grid coordinates and metadata
+        H_MAX (int or float): Max grid height [m]
+        TEMP (int or float): Temperature for sound speed calculation [K]
+        MAX_T (int or float): Duration of FDTD simulation [s] (make sure it
+            extends across your grid)
+        DT (int or float): Simulation time (`DT` :math:`\\leq` `dem.spacing` /
+            :math:`c\\sqrt{3}`, where :math:`c` is sound speed)
+        SRC_FREQ (int or float): Source frequency [Hz] (make sure at least 20
+            wavelengths per `dem.spacing`)
+        SNAPOUT (int or float): Snapshot output interval [s]
     """
 
     print('--------------')
@@ -195,25 +196,34 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
         pickle.dump(dem, f, protocol=-1)
 
 
-def fdtd_travel_time(grid, st, FILENAME_ROOT, FDTD_DIR=os.getcwd()):
+def fdtd_travel_time(grid, st, FILENAME_ROOT, FDTD_DIR=None):
     """
-    Computes travel time from each station to each grid point using FDTD
-    output surface pressure files.
+    Computes travel time from each station to each grid point using FDTD output
+    surface pressure files.
 
     Args:
-        grid: x, y grid to use <-- output of define_grid()
-        st: Stream containing coordinates for each station
-        FILENAME_ROOT: FDTD filename prefix
-        FDTD_DIR: output directory for FDTD run (default: os.getcwd())
+        grid (:class:`~xarray.DataArray`): Grid to use; output of
+            :func:`~rtm.grid.define_grid`
+        st (:class:`~obspy.core.stream.Stream`): Stream containing coordinates
+            for each station
+        FILENAME_ROOT (str): FDTD filename prefix
+        FDTD_DIR (str): Output directory for FDTD run. If `None`, uses
+            `os.getcwd()` (default: `None`)
+
     Returns:
-        fdtd_interp: 3D array with dimensions (station, y, x) containing
-                     travel times from each station to each (x, y) point in
-                     seconds (interpolated to input grid)
+        :class:`~xarray.DataArray`: 3-D array with dimensions
+        :math:`(\\text{station}, y, x)` containing travel times from each
+        station to each :math:`(x, y)` point in seconds (interpolated to input
+        grid)
     """
 
     print('--------------')
     print('USING FDTD FILES FOR RTM TIME CALCULATION')
     print('--------------')
+
+    # If FDTD_DIR was set to None, set it to os.getcwd()
+    if not FDTD_DIR:
+        FDTD_DIR = os.getcwd()
 
     # Get SEED station codes
     stations = [tr.stats.station for tr in st]
@@ -317,17 +327,21 @@ def celerity_travel_time(grid, st, celerity=343, dem=None):
     circles.
 
     Args:
-        grid: x, y grid to use <-- output of define_grid()
-        st: Stream containing coordinates for each station
-        celerity: [m/s] Single celerity to use for travel time removal
-                  (default: 343)
-        dem: Grid of elevation values for 3-D Euclidean distance time removal,
-             such as output from produce_dem(). If None, only performs 2-D
-             Euclidian distance time removal (default: None)
+        grid (:class:`~xarray.DataArray`): Grid to use; output of
+            :func:`~rtm.grid.define_grid`
+        st (:class:`~obspy.core.stream.Stream`): Stream containing coordinates
+            for each station
+        celerity (int or float): [m/s] Single celerity to use for travel time
+            removal (default: `343`)
+        dem (:class:`~xarray.DataArray`): Grid of elevation values for 3-D
+            Euclidean distance time removal, such as output from
+            :class:`~rtm.grid.produce_dem`. If `None`, only performs 2-D
+            Euclidian distance time removal (default: `None`)
+
     Returns:
-        travel_times: 3-D array with dimensions (station, y, x) containing
-                      travel times from each station to each (x, y) point in
-                      seconds
+        :class:`~xarray.DataArray`: 3-D array with dimensions
+        :math:`(\\text{station}, y, x)` containing travel times from each
+        station to each :math:`(x, y)` point in seconds
     """
 
     # Expand the grid to a 3-D array of (station, y, x)
