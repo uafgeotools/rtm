@@ -85,7 +85,7 @@ Usage
 -----
 
 Documentation is available online
-[here](https://uaf-rtm.readthedocs.io/en/docs/).
+[here](https://uaf-rtm.readthedocs.io).
 
 Access the package's functions with (for example)
 ```python
