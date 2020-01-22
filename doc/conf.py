@@ -13,7 +13,8 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.intersphinx',
               'recommonmark',
               'sphinx.ext.viewcode',
-              'sphinxcontrib.apidoc'
+              'sphinxcontrib.apidoc',
+              'sphinx.ext.mathjax'
               ]
 
 # List of patterns, relative to source directory, that match files and
@@ -48,6 +49,9 @@ apidoc_toc_file = False
 
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3/', None),
+    'numpy': ('https://docs.scipy.org/doc/numpy', None),
     'obspy': ('https://docs.obspy.org/', None),
-    'xarray': ('http://xarray.pydata.org/en/stable/', None)
+    'xarray': ('http://xarray.pydata.org/en/stable/', None),
+    'cartopy': ('https://scitools.org.uk/cartopy/docs/latest/', None),
+    'matplotlib': ('https://matplotlib.org/', None)
 }
