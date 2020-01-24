@@ -48,20 +48,23 @@ def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
     system.
 
     Args:
-        lon_0: [deg] Longitude of grid center
-        lat_0: [deg] Latitude of grid center
-        x_radius: [deg or m] Distance from lon_0 to edge of grid (i.e., radius)
-        y_radius: [deg or m] Distance from lat_0 to edge of grid (i.e., radius)
-        spacing: [deg or m] Desired grid spacing
-        projected: Boolean controlling whether a latitude/longitude or UTM grid
-                   is used. If True, a UTM grid is used and the units of
-                   x_radius, y_radius, and spacing are interpreted in meters
-                   instead of in degrees (default: False)
-        plot_preview: Toggle plotting a preview of the grid for reference and
-                      troubleshooting (default: False)
+        lon_0 (int or float): [deg] Longitude of grid center
+        lat_0 (int or float): [deg] Latitude of grid center
+        x_radius (int or float): [deg or m] Distance from `lon_0` to edge of
+            grid (i.e., radius)
+        y_radius (int or float): [deg or m] Distance from `lat_0` to edge of
+            grid (i.e., radius)
+        spacing (int or float): [deg or m] Desired grid spacing
+        projected (bool): Toggle whether a latitude/longitude or UTM grid is
+            used. If `True`, a UTM grid is used and the units of `x_radius`,
+            `y_radius`, and `spacing` are interpreted in meters instead of in
+            degrees (default: `False`)
+        plot_preview (bool): Toggle plotting a preview of the grid for
+            reference and troubleshooting (default: `False`)
+
     Returns:
-        grid_out: xarray.DataArray object containing the grid coordinates and
-                  metadata
+        :class:`~xarray.DataArray` object containing the grid coordinates and
+        metadata
     """
 
     print('-------------')
@@ -171,30 +174,35 @@ def produce_dem(grid, external_file=None, plot_output=True, output_file=False):
     either a user-supplied file or global SRTM 1 arc-second (~30 m) data taken
     from the GMT server. A DataArray and (optionally) a GeoTIFF file are
     created. Optionally plot the output DEM. Output GeoTIFF files are placed in
-    ./rtm_dem (relative to where this function is called).
+    ``./rtm_dem`` (relative to where this function is called).
 
-    NOTE 1:
-        The filename convention for output files is
+    **NOTE 1**
 
-            rtm_dem_<lat_0>_<lon_0>_<x_radius>x_<y_radius>y_<spacing>m.tif
+    The filename convention for output files is
 
-        See the docstring for define_grid() for details/units.
+    ``rtm_dem_<lat_0>_<lon_0>_<x_radius>x_<y_radius>y_<spacing>m.tif``
 
-    NOTE 2:
-        GMT caches downloaded SRTM tiles in the directory ~/.gmt/server/srtm1.
-        If you're concerned about space, you can delete this directory. It will
-        be created again the next time an SRTM tile is requested.
+    See the docstring for :func:`define_grid` for details/units.
+
+    **NOTE 2**
+
+    GMT caches downloaded SRTM tiles in the directory ``~/.gmt/server/srtm1``.
+    If you're concerned about space, you can delete this directory. It will
+    be created again the next time an SRTM tile is requested.
 
     Args:
-        grid: Projected x, y grid <-- output of define_grid(projected=True)
-        external_file: Filename of external DEM file to use. If None, then SRTM
-                       data is used (default: None)
-        plot_output: Toggle plotting a hillshade of the output DEM - useful for
-                     identifying voids or artifacts (default: True)
-        output_file: Toggle creation of output GeoTIFF file (default: False)
+        grid (:class:`~xarray.DataArray`): Projected :math:`(x, y)` grid; i.e.,
+            output of :func:`define_grid` with `projected=True`
+        external_file (str): Filename of external DEM file to use. If `None`,
+            then SRTM data is used (default: `None`)
+        plot_output (bool): Toggle plotting a hillshade of the output DEM -
+            useful for identifying voids or artifacts (default: `True`)
+        output_file (bool): Toggle creation of output GeoTIFF file (default:
+            `False`)
+
     Returns:
-        dem: 2-D xarray.DataArray of elevation values with identical shape to
-             input grid.
+        2-D :class:`~xarray.DataArray` of elevation values with identical shape
+        to input grid.
     """
 
     print('--------------')
@@ -381,46 +389,58 @@ def produce_dem(grid, external_file=None, plot_output=True, output_file=False):
 def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
                 stack_method='sum', window=None, **time_kwargs):
     """
-    Perform a grid search over x and y and return a 3-D object with dimensions
-    x, y, and t. If a UTM grid is used, then the UTM (x, y) coordinates for
-    each station (tr.stats.utm_x, tr.stats.utm_y) are added to processed_st.
-    Optionally provide a 2-D array of elevation values to enable 3-D distance
-    computation.
+    Perform a grid search over :math:`x` and :math:`y` and return a 3-D object
+    with dimensions :math:`(t, y, x)`. If a UTM grid is used, then the UTM
+    :math:`(x, y)` coordinates for each station (`tr.stats.utm_x`,
+    `tr.stats.utm_y`) are added to `processed_st`. Optionally provide a 2-D
+    array of elevation values to enable 3-D distance computation.
 
     Args:
-        processed_st: Pre-processed Stream <-- output of process_waveforms()
-        grid: x, y grid to use <-- output of define_grid()
-        time_method: Method to use for calculating travel times. One of
-                     'celerity' or 'fdtd'
+        processed_st (:class:`~obspy.core.stream.Stream`): Pre-processed data;
+            output of :func:`~rtm.waveform.process_waveforms`
+        grid (:class:`~xarray.DataArray`): Grid to use; output of
+            :func:`define_grid`
+        time_method (str): Method to use for calculating travel times. One of
+            `'celerity'` or `'fdtd'`
 
-          'celerity' A single celerity is assumed for propagation. Distances
-                     are either 2-D or 3-D (if a DEM is supplied)
+                * `'celerity'` A single celerity is assumed for
+                  propagation. Distances are either 2-D or 3-D (if a DEM
+                  is supplied)
 
-              'fdtd' Travel times are calculated using a finite-difference
-                     time-domain algorithim which accounts for wave
-                     interactions with topography. Only valid for UTM grids.
+                * `'fdtd'` Travel times are calculated using a
+                  finite-difference time-domain algorithm which accounts
+                  for wave interactions with topography. Only valid for
+                  UTM grids
 
-        starttime: Start time for grid search (UTCDateTime) (default: None,
-                   which translates to processed_st[0].stats.starttime)
-        endtime: End time for grid search (UTCDateTime) (default: None,
-                 which translates to processed_st[0].stats.endtime)
-        stack_method: Method to use for stacking aligned waveforms. One of
-                      'sum' or 'product' (default: 'sum')
+        starttime (:class:`~obspy.core.utcdatetime.UTCDateTime`): Start time
+            for grid search (default: `None`, which translates to
+            `processed_st[0].stats.starttime`)
+        endtime (:class:`~obspy.core.utcdatetime.UTCDateTime`): End time for
+            grid search (default: `None`, which translates to
+            `processed_st[0].stats.endtime`)
+        stack_method (str): Method to use for stacking aligned waveforms. One
+            of `'sum'`, `'product'`, or `'semblance'` (default: `'sum'`)
 
-                'sum' Sum the aligned waveforms sample-by-sample.
+                * `'sum'` Sum the aligned waveforms sample-by-sample
 
-            'product' Multiply the aligned waveforms sample-by-sample. Results
-                      in a more spatially concentrated stack maximum.
+                * `'product'` Multiply the aligned waveforms
+                  sample-by-sample. Results in a more spatially
+                  concentrated stack maximum
 
-          'semblance' Multi-channel coherence computed over defined time windows
+                * `'semblance'` Multi-channel coherence computed over
+                  defined time windows
 
-        window: Time window [s] needed for 'semblance' stacking (default: None)
+        window (int or float): Time window [s] needed for `'semblance'`
+            stacking (default: `None`)
 
         **time_kwargs: Keyword arguments to be passed on to
-                       celerity_travel_time() or fdtd_travel_time() functions.
-                       For details, see the docstrings of those functions.
+            :func:`~rtm.travel_time.celerity_travel_time` or
+            :func:`~rtm.travel_time.fdtd_travel_time` functions. For details,
+            see the docstrings of those functions.
+
     Returns:
-        S: xarray.DataArray object containing the 3-D (t, y, x) stack function
+        :class:`~xarray.DataArray` containing the 3-D :math:`(t, y, x)` stack
+        function
     """
 
     # Check that the requested method works with the provided grid
@@ -555,12 +575,14 @@ def calculate_time_buffer(grid, max_station_dist):
     ensure that enough data is downloaded.
 
     Args:
-        grid: x, y grid <-- output of define_grid()
-        max_station_dist: [km] The longest distance from the grid center to a
-                          station
+        grid (:class:`~xarray.DataArray`): Grid to use; output of
+            :func:`define_grid`
+        max_station_dist (int or float): [km] The longest distance from the
+            grid center to a station
+
     Returns:
-        time_buffer: [s] Maximum travel time expected for a source anywhere in
-                     the grid to the station farthest from the grid center
+        Maximum travel time [s] expected for a source anywhere in the grid to
+        the station farthest from the grid center
     """
 
     # If projected grid, just calculate Euclidean distance for diagonal
@@ -591,16 +613,18 @@ def calculate_time_buffer(grid, max_station_dist):
 
 def _project_station_to_utm(tr, grid):
     """
-    Projects tr.latitude, tr.longitude into the UTM zone of the input grid.
-    Issues a warning if the coordinates of the Trace would locate to another
-    UTM grid instead. (The implication here is that the user is trying to use
-    an oversized UTM grid and is better off using an unprojected grid instead.)
+    Projects `tr.latitude`, `tr.longitude` into the UTM zone of the input grid.
+    Issues a warning if the coordinates of `tr` would locate to another UTM
+    grid instead. (The implication here is that the user is trying to use an
+    oversized UTM grid and is better off using an unprojected grid instead.)
 
     Args:
-        tr: A Trace containing station coordinates
-        grid: Projected x, y grid <-- output of define_grid(projected=True)
+        tr: A :class:`~obspy.core.trace.Trace` containing station coordinates
+        grid (:class:`~xarray.DataArray`): Projected :math:`(x, y)` grid; i.e.,
+            output of :func:`define_grid` with `projected=True`
+
     Returns:
-        station_utm: [utm_x, utm_y] coordinates for station associated with tr
+        List of [`utm_x`, `utm_y`] coordinates for station associated with `tr`
     """
 
     grid_zone_number = grid.UTM['zone']

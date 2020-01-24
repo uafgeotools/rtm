@@ -17,24 +17,28 @@ def process_waveforms(st, freqmin, freqmax, envelope=False,
     processing step has been applied for troubleshooting.
 
     Args:
-        st: Stream from gather_waveforms()
-        freqmin: [Hz] Lower corner for zero-phase bandpass filter
-        freqmax: [Hz] Upper corner for zero-phase bandpass filter
-        envelope: Take envelope of waveforms (default: False)
-        decimation_rate: [Hz] New sample rate to decimate to (via
-                         interpolation). If None, just interpolates to the
-                         lowest sample rate present in the Stream (default:
-                         None)
-        smooth_win: [s] Smoothing window duration. If None, does not perform
-                    smoothing (default: None)
-        agc_params: Dictionary of keyword arguments to be passed on to _agc().
-                    Example: dict(win_sec=500, method='gismo')
-                    If set to None, no AGC is applied. For details, see the
-                    docstring for _agc() (default: None)
-        normalize: Apply normalization to Stream (default: False)
-        plot_steps: Toggle plotting each processing step (default: False)
+        st (:class:`~obspy.core.stream.Stream`): Stream from
+            ``waveform_collection.server.gather_waveforms()``
+        freqmin (int or float): [Hz] Lower corner for zero-phase bandpass
+            filter
+        freqmax (int or float): [Hz] Upper corner for zero-phase bandpass
+            filter
+        envelope (bool): Take envelope of waveforms (default: `False`)
+        decimation_rate (int or float): [Hz] New sample rate to decimate to
+            (via interpolation). If `None`, just interpolates to the lowest
+            sample rate present in the Stream (default: `None`)
+        smooth_win (int or float): [s] Smoothing window duration. If `None`,
+            does not perform smoothing (default: `None`)
+        agc_params (dict): Dictionary of keyword arguments to be passed on to
+            ``rtm.waveform._agc()``. Example: `dict(win_sec=500,
+            method='gismo')`. If set to `None`, no AGC is applied. For details,
+            see the docstring for ``rtm.waveform._agc()`` (default: `None`)
+        normalize (bool): Apply normalization to Stream (default: `False`)
+        plot_steps (bool): Toggle plotting each processing step (default:
+            `False`)
+
     Returns:
-        st_out: Stream containing processed waveforms
+        :class:`~obspy.core.stream.Stream` containing processed waveforms
     """
 
     print('---------------')
@@ -133,32 +137,40 @@ def _agc(st, win_sec, method='gismo'):
     """
     Apply automatic gain correction (AGC) to a collection of waveforms stored
     in an ObsPy Stream object. This function is designed to be used as part of
-    process_waveforms() though it can be used on its own as well.
+    :func:`process_waveforms` though it can be used on its own as well.
 
     Args:
-        st: Stream containing waveforms to be processed
-        win_sec: [s] AGC window. A shorter time window results in a more
-                     aggressive AGC effect (i.e., increased gain for quieter
-                     signals)
-        method: One of 'gismo' or 'walker' (default: 'gismo')
+        st (:class:`~obspy.core.stream.Stream`): Stream containing waveforms to
+            be processed
+        win_sec (int or float): AGC window [s]. A shorter time window results
+            in a more aggressive AGC effect (i.e., increased gain for quieter
+            signals)
+        method (str): One of `'gismo'` or `'walker'` (default: `'gismo'`)
 
-                'gismo' A Python implementation of agc.m from the GISMO suite:
-                            https://github.com/geoscience-community-codes/GISMO/blob/master/core/%40correlation/agc.m
-                        It preserves the relative amplitudes of traces (i.e.
-                        doesn't normalize) but is limited in how much in can
-                        boost quiet sections of waveform.
+            * `'gismo'` A Python implementation of ``agc.m`` from the GISMO
+              suite:
 
-               'walker' An implementation of the AGC algorithm described in
-                        Walker et al. (2010), paragraph 22:
-                            https://doi.org/10.1029/2010JB007863
-                        (The code is adopted from Richard Sanderson's version.)
-                        This method scales the amplitudes of the resulting
-                        traces between [-1, 1] (or [0, 1] for envelopes) so
-                        inter-trace amplitudes are not preserved. However, the
-                        method produces a stronger AGC effect which may be
-                        desirable depending upon the context.
+              https://github.com/geoscience-community-codes/GISMO/blob/master/core/%40correlation/agc.m
+
+              It preserves the relative amplitudes of traces (i.e. doesn't
+              normalize) but is limited in how much in can boost quiet sections
+              of waveform.
+
+            * `'walker'` An implementation of the AGC algorithm described in
+              Walker *et al.* (2010), paragraph 22:
+
+              https://doi.org/10.1029/2010JB007863
+
+              (The code is adopted from Richard Sanderson's version.) This
+              method scales the amplitudes of the resulting traces between
+              :math:`[-1, 1]` (or :math:`[0, 1]` for envelopes) so inter-trace
+              amplitudes are not preserved. However, the method produces a
+              stronger AGC effect which may be desirable depending upon the
+              context.
+
     Returns:
-        st_out: Copy of input Stream with AGC applied
+        :class:`~obspy.core.stream.Stream`: Copy of input Stream with AGC
+        applied
     """
 
     st_out = st.copy()
