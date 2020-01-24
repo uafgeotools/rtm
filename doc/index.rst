@@ -1,7 +1,7 @@
 rtm
 ===
 
-A Python package for reverse time migration of infrasound signals
+A Python package for locating infrasound sources using reverse time migration
 
 .. toctree::
    :caption: README
