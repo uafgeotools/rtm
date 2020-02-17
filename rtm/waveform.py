@@ -18,7 +18,7 @@ def process_waveforms(st, freqmin, freqmax, envelope=False,
 
     Args:
         st (:class:`~obspy.core.stream.Stream`): Stream from
-            ``waveform_collection.server.gather_waveforms()``
+            :func:`waveform_collection.server.gather_waveforms`
         freqmin (int or float): [Hz] Lower corner for zero-phase bandpass
             filter
         freqmax (int or float): [Hz] Upper corner for zero-phase bandpass
