@@ -86,7 +86,9 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
             # find station x/y grid point closest to utm x/y
             staxyz_g[i] = [np.abs(dem.x.values-stautm[i][0]).argmin(),
                            np.abs(dem.y.values-stautm[i][1]).argmin(), staloc[i][2]]
-            staxyz[i] = [dem.spacing*x for x in staxyz_g[i]]
+            staxyz[i] = [dem.spacing*x for x in staxyz_g[i][0:2]]
+            #z value already in actual units
+            staxyz[i].append(staxyz_g[i][2])
         except KeyError:
             print('Failed! No matching station coordinates found for %s' % sta)
             raise
