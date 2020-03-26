@@ -358,7 +358,7 @@ def celerity_travel_time(grid, st, celerity=343, dem=None):
         idy = np.abs(dem.y.values - tr.stats.utm_y).argmin()
         elv = dem[idy, idx].values
         if np.isfinite(elv):
-            print(tr.stats.elevation -  elv)
+            tr.stats.elevation = elv
         else:
             print('No DEM grid point found for %s, using input elevation' % tr.id)
 
