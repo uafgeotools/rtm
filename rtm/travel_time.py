@@ -9,6 +9,8 @@ import glob
 import time
 import pickle
 import xarray as xr
+import warnings
+from . import RTMWarning
 
 
 def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
@@ -352,16 +354,19 @@ def celerity_travel_time(grid, st, celerity=343, dem=None):
     # Pre-define this boolean for speed
     projected = grid.UTM
 
-    # Clamp station elevations to the DEM surface
-    for tr in st:
-        idx = np.abs(dem.x.values - tr.stats.utm_x).argmin()
-        idy = np.abs(dem.y.values - tr.stats.utm_y).argmin()
-        elv = dem[idy, idx].values
-        if np.isfinite(elv):
-            tr.stats.elevation = elv  # Overwrite existing elevation (from station metadata) with interpolated DEM elevation
-        else:
-            warnings.warn(f'No DEM grid point found for {tr.id}, using input elevation', RTMWarning)
-
+    # If DEM provided, clamp station elevations to the DEM surface
+    if dem is not None:
+        for tr in st:
+            idx = np.abs(dem.x.values - tr.stats.utm_x).argmin()
+            idy = np.abs(dem.y.values - tr.stats.utm_y).argmin()
+            elv = dem[idy, idx].values
+            if np.isfinite(elv):
+                tr.stats.elevation = elv  # Overwrite existing elevation (from
+                                          # station metadata) with interpolated
+                                          # DEM elevation
+            else:
+                warnings.warn(f'No DEM grid point found for {tr.id}, using '
+                              f'input elevation instead.', RTMWarning)
 
     print('-------------------------------------------------')
     print(f'CALCULATING TRAVEL TIMES USING CELERITY = {celerity:g} M/S')
