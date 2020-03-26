@@ -360,7 +360,7 @@ def celerity_travel_time(grid, st, celerity=343, dem=None):
         if np.isfinite(elv):
             tr.stats.elevation = elv  # Overwrite existing elevation (from station metadata) with interpolated DEM elevation
         else:
-            print('No DEM grid point found for %s, using input elevation' % tr.id)
+            warnings.warn(f'No DEM grid point found for {tr.id}, using input elevation', RTMWarning)
 
 
     print('-------------------------------------------------')
