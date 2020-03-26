@@ -357,11 +357,12 @@ def celerity_travel_time(grid, st, celerity=343, dem=None):
     # Expand the grid to a 3-D array of (station, y, x)
     travel_times = grid.expand_dims(station=[tr.id for tr in st]).copy()
 
-    # Pre-define this boolean for speed
+    # Pre-define this boolean for speed - if this is True, then tr.stats.utm_x
+    # etc. are defined!
     projected = grid.UTM
 
     # If DEM provided, clamp station elevations to the DEM surface
-    if dem is not None:
+    if projected and dem is not None:
         for tr in st:
             idx = np.abs(dem.x.values - tr.stats.utm_x).argmin()
             idy = np.abs(dem.y.values - tr.stats.utm_y).argmin()
