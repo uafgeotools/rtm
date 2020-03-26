@@ -352,6 +352,17 @@ def celerity_travel_time(grid, st, celerity=343, dem=None):
     # Pre-define this boolean for speed
     projected = grid.UTM
 
+    # Clamp station elevations to the DEM surface
+    for tr in st:
+        idx = np.abs(dem.x.values - tr.stats.utm_x).argmin()
+        idy = np.abs(dem.y.values - tr.stats.utm_y).argmin()
+        elv = dem[idy, idx].values
+        if np.isfinite(elv):
+            print(tr.stats.elevation -  elv)
+        else:
+            print('No DEM grid point found for %s, using input elevation' % tr.id)
+
+
     print('-------------------------------------------------')
     print(f'CALCULATING TRAVEL TIMES USING CELERITY = {celerity:g} M/S')
     print('-------------------------------------------------')
