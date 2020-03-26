@@ -330,6 +330,12 @@ def celerity_travel_time(grid, st, celerity=343, dem=None):
     grids, distances can be 2-D or 3-D. For lat/lon grids, distances are great
     circles.
 
+    **NOTE**
+
+    If an input DEM is provided, this function will overwrite the
+    ``tr.stats.elevation`` attribute for each Trace in the input `st` with the
+    "clamped-to-ground" value from the DEM.
+
     Args:
         grid (:class:`~xarray.DataArray`): Grid to use; output of
             :func:`~rtm.grid.define_grid`
