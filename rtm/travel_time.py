@@ -364,16 +364,23 @@ def celerity_travel_time(grid, st, celerity=343, dem=None):
     # If DEM provided, clamp station elevations to the DEM surface
     if projected and dem is not None:
         for tr in st:
-            idx = np.abs(dem.x.values - tr.stats.utm_x).argmin()
-            idy = np.abs(dem.y.values - tr.stats.utm_y).argmin()
-            elv = dem[idy, idx].values
-            if np.isfinite(elv):
-                tr.stats.elevation = elv  # Overwrite existing elevation (from
-                                          # station metadata) with interpolated
-                                          # DEM elevation
+            try:
+                # Note 1: This can be NaN even if we're within DEM extent!
+                # Note 2: This raises a KeyError if it can't find a point
+                #         within `tolerance` of (x, y)
+                elevation = dem.sel(x=tr.stats.utm_x, y=tr.stats.utm_y,
+                                    method='nearest',
+                                    tolerance=dem.spacing).data
+            except KeyError:
+                elevation = np.nan  # We're outside the DEM extent
+
+            if not np.isnan(elevation):
+                # Overwrite existing elevation (from station metadata) with
+                # interpolated DEM elevation
+                tr.stats.elevation = elevation
             else:
-                warnings.warn(f'No DEM grid point found for {tr.id}, using '
-                              f'input elevation instead.', RTMWarning)
+                warnings.warn(f'No valid DEM grid point found for {tr.id}, '
+                              f'using metadata elevation instead.', RTMWarning)
 
     print('-------------------------------------------------')
     print(f'CALCULATING TRAVEL TIMES USING CELERITY = {celerity:g} M/S')
