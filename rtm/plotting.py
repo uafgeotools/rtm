@@ -162,7 +162,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     ax.legend(h, [handle.get_label() for handle in h], loc='best',
               framealpha=1)
 
-    title = f'Time: {UTCDateTime(slice.time.values.astype(str)).datetime}'
+    title = 'Time: {}'.format(UTCDateTime(slice.time.values.astype(str)).strftime('%Y-%m-%d %H:%M:%S'))
 
     if hasattr(S, 'celerity'):
         title += f'\nCelerity: {S.celerity:g} m/s'
@@ -281,7 +281,7 @@ def plot_record_section(st, origin_time, source_location, plot_celerity=None,
 
     ax.set_ylim(bottom=0)  # Show all the way to zero offset
 
-    ax.set_xlabel(f'Time (s) from {origin_time.datetime}')
+    ax.set_xlabel('Time (s) from {}'.format(origin_time.strftime('%Y-%m-%d %H:%M:%S')))
     ax.set_ylabel('Distance (km) from '
                   '({:.4f}, {:.4f})'.format(*source_location))
 
