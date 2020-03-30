@@ -116,6 +116,21 @@ def process_waveforms(st, freqmin, freqmax, envelope=False,
         st_n.normalize()
         streams['normalized'] = st_n
 
+    # Ensure all traces have the same number of values. Only operate on final
+    # entry lof stream dictionary
+    st_out = list(streams.values())[-1]
+    # Find unique number of values in stream
+    u_val, u_ind, u_cts = np.unique(np.array([tr.count() for tr in st_out]),
+                                    return_index=True, return_counts=True)
+    if len(u_val) > 1:
+        # Find the trace with differing numbers of samples
+        min_ind = u_ind[u_cts.argmin()]  #index to trace with lower number
+        npts_add = u_val.max() - u_val.min()    #number of points to add
+        print(f'Adding {npts_add} sample(s) to trace {st_out[min_ind].id}')
+        # add zero data values
+        st_out[min_ind].data = np.hstack([st_out[min_ind].data,
+                                          np.zeros(1, npts_add)])
+
     print('Done')
 
     if plot_steps:
