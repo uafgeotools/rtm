@@ -90,7 +90,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
 
     if dem is None:
         _plot_geographic_context(ax=ax, utm=S.UTM, hires=hires)
-        slice_plot_kwargs = dict(ax=ax, alpha=0.5, cmap='hot_r',
+        slice_plot_kwargs = dict(ax=ax, alpha=0.5, cmap='viridis',
                                  add_colorbar=False, transform=transform)
     else:
         cs = dem.plot.contour(ax=ax, colors='k', levels=50, zorder=-1,
@@ -100,7 +100,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
         ax.set_xlabel('UTM Easting (m)')
         ax.set_ylabel('UTM Northing (m)')
 
-        slice_plot_kwargs = dict(ax=ax, alpha=0.5, cmap='hot_r',
+        slice_plot_kwargs = dict(ax=ax, alpha=0.5, cmap='viridis',
                                  add_colorbar=False, add_labels=False)
 
         bar_length = np.around(dem.x_radius/4, decimals=-1)
