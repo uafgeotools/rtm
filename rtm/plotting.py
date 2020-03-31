@@ -120,12 +120,6 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
         # pcolormesh instead (gridlines will show in translucent plot)
         sm = slice.plot.pcolormesh(**slice_plot_kwargs)
 
-    ax_pos = ax.get_position()
-    cloc = [ax_pos.x1+.02, ax_pos.y0, .02, ax_pos.height]
-    cbaxes = fig.add_axes(cloc)
-    cbar = fig.colorbar(sm, cax=cbaxes, label='Stack amplitude')
-    cbar.solids.set_alpha(1)
-
     # Initialize list of handles for legend
     h = [None, None, None]
     scatter_zorder = 5
@@ -138,7 +132,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     # Plot stack maximum
     if S.UTM:
         # UTM formatting
-        label = f'Stack maximum\n({x_max:.0f}, {y_max:.0f})'
+        label = f'Stack max\n({x_max:.0f}, {y_max:.0f})'
     else:
         # Lat/lon formatting
         label = f'Stack maximum\n({y_max:.4f}, {x_max:.4f})'
@@ -176,6 +170,12 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     # Another hack that can be removed once cartopy is improved
     if dem is not None:
         ax.set_aspect('equal')
+
+    ax_pos = ax.get_position()
+    cloc = [ax_pos.x1+.02, ax_pos.y0, .02, ax_pos.height]
+    cbaxes = fig.add_axes(cloc)
+    cbar = fig.colorbar(sm, cax=cbaxes, label='Stack amplitude')
+    cbar.solids.set_alpha(1)
 
     fig.show()
 
