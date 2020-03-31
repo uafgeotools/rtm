@@ -154,7 +154,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
                     transform=plot_transform)
 
     ax.legend(h, [handle.get_label() for handle in h], loc='best',
-              framealpha=1)
+              framealpha=1, borderpad=.3, handletextpad=.3)
 
     title = 'Time: {}'.format(UTCDateTime(slice.time.values.astype(str)).strftime('%Y-%m-%d %H:%M:%S'))
 
