@@ -132,7 +132,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     # Plot stack maximum
     if S.UTM:
         # UTM formatting
-        label = f'Stack max\n({x_max:.0f}, {y_max:.0f})'
+        label = f'Stack max'
     else:
         # Lat/lon formatting
         label = f'Stack maximum\n({y_max:.4f}, {x_max:.4f})'
