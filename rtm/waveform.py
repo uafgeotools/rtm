@@ -116,13 +116,14 @@ def process_waveforms(st, freqmin, freqmax, envelope=False,
         st_n.normalize()
         streams['normalized'] = st_n
 
-    # Ensure all traces have the same number of values. Only operate on final
-    # entry lof stream dictionary
+    # Ensure all Traces have the same number of values. Only operate on final
+    # entry in Stream dictionary
     st_out = list(streams.values())[-1]
-
     min_starttime = np.min([tr.stats.starttime for tr in st_out])
     max_endtime = np.max([tr.stats.endtime for tr in st_out])
-
+    for tr in st_out:
+        # Use earliest starttime as starttime for all traces
+        tr.stats.starttime = min_starttime
     # Most conservative trim possible - will zero-pad on either end
     st_out.trim(min_starttime, max_endtime, pad=True, fill_value=0)
 
@@ -137,8 +138,6 @@ def process_waveforms(st, freqmin, freqmax, envelope=False,
             fig.tight_layout()
             fig.show()
         print('Done')
-
-    st_out = list(streams.values())[-1]  # Final entry in Stream dictionary
 
     return st_out
 
