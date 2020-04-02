@@ -422,7 +422,7 @@ def plot_stack_peak(S, plot_max=False, ax=None):
 
     ax.set_xlim(S.time[0].data, S.time[-1].data)
     ax.set_xlabel('UTC time')
-    ax.set_ylabel('Stack amplitude at spatial stack max')
+    ax.set_ylabel('Stack amplitude\n(at spatial stack max)')
 
     return fig
 
