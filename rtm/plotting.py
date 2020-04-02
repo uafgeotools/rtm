@@ -201,7 +201,6 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
         ax1.set_aspect('auto')
         ax1.set_xlabel('UTC Time')
         ax1.set_ylabel('Peak Stack Amplitude')
-        plt.subplots_adjust(hspace=.1)
 
     fig.show()
 
