@@ -196,13 +196,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     cbar.solids.set_alpha(1)
 
     if plot_peak:
-        s_peak = S.max(axis=(1, 2)).data
-
-        ax1.plot(S.time, s_peak, 'k-')
-        ax1.set_xlim(S.time[0].data, S.time[-1].data)
-        ax1.set_aspect('auto')
-        ax1.set_xlabel('UTC Time')
-        ax1.set_ylabel('Peak Stack Amplitude')
+        plot_stack_peak(S, plot_max=True, ax=ax1)
 
     fig.show()
 
@@ -394,13 +388,14 @@ def plot_st(st, filt, equal_scale=False, remove_response=False,
     return fig
 
 
-def plot_stack_peak(S, plot_max=False):
+def plot_stack_peak(S, plot_max=False, ax=None):
     """
     Plot the peak of the stack as a function of time.
 
     Args:
         S: :class:`~xarray.DataArray` containing the stack function :math:`S`
         plot_max (bool): Plot maximum value with red circle (default: `False`)
+        ax (:class:`~matplotlib.axes.Axes`:): Pre-existing axes to plot into
 
     Returns:
         :class:`~matplotlib.figure.Figure`: Output figure
@@ -408,7 +403,10 @@ def plot_stack_peak(S, plot_max=False):
 
     s_peak = S.max(axis=(1, 2)).data
 
-    fig, ax = plt.subplots(figsize=(8, 4), nrows=1, ncols=1)
+    if not ax:
+        fig, ax = plt.subplots(figsize=(8, 4))
+    else:
+        fig = ax.get_figure()  # Get figure to which provided axis belongs
     ax.plot(S.time, s_peak, 'k-')
     if plot_max:
         stack_maximum = S.where(S == S.max(), drop=True).squeeze()
@@ -419,7 +417,8 @@ def plot_stack_peak(S, plot_max=False):
             warnings.warn(f'Multiple global maxima ({len(stack_maximum.data)}) '
                           'present in S!', RTMWarning)
         else:
-            ax.plot(stack_maximum.time, stack_maximum.data, 'ro')
+            ax.scatter(stack_maximum.time.data, stack_maximum.data, marker='*',
+                       color='red', edgecolor='black', s=150, zorder=5)
 
     ax.set_xlim(S.time[0].data, S.time[-1].data)
     ax.set_xlabel('UTC Time')
