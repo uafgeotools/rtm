@@ -6,10 +6,7 @@ from matplotlib import dates
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from cartopy.io.img_tiles import Stamen
-<<<<<<< HEAD
 import matplotlib.patheffects as pe
-=======
->>>>>>> 896effc3e1357b15413955542e54f46ee8c52f6c
 from obspy.geodetics import gps2dist_azimuth
 from .stack import get_peak_coordinates
 import utm
