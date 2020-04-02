@@ -390,7 +390,7 @@ def plot_st(st, filt, equal_scale=False, remove_response=False,
 
 def plot_stack_peak(S, plot_max=False, ax=None):
     """
-    Plot the peak of the stack as a function of time.
+    Plot the stack function (at the spatial stack max) as a function of time.
 
     Args:
         S: :class:`~xarray.DataArray` containing the stack function :math:`S`
@@ -421,8 +421,8 @@ def plot_stack_peak(S, plot_max=False, ax=None):
                        color='red', edgecolor='black', s=150, zorder=5)
 
     ax.set_xlim(S.time[0].data, S.time[-1].data)
-    ax.set_xlabel('UTC Time')
-    ax.set_ylabel('Peak Stack Amplitude')
+    ax.set_xlabel('UTC time')
+    ax.set_ylabel('Stack amplitude at spatial stack max')
 
     return fig
 
