@@ -66,7 +66,8 @@ S = grid_search(processed_st=st_proc, grid=grid, time_method=TIME_METHOD,
 from rtm import (plot_time_slice, plot_record_section, get_peak_coordinates,
                  plot_stack_peak)
 
-plot_time_slice(S, st_proc, label_stations=False, hires=True)
+fig_slice = plot_time_slice(S, st_proc, label_stations=False, hires=True,
+                            plot_peak=True)
 
 time_max, y_max, x_max, _, _ = get_peak_coordinates(S, unproject=S.UTM)
 
