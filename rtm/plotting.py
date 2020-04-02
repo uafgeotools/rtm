@@ -11,6 +11,7 @@ from obspy.geodetics import gps2dist_azimuth
 from .stack import get_peak_coordinates
 import utm
 from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
+from datetime import datetime
 
 from . import RTMWarning
 
@@ -172,7 +173,8 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     ax.legend(h, [handle.get_label() for handle in h], loc='best',
               framealpha=1, borderpad=.3, handletextpad=.3)
 
-    title = 'Time: {}'.format(UTCDateTime(slice.time.values.astype(str)).strftime('%Y-%m-%d %H:%M:%S'))
+    time_round = np.datetime64(slice.time.values + np.timedelta64(500, 'ms'), 's').astype(datetime)  # Nearest second
+    title = 'Time: {}'.format(time_round)
 
     if hasattr(S, 'celerity'):
         title += f'\nCelerity: {S.celerity:g} m/s'
@@ -306,7 +308,8 @@ def plot_record_section(st, origin_time, source_location, plot_celerity=None,
 
     ax.set_ylim(bottom=0)  # Show all the way to zero offset
 
-    ax.set_xlabel('Time (s) from {}'.format(origin_time.strftime('%Y-%m-%d %H:%M:%S')))
+    time_round = np.datetime64(origin_time + 0.5, 's').astype(datetime)  # Nearest second
+    ax.set_xlabel('Time (s) from {}'.format(time_round))
     ax.set_ylabel('Distance (km) from '
                   '({:.4f}, {:.4f})'.format(*source_location))
 
