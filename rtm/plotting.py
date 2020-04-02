@@ -17,7 +17,8 @@ from . import RTMWarning
 
 
 def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
-                    hires=False, dem=None, plot_peak=True):
+                    hires=False, dem=None, plot_peak=True, cont_int=5,
+                    annot_int=50):
     """
     Plot a time slice through :math:`S` to produce a map-view plot. If time is
     not specified, then the slice corresponds to the maximum of :math:`S` in
@@ -43,6 +44,9 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
             DEM from :class:`~rtm.grid.produce_dem` (default: `None`)
         plot_peak (bool): Plot the peak stack function over time as a subplot
             (default: `True`)
+        cont_int (int): Contour interval [m] for plots with DEM data
+        annot_int (int): Annotated contour interval [m] for plots with DEM data
+            (these contours are thicker and labeled)
 
     Returns:
         :class:`~matplotlib.figure.Figure`: Output figure
@@ -108,15 +112,31 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
         slice_plot_kwargs = dict(ax=ax, alpha=0.5, cmap='viridis',
                                  add_colorbar=False, transform=transform)
     else:
-        cs = dem.plot.contour(ax=ax, colors='k', levels=50, zorder=-1,
-                              linewidths=0.3)
-        ax.clabel(cs, cs.levels[::2], fontsize=9, fmt='%d', inline=True)
+        # Rounding to nearest cont_int
+        all_levels = np.arange(np.ceil(dem.min().data / cont_int),
+                               np.floor(dem.max().data / cont_int) + 1) * cont_int
+        # Rounding to nearest annot_int
+        annot_levels = np.arange(np.ceil(dem.min().data / annot_int),
+                                 np.floor(dem.max().data / annot_int) + 1) * annot_int
+        # Ensure we don't draw annotated levels twice
+        cont_levels = []
+        for level in all_levels:
+            if level not in annot_levels:
+                cont_levels.append(level)
+
+        dem.plot.contour(ax=ax, colors='k', levels=cont_levels, zorder=-1,
+                         linewidths=0.3)
+        # Use thicker lines for annotated contours
+        cs = dem.plot.contour(ax=ax, colors='k', levels=annot_levels,
+                              zorder=-1, linewidths=0.7)
+        ax.clabel(cs, fontsize=9, fmt='%d', inline=True)  # Actually annotate
 
         ax.set_xlabel('UTM Easting (m)')
         ax.set_ylabel('UTM Northing (m)')
 
-        slice_plot_kwargs = dict(ax=ax, alpha=0.5, cmap='viridis',
-                                 add_colorbar=False, add_labels=False)
+        slice_plot_kwargs = dict(ax=ax, alpha=0.7, cmap='viridis',
+                                 add_colorbar=False, add_labels=False,
+                                 zorder=0)
 
         # Add scalebar
         SCALEBAR_INC = 100  # [m] Scalebar increment (will be multiple of this)
