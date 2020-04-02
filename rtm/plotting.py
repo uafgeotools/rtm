@@ -6,7 +6,10 @@ from matplotlib import dates
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from cartopy.io.img_tiles import Stamen
+<<<<<<< HEAD
 import matplotlib.patheffects as pe
+=======
+>>>>>>> 896effc3e1357b15413955542e54f46ee8c52f6c
 from obspy.geodetics import gps2dist_azimuth
 from .stack import get_peak_coordinates
 import utm
@@ -450,7 +453,7 @@ def plot_stack_peak(S, plot_max=False, ax=None):
 
     ax.set_xlim(S.time[0].data, S.time[-1].data)
     ax.set_xlabel('UTC time')
-    ax.set_ylabel('Stack amplitude\n(at spatial stack max)')
+    ax.set_ylabel('Max stack amplitude')
 
     return fig
 
