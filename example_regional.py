@@ -63,8 +63,7 @@ S = grid_search(processed_st=st_proc, grid=grid, time_method=TIME_METHOD,
 
 #%% (4) Plot
 
-from rtm import (plot_time_slice, plot_record_section, get_peak_coordinates,
-                 plot_stack_peak)
+from rtm import plot_time_slice, plot_record_section, get_peak_coordinates
 
 fig_slice = plot_time_slice(S, st_proc, label_stations=False, hires=True,
                             plot_peak=True)
@@ -75,5 +74,3 @@ fig = plot_record_section(st_proc, origin_time=time_max,
                           source_location=(y_max, x_max),
                           plot_celerity='range', label_waveforms=False)
 fig.axes[0].set_ylim(bottom=1100)  # Start at this distance (km) from source
-
-fig_peak = plot_stack_peak(S, plot_max=True)
