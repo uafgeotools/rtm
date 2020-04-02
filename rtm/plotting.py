@@ -127,6 +127,9 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
 
         plot_transform = ax.transData
 
+        # Mask areas outside of DEM extent
+        slice.data[np.isnan(dem.data)] = np.nan
+
     if S.UTM:
         # imshow works well here (no gridlines in translucent plot)
         sm = slice.plot.imshow(**slice_plot_kwargs)
