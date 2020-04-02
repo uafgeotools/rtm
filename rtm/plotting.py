@@ -11,15 +11,18 @@ from obspy.geodetics import gps2dist_azimuth
 from .stack import get_peak_coordinates
 import utm
 from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
 from . import RTMWarning
 
 
 def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
-                    hires=False, dem=None):
+                    hires=False, dem=None, plot_peak=True):
     """
     Plot a time slice through :math:`S` to produce a map-view plot. If time is
     not specified, then the slice corresponds to the maximum of :math:`S` in
-    the time direction.
+    the time direction. Can also plot the peak of the stack function over
+    time.
 
     Args:
         S (:class:`~xarray.DataArray`): The stack function :math:`S`
@@ -38,6 +41,8 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
             `False`)
         dem (:class:`~xarray.DataArray`): Overlay time slice on a user-supplied
             DEM from :class:`~rtm.grid.produce_dem` (default: `None`)
+        plot_peak (bool): Plot the peak stack function over time (default:
+            `True`)
 
     Returns:
         :class:`~matplotlib.figure.Figure`: Output figure
@@ -77,8 +82,17 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
         transform = ccrs.PlateCarree()
         plot_transform = ccrs.Geodetic()
 
-    fig, ax = plt.subplots(figsize=(8, 8),
-                           subplot_kw=dict(projection=proj))
+    if plot_peak:
+        fig, (ax, ax1) = plt.subplots(figsize=(8, 12), nrows=2,
+                                      gridspec_kw={'height_ratios': [3, 1]},
+                                      subplot_kw=dict(projection=proj))
+
+    else:
+        fig, ax = plt.subplots(figsize=(8, 8),
+                               subplot_kw=dict(projection=proj))
+
+    divider = make_axes_locatable(ax)
+    cbaxes = divider.append_axes("right", size="3%", pad=0.1)
 
     # In either case, we convert from UTCDateTime to np.datetime64
     if time_slice:
@@ -173,11 +187,16 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     if dem is not None:
         ax.set_aspect('equal')
 
-    ax_pos = ax.get_position()
-    cloc = [ax_pos.x1+.02, ax_pos.y0, .02, ax_pos.height]
-    cbaxes = fig.add_axes(cloc)
     cbar = fig.colorbar(sm, cax=cbaxes, label='Stack amplitude')
     cbar.solids.set_alpha(1)
+
+    if plot_peak:
+        s_peak = S.max(axis=(1, 2)).data
+
+        ax1.plot(S.time, s_peak, 'k-')
+        ax1.set_xlim(S.time[0].data, S.time[-1].data)
+        ax1.set_xlabel('UTC Time')
+        ax1.set_ylabel('Peak Stack Amplitude')
 
     fig.show()
 
