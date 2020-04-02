@@ -11,7 +11,6 @@ from obspy.geodetics import gps2dist_azimuth
 from .stack import get_peak_coordinates
 import utm
 from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from . import RTMWarning
 
@@ -41,8 +40,8 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
             `False`)
         dem (:class:`~xarray.DataArray`): Overlay time slice on a user-supplied
             DEM from :class:`~rtm.grid.produce_dem` (default: `None`)
-        plot_peak (bool): Plot the peak stack function over time (default:
-            `True`)
+        plot_peak (bool): Plot the peak stack function over time as a subplot
+            (default: `True`)
 
     Returns:
         :class:`~matplotlib.figure.Figure`: Output figure
@@ -87,12 +86,13 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
                                       gridspec_kw={'height_ratios': [3, 1]},
                                       subplot_kw=dict(projection=proj))
 
+        #axes kluge so the second one can have a different projection
+        ax1.remove()
+        ax1 = fig.add_subplot(414)
+
     else:
         fig, ax = plt.subplots(figsize=(8, 8),
                                subplot_kw=dict(projection=proj))
-
-    divider = make_axes_locatable(ax)
-    cbaxes = divider.append_axes("right", size="3%", pad=0.1)
 
     # In either case, we convert from UTCDateTime to np.datetime64
     if time_slice:
@@ -187,6 +187,9 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     if dem is not None:
         ax.set_aspect('equal')
 
+    ax_pos = ax.get_position()
+    cloc = [ax_pos.x1+.02, ax_pos.y0, .02, ax_pos.height]
+    cbaxes = fig.add_axes(cloc)
     cbar = fig.colorbar(sm, cax=cbaxes, label='Stack amplitude')
     cbar.solids.set_alpha(1)
 
@@ -195,8 +198,10 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
 
         ax1.plot(S.time, s_peak, 'k-')
         ax1.set_xlim(S.time[0].data, S.time[-1].data)
+        ax1.set_aspect('auto')
         ax1.set_xlabel('UTC Time')
         ax1.set_ylabel('Peak Stack Amplitude')
+        plt.subplots_adjust(hspace=.1)
 
     fig.show()
 
