@@ -6,7 +6,7 @@ from matplotlib import dates
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from cartopy.io.img_tiles import Stamen
-from obspy import UTCDateTime
+import matplotlib.patheffects as pe
 from obspy.geodetics import gps2dist_azimuth
 from .stack import get_peak_coordinates
 import utm
@@ -160,15 +160,17 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     # Plot stations
     for tr in st:
         h[2] = ax.scatter(tr.stats.longitude, tr.stats.latitude, marker='v',
-                          color='blue', edgecolor='black',
+                          color='orange', edgecolor='black',
                           label='Station', transform=plot_transform,
                           zorder=scatter_zorder)
         if label_stations:
             ax.text(tr.stats.longitude, tr.stats.latitude,
                     '  {}.{}'.format(tr.stats.network, tr.stats.station),
                     verticalalignment='center_baseline',
-                    horizontalalignment='left', fontsize=10, weight='bold',
-                    transform=plot_transform)
+                    horizontalalignment='left', fontsize=10, color='white',
+                    transform=plot_transform, zorder=scatter_zorder,
+                    path_effects=[pe.Stroke(linewidth=2, foreground='black'),
+                                  pe.Normal()])
 
     ax.legend(h, [handle.get_label() for handle in h], loc='best',
               framealpha=1, borderpad=.3, handletextpad=.3)
