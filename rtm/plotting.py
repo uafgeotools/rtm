@@ -6,20 +6,24 @@ from matplotlib import dates
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from cartopy.io.img_tiles import Stamen
-from obspy import UTCDateTime
+import matplotlib.patheffects as pe
 from obspy.geodetics import gps2dist_azimuth
 from .stack import get_peak_coordinates
 import utm
 from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
+from datetime import datetime
+
 from . import RTMWarning
 
 
 def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
-                    hires=False, dem=None):
+                    hires=False, dem=None, plot_peak=True, cont_int=5,
+                    annot_int=50):
     """
     Plot a time slice through :math:`S` to produce a map-view plot. If time is
     not specified, then the slice corresponds to the maximum of :math:`S` in
-    the time direction.
+    the time direction. Can also plot the peak of the stack function over
+    time.
 
     Args:
         S (:class:`~xarray.DataArray`): The stack function :math:`S`
@@ -38,6 +42,11 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
             `False`)
         dem (:class:`~xarray.DataArray`): Overlay time slice on a user-supplied
             DEM from :class:`~rtm.grid.produce_dem` (default: `None`)
+        plot_peak (bool): Plot the peak stack function over time as a subplot
+            (default: `True`)
+        cont_int (int): Contour interval [m] for plots with DEM data
+        annot_int (int): Annotated contour interval [m] for plots with DEM data
+            (these contours are thicker and labeled)
 
     Returns:
         :class:`~matplotlib.figure.Figure`: Output figure
@@ -77,8 +86,18 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
         transform = ccrs.PlateCarree()
         plot_transform = ccrs.Geodetic()
 
-    fig, ax = plt.subplots(figsize=(8, 8),
-                           subplot_kw=dict(projection=proj))
+    if plot_peak:
+        fig, (ax, ax1) = plt.subplots(figsize=(8, 12), nrows=2,
+                                      gridspec_kw={'height_ratios': [3, 1]},
+                                      subplot_kw=dict(projection=proj))
+
+        #axes kluge so the second one can have a different projection
+        ax1.remove()
+        ax1 = fig.add_subplot(414)
+
+    else:
+        fig, ax = plt.subplots(figsize=(8, 8),
+                               subplot_kw=dict(projection=proj))
 
     # In either case, we convert from UTCDateTime to np.datetime64
     if time_slice:
@@ -90,20 +109,39 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
 
     if dem is None:
         _plot_geographic_context(ax=ax, utm=S.UTM, hires=hires)
-        slice_plot_kwargs = dict(ax=ax, alpha=0.5, cmap='hot_r',
+        slice_plot_kwargs = dict(ax=ax, alpha=0.5, cmap='viridis',
                                  add_colorbar=False, transform=transform)
     else:
-        cs = dem.plot.contour(ax=ax, colors='k', levels=50, zorder=-1,
-                              linewidths=0.3)
-        ax.clabel(cs, cs.levels[::2], fontsize=9, fmt='%d', inline=True)
+        # Rounding to nearest cont_int
+        all_levels = np.arange(np.ceil(dem.min().data / cont_int),
+                               np.floor(dem.max().data / cont_int) + 1) * cont_int
+        # Rounding to nearest annot_int
+        annot_levels = np.arange(np.ceil(dem.min().data / annot_int),
+                                 np.floor(dem.max().data / annot_int) + 1) * annot_int
+        # Ensure we don't draw annotated levels twice
+        cont_levels = []
+        for level in all_levels:
+            if level not in annot_levels:
+                cont_levels.append(level)
+
+        dem.plot.contour(ax=ax, colors='k', levels=cont_levels, zorder=-1,
+                         linewidths=0.3)
+        # Use thicker lines for annotated contours
+        cs = dem.plot.contour(ax=ax, colors='k', levels=annot_levels,
+                              zorder=-1, linewidths=0.7)
+        ax.clabel(cs, fontsize=9, fmt='%d', inline=True)  # Actually annotate
 
         ax.set_xlabel('UTM Easting (m)')
         ax.set_ylabel('UTM Northing (m)')
 
-        slice_plot_kwargs = dict(ax=ax, alpha=0.5, cmap='hot_r',
-                                 add_colorbar=False, add_labels=False)
+        slice_plot_kwargs = dict(ax=ax, alpha=0.7, cmap='viridis',
+                                 add_colorbar=False, add_labels=False,
+                                 zorder=0)
 
-        bar_length = np.around(dem.x_radius/4, decimals=-1)
+        # Add scalebar
+        SCALEBAR_INC = 100  # [m] Scalebar increment (will be multiple of this)
+        target_length = dem.x_radius / 4
+        bar_length = np.around(target_length / SCALEBAR_INC) * SCALEBAR_INC
         bar_label = f'{bar_length:g} m'
         scalebar = AnchoredSizeBar(ax.transData, bar_length, bar_label,
                                    'lower left', pad=0.3, color='black',
@@ -112,6 +150,10 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
 
         plot_transform = ax.transData
 
+        # Mask areas outside of DEM extent
+        dem_slice = dem.sel(x=slice.x, y=slice.y, method='nearest')  # Select subset of DEM that slice occupies
+        slice.data[np.isnan(dem_slice.data)] = np.nan
+        
     if S.UTM:
         # imshow works well here (no gridlines in translucent plot)
         sm = slice.plot.imshow(**slice_plot_kwargs)
@@ -119,12 +161,6 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
         # imshow performs poorly for Albers equal-area projection - use
         # pcolormesh instead (gridlines will show in translucent plot)
         sm = slice.plot.pcolormesh(**slice_plot_kwargs)
-
-    ax_pos = ax.get_position()
-    cloc = [ax_pos.x1+.02, ax_pos.y0, .02, ax_pos.height]
-    cbaxes = fig.add_axes(cloc)
-    cbar = fig.colorbar(sm, cax=cbaxes, label='Stack amplitude')
-    cbar.solids.set_alpha(1)
 
     # Initialize list of handles for legend
     h = [None, None, None]
@@ -138,7 +174,9 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     # Plot stack maximum
     if S.UTM:
         # UTM formatting
-        label = f'Stack maximum\n({x_max:.0f}, {y_max:.0f})'
+        label = f'Stack max'
+        # Change ticks to plain format for long utm coordinates
+        ax.ticklabel_format(style='plain')
     else:
         # Lat/lon formatting
         label = f'Stack maximum\n({y_max:.4f}, {x_max:.4f})'
@@ -149,20 +187,23 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     # Plot stations
     for tr in st:
         h[2] = ax.scatter(tr.stats.longitude, tr.stats.latitude, marker='v',
-                          color='blue', edgecolor='black',
+                          color='orange', edgecolor='black',
                           label='Station', transform=plot_transform,
                           zorder=scatter_zorder)
         if label_stations:
             ax.text(tr.stats.longitude, tr.stats.latitude,
                     '  {}.{}'.format(tr.stats.network, tr.stats.station),
                     verticalalignment='center_baseline',
-                    horizontalalignment='left', fontsize=10, weight='bold',
-                    transform=plot_transform)
+                    horizontalalignment='left', fontsize=10, color='white',
+                    transform=plot_transform, zorder=scatter_zorder,
+                    path_effects=[pe.Stroke(linewidth=2, foreground='black'),
+                                  pe.Normal()])
 
     ax.legend(h, [handle.get_label() for handle in h], loc='best',
-              framealpha=1)
+              framealpha=1, borderpad=.3, handletextpad=.3)
 
-    title = 'Time: {}'.format(UTCDateTime(slice.time.values.astype(str)).strftime('%Y-%m-%d %H:%M:%S'))
+    time_round = np.datetime64(slice.time.values + np.timedelta64(500, 'ms'), 's').astype(datetime)  # Nearest second
+    title = 'Time: {}'.format(time_round)
 
     if hasattr(S, 'celerity'):
         title += f'\nCelerity: {S.celerity:g} m/s'
@@ -176,6 +217,15 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     # Another hack that can be removed once cartopy is improved
     if dem is not None:
         ax.set_aspect('equal')
+
+    ax_pos = ax.get_position()
+    cloc = [ax_pos.x1+.02, ax_pos.y0, .02, ax_pos.height]
+    cbaxes = fig.add_axes(cloc)
+    cbar = fig.colorbar(sm, cax=cbaxes, label='Stack amplitude')
+    cbar.solids.set_alpha(1)
+
+    if plot_peak:
+        plot_stack_peak(S, plot_max=True, ax=ax1)
 
     fig.show()
 
@@ -281,7 +331,8 @@ def plot_record_section(st, origin_time, source_location, plot_celerity=None,
 
     ax.set_ylim(bottom=0)  # Show all the way to zero offset
 
-    ax.set_xlabel('Time (s) from {}'.format(origin_time.strftime('%Y-%m-%d %H:%M:%S')))
+    time_round = np.datetime64(origin_time + 0.5, 's').astype(datetime)  # Nearest second
+    ax.set_xlabel('Time (s) from {}'.format(time_round))
     ax.set_ylabel('Distance (km) from '
                   '({:.4f}, {:.4f})'.format(*source_location))
 
@@ -366,13 +417,14 @@ def plot_st(st, filt, equal_scale=False, remove_response=False,
     return fig
 
 
-def plot_stack_peak(S, plot_max=False):
+def plot_stack_peak(S, plot_max=False, ax=None):
     """
-    Plot the peak of the stack as a function of time.
+    Plot the stack function (at the spatial stack max) as a function of time.
 
     Args:
         S: :class:`~xarray.DataArray` containing the stack function :math:`S`
         plot_max (bool): Plot maximum value with red circle (default: `False`)
+        ax (:class:`~matplotlib.axes.Axes`:): Pre-existing axes to plot into
 
     Returns:
         :class:`~matplotlib.figure.Figure`: Output figure
@@ -380,7 +432,10 @@ def plot_stack_peak(S, plot_max=False):
 
     s_peak = S.max(axis=(1, 2)).data
 
-    fig, ax = plt.subplots(figsize=(8, 4), nrows=1, ncols=1)
+    if not ax:
+        fig, ax = plt.subplots(figsize=(8, 4))
+    else:
+        fig = ax.get_figure()  # Get figure to which provided axis belongs
     ax.plot(S.time, s_peak, 'k-')
     if plot_max:
         stack_maximum = S.where(S == S.max(), drop=True).squeeze()
@@ -391,11 +446,12 @@ def plot_stack_peak(S, plot_max=False):
             warnings.warn(f'Multiple global maxima ({len(stack_maximum.data)}) '
                           'present in S!', RTMWarning)
         else:
-            ax.plot(stack_maximum.time, stack_maximum.data, 'ro')
+            ax.scatter(stack_maximum.time.data, stack_maximum.data, marker='*',
+                       color='red', edgecolor='black', s=150, zorder=5)
 
     ax.set_xlim(S.time[0].data, S.time[-1].data)
-    ax.set_xlabel('UTC Time')
-    ax.set_ylabel('Peak Stack Amplitude')
+    ax.set_xlabel('UTC time')
+    ax.set_ylabel('Max stack amplitude')
 
     return fig
 
