@@ -179,7 +179,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
         ax.ticklabel_format(style='plain')
     else:
         # Lat/lon formatting
-        label = f'Stack maximum\n({y_max:.4f}, {x_max:.4f})'
+        label = f'Stack max\n({y_max:.4f}, {x_max:.4f})'
     h[1] = ax.scatter(x_max, y_max, s=100, color='red', marker='*',
                       edgecolor='black', label=label,
                       transform=plot_transform, zorder=scatter_zorder)
@@ -439,15 +439,18 @@ def plot_stack_peak(S, plot_max=False, ax=None):
     ax.plot(S.time, s_peak, 'k-')
     if plot_max:
         stack_maximum = S.where(S == S.max(), drop=True).squeeze()
+        marker_kwargs = dict(marker='*', color='red', edgecolor='black', s=150,
+                             zorder=5)
         if stack_maximum.size > 1:
             max_indices = np.argwhere(~np.isnan(stack_maximum.data))
-            ax.plot(stack_maximum[tuple(max_indices[0])].time,
-                    stack_maximum[tuple(max_indices[0])].data, 'ro')
+            ax.scatter(stack_maximum[tuple(max_indices[0])].time.data,
+                       stack_maximum[tuple(max_indices[0])].data,
+                       **marker_kwargs)
             warnings.warn(f'Multiple global maxima ({len(stack_maximum.data)}) '
                           'present in S!', RTMWarning)
         else:
-            ax.scatter(stack_maximum.time.data, stack_maximum.data, marker='*',
-                       color='red', edgecolor='black', s=150, zorder=5)
+            ax.scatter(stack_maximum.time.data, stack_maximum.data,
+                       **marker_kwargs)
 
     ax.set_xlim(S.time[0].data, S.time[-1].data)
     ax.set_xlabel('UTC time')
