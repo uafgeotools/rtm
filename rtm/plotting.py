@@ -153,7 +153,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
         # Mask areas outside of DEM extent
         dem_slice = dem.sel(x=slice.x, y=slice.y, method='nearest')  # Select subset of DEM that slice occupies
         slice.data[np.isnan(dem_slice.data)] = np.nan
-        
+
     if S.UTM:
         # imshow works well here (no gridlines in translucent plot)
         sm = slice.plot.imshow(**slice_plot_kwargs)
@@ -424,7 +424,7 @@ def plot_stack_peak(S, plot_max=False, ax=None):
     Args:
         S: :class:`~xarray.DataArray` containing the stack function :math:`S`
         plot_max (bool): Plot maximum value with red circle (default: `False`)
-        ax (:class:`~matplotlib.axes.Axes`:): Pre-existing axes to plot into
+        ax (:class:`~matplotlib.axes.Axes`): Pre-existing axes to plot into
 
     Returns:
         :class:`~matplotlib.figure.Figure`: Output figure
