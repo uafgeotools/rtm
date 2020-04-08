@@ -16,6 +16,7 @@ specifications.
 Sanderson, R., Matoza, R. S., Fee, D., Haney, M. M., & Lyons, J. J. (in press).
 Remote detection and location of explosive volcanism in Alaska with the
 EarthScope Transportable Array. _Journal of Geophysical Research: Solid Earth_.
+[https://doi.org/10.1029/2019JB018347](https://doi.org/10.1029/2019JB018347)
 
 Walker, K. T., Hedlin, M. A. H., de Groot‐Hedlin, C., Vergoz, J., Le Pichon,
 A., & Drob, D. P. (2010). Source location of the 19 February 2008 Oregon bolide
