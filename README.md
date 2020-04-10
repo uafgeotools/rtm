@@ -11,6 +11,8 @@ applicable to a wide variety of network geometries and sizes. Realistic travel
 times can be incorporated from numerical modeling or atmospheric
 specifications.
 
+![](example_local_slice_master.png)
+
 **References**
 
 Sanderson, R., Matoza, R. S., Fee, D., Haney, M. M., & Lyons, J. J. (in press).
