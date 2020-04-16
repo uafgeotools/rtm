@@ -458,11 +458,12 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
             raise ValueError('Window must be defined for method '
                              f'\'{stack_method}\'.')
         times = np.arange(processed_st[0].stats.starttime,
-                          processed_st[0].stats.endtime + window, window)
+                          processed_st[0].stats.endtime, window)
+        # sample pointer for window-based stack
         samples_stack = np.arange(0, npts_st,
                                   window * processed_st[0].stats.sampling_rate)
         # Add final window to account for potential uneven number of samples
-        if samples_stack[-1] < npts_st:
+        if samples_stack[-1] < npts_st-1:
             samples_stack = np.hstack((samples_stack, npts_st))
         samples_stack = samples_stack.astype(np.int, copy=False)
 
