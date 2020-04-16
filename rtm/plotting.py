@@ -53,7 +53,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     """
 
     # Don't plot peak of stack function when length of stack is one
-    if plot_peak & len(S.time)==1:
+    if plot_peak and len(S.time)==1:
         plot_peak=False
         warnings.warn(f'Stack time length=1, not plotting peak', RTMWarning)
 
