@@ -461,6 +461,7 @@ def plot_stack_peak(S, plot_max=False, ax=None):
     ax.set_ylim(bottom=0)  # Never can go below zero
     ax.set_xlabel('UTC time')
     ax.set_ylabel('Max stack amplitude')
+    plt.setp(ax.xaxis.get_majorticklabels(), rotation=30, ha='right')
 
     return fig
 
