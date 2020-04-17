@@ -52,6 +52,11 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
         :class:`~matplotlib.figure.Figure`: Output figure
     """
 
+    # Don't plot peak of stack function when length of stack is one
+    if plot_peak and len(S.time) == 1:
+        plot_peak = False
+        warnings.warn('Stack time length = 1, not plotting peak', RTMWarning)
+
     st = processed_st.copy()
 
     # Get coordinates of stack maximum in (latitude, longitude)
@@ -456,6 +461,7 @@ def plot_stack_peak(S, plot_max=False, ax=None):
     ax.set_ylim(bottom=0)  # Never can go below zero
     ax.set_xlabel('UTC time')
     ax.set_ylabel('Max stack amplitude')
+    plt.setp(ax.xaxis.get_majorticklabels(), rotation=30, ha='right')
 
     return fig
 

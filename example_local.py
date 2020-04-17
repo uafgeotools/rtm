@@ -69,6 +69,7 @@ TIME_METHOD = 'celerity'  # Choose either 'celerity' or 'fdtd'
 TIME_KWARGS = {'celerity': 343, 'dem': dem}
 
 S = grid_search(processed_st=st_proc, grid=grid, time_method=TIME_METHOD,
+                starttime=STARTTIME, endtime=ENDTIME,
                 stack_method=STACK_METHOD, **TIME_KWARGS)
 
 #%% (4) Plot
