@@ -2,7 +2,7 @@ import warnings
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.transforms as transforms
-from matplotlib import dates
+import matplotlib.dates as mdates
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from cartopy.io.img_tiles import Stamen
@@ -369,7 +369,7 @@ def plot_st(st, filt, equal_scale=False, remove_response=False,
 
     st_plot = st.copy()
     ntra = len(st)
-    tvec = dates.date2num(st_plot[0].stats.starttime.datetime) + st_plot[0].times()/86400
+    tvec = st_plot[0].times('matplotlib')
 
     if remove_response:
         print('Applying sensitivity')
@@ -386,7 +386,7 @@ def plot_st(st, filt, equal_scale=False, remove_response=False,
     if equal_scale:
         ym = np.max(st_plot.max())
 
-    fig, ax = plt.subplots(figsize=(8, 6), nrows=ntra, ncols=1)
+    fig, ax = plt.subplots(figsize=(8, 6), nrows=ntra, sharex=True)
 
     for i, tr in enumerate(st_plot):
         ax[i].plot(tvec, tr.data, 'k-')
@@ -404,16 +404,16 @@ def plot_st(st, filt, equal_scale=False, remove_response=False,
         else:
             ax[i].set_ylabel('Velocity [m/s]', fontsize=8)
 
-        ax[i].xaxis_date()
-        if i < ntra-1:
-            ax[i].set_xticklabels('')
-
         if label_waveforms:
             ax[i].text(.85, .9,
                        f'{tr.stats.network}.{tr.stats.station}.{tr.stats.channel}',
                        verticalalignment='center', transform=ax[i].transAxes)
 
-    ax[-1].set_xlabel('UTC Time')
+    # Tick locating and formatting
+    locator = mdates.AutoDateLocator()
+    ax[-1].xaxis.set_major_locator(locator)
+    ax[-1].xaxis.set_major_formatter(_UTCDateFormatter(locator))
+    fig.autofmt_xdate()
 
     fig.tight_layout()
     plt.subplots_adjust(hspace=.12)
@@ -459,8 +459,12 @@ def plot_stack_peak(S, plot_max=False, ax=None):
 
     ax.set_xlim(S.time[0].data, S.time[-1].data)
     ax.set_ylim(bottom=0)  # Never can go below zero
-    ax.set_xlabel('UTC time')
     ax.set_ylabel('Max stack amplitude')
+
+    # Tick locating and formatting
+    locator = mdates.AutoDateLocator()
+    ax.xaxis.set_major_locator(locator)
+    ax.xaxis.set_major_formatter(_UTCDateFormatter(locator))
     plt.setp(ax.xaxis.get_majorticklabels(), rotation=30, ha='right')
 
     return fig
@@ -501,3 +505,30 @@ def _plot_geographic_context(ax, utm, hires=False):
         lakes = cfeature.LAKES.with_scale(scale)
         ax.add_feature(lakes, facecolor=cfeature.COLORS['water'],
                        edgecolor='black', zorder=0)
+
+
+# Subclass ConciseDateFormatter (modifies __init__() and set_axis() methods)
+class _UTCDateFormatter(mdates.ConciseDateFormatter):
+    def __init__(self, locator, tz=None):
+        super().__init__(locator, tz=tz, show_offset=True)
+
+        # Re-format datetimes
+        self.formats[5] = '%H:%M:%S.%f'
+        self.zero_formats = self.formats
+        self.offset_formats = [
+            'UTC time',
+            'UTC time in %Y',
+            'UTC time in %B %Y',
+            'UTC time on %Y-%m-%d',
+            'UTC time on %Y-%m-%d',
+            'UTC time on %Y-%m-%d',
+        ]
+
+    def set_axis(self, axis):
+        self.axis = axis
+
+        # If this is an x-axis (usually is!) then center the offset text
+        if self.axis.axis_name == 'x':
+            offset = self.axis.get_offset_text()
+            offset.set_horizontalalignment('center')
+            offset.set_x(0.5)
