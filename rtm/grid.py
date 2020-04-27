@@ -387,7 +387,7 @@ def produce_dem(grid, external_file=None, plot_output=True, output_file=False):
 
 
 def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
-                stack_method='sum', window=None, **time_kwargs):
+                stack_method='sum', window=None, overlap=None, **time_kwargs):
     """
     Perform a grid search over :math:`x` and :math:`y` and return a 3-D object
     with dimensions :math:`(t, y, x)`. If a UTM grid is used, then the UTM
@@ -457,11 +457,20 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
         if not window:
             raise ValueError('Window must be defined for method '
                              f'\'{stack_method}\'.')
+        if not overlap:
+            overlap = 0.5
+            print(f'No window overlap defined, defaulting to 50%')
+
         times = np.arange(processed_st[0].stats.starttime,
-                          processed_st[0].stats.endtime, window)
+                          processed_st[0].stats.endtime, window * (1-overlap))
+
+        # Define number of samples per window and increment
+        winlen_samp = window * processed_st[0].stats.sampling_rate
+        samp_inc = (1-overlap)*winlen_samp
+
         # Sample pointer for window-based stack
-        samples_stack = np.arange(0, npts_st,
-                                  window * processed_st[0].stats.sampling_rate)
+        samples_stack = np.arange(0, npts_st, samp_inc)
+
         # Add final window to account for potential uneven number of samples
         if samples_stack[-1] < npts_st - 1:
             samples_stack = np.hstack((samples_stack, npts_st))
