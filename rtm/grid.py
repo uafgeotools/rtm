@@ -434,7 +434,7 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
             stacking (default: `None`)
 
         overlap (int or float): Overlap of time window for `'semblance'`
-            stacking (default: `0.5`). Must be 0-1.
+            stacking (default: `0.5`). Must be between 0 and 1, inclusive.
 
         **time_kwargs: Keyword arguments to be passed on to
             :func:`~rtm.travel_time.celerity_travel_time` or
