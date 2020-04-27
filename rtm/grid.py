@@ -469,7 +469,7 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
 
         # Define number of samples per window and increment
         winlen_samp = window * processed_st[0].stats.sampling_rate
-        samp_inc = (1-overlap)*winlen_samp
+        samp_inc = (1-overlap) * winlen_samp
 
         # Sample pointer for window-based stack
         samples_stack = np.arange(0, npts_st, samp_inc)
