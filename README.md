@@ -15,9 +15,10 @@ specifications.
 
 **References**
 
-Sanderson, R., Matoza, R. S., Fee, D., Haney, M. M., & Lyons, J. J. (in press).
+Sanderson, R. W., Matoza, R. S., Fee, D., Haney, M. M., & Lyons, J. J. (2020).
 Remote detection and location of explosive volcanism in Alaska with the
-EarthScope Transportable Array. _Journal of Geophysical Research: Solid Earth_.
+EarthScope Transportable Array. _Journal of Geophysical Research: Solid Earth_,
+125, e2019JB018347.
 [https://doi.org/10.1029/2019JB018347](https://doi.org/10.1029/2019JB018347)
 
 Walker, K. T., Hedlin, M. A. H., de Groot‐Hedlin, C., Vergoz, J., Le Pichon,
