@@ -153,7 +153,7 @@ def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
 
         # Plot the center of the grid
         ax.scatter(lon_0, lat_0, s=50, color='limegreen', edgecolor='black',
-                   label='Grid center', transform=ccrs.Geodetic())
+                   label='Grid center', transform=ccrs.PlateCarree())
 
         # Add a legend
         ax.legend(loc='best')
@@ -364,7 +364,7 @@ def produce_dem(grid, external_file=None, plot_output=True, output_file=False):
         # Plot the center of the grid
         ax.scatter(*dem.grid_center, s=50, color='limegreen',
                    edgecolor='black', label='Grid center',
-                   transform=ccrs.Geodetic())
+                   transform=ccrs.PlateCarree())
 
         # Add a legend
         ax.legend(loc='best')
