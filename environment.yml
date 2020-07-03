@@ -1,0 +1,15 @@
+name: rtm
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - cartopy
+  - gdal
+  - ipython
+  - obspy
+  - pip
+  - utm
+  - xarray
+  - pip:
+    - git+https://github.com/uafgeotools/waveform_collection.git
+    - -e .
