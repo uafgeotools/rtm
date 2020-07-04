@@ -6,7 +6,7 @@ rtm
 _rtm_ is a Python package for locating infrasound sources using reverse time
 migration (RTM). Infrasound (or seismic) waveform data are back-projected over
 a grid of trial source locations. Based upon previous work by Sanderson et al.
-(in press) and Walker et al. (2010), this implementation is flexible and
+(2020) and Walker et al. (2010), this implementation is flexible and
 applicable to a wide variety of network geometries and sizes. Realistic travel
 times can be incorporated from numerical modeling or atmospheric
 specifications.
