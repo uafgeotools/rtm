@@ -81,7 +81,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     elif S.UTM:
         proj = ccrs.UTM(**S.UTM)
         transform = proj
-        plot_transform = ccrs.Geodetic()
+        plot_transform = ccrs.PlateCarree()
     else:
         # This is a good projection to use since it preserves area
         proj = ccrs.AlbersEqualArea(central_longitude=lon_0,
@@ -89,7 +89,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
                                     standard_parallels=(S.y.values.min(),
                                                         S.y.values.max()))
         transform = ccrs.PlateCarree()
-        plot_transform = ccrs.Geodetic()
+        plot_transform = ccrs.PlateCarree()
 
     if plot_peak:
         fig, (ax, ax1) = plt.subplots(figsize=(8, 12), nrows=2,
