@@ -160,16 +160,6 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
                                  add_colorbar=False, add_labels=False,
                                  zorder=0)
 
-        # Add scalebar
-        SCALEBAR_INC = 100  # [m] Scalebar increment (will be multiple of this)
-        target_length = dem.x_radius / 4
-        bar_length = np.around(target_length / SCALEBAR_INC) * SCALEBAR_INC
-        bar_label = f'{bar_length:g} m'
-        scalebar = AnchoredSizeBar(ax.transData, bar_length, bar_label,
-                                   'lower left', pad=0.3, color='black',
-                                   frameon=True, size_vertical=1, borderpad=1)
-        ax.add_artist(scalebar)
-
         plot_transform = ax.transData
 
         # Mask areas outside of DEM extent
