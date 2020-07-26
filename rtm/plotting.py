@@ -112,6 +112,23 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
 
     slice = S.sel(time=time_to_plot, method='nearest')
 
+    #convert UTM grid/etc to x/y coordinates with (0,0) as origin
+    if S.UTM:
+        #update dataarrays to x/y coordinates
+        xmin = slice.x.data.min()
+        ymin = slice.y.data.min()
+        slice = slice.assign_coords(x=(slice.x.data - xmin))
+        slice = slice.assign_coords(y=(slice.y.data - ymin))
+        dem = dem.assign_coords(x=(dem.x.data - dem.x.data.min()))
+        dem = dem.assign_coords(y=(dem.y.data - dem.y.data.min()))
+        lon_0 = lon_0 - xmin
+        lat_0 = lat_0 - ymin
+        x_max = x_max - xmin
+        y_max = y_max - ymin
+        for tr in st:
+            tr.stats.longitude = tr.stats.longitude - xmin
+            tr.stats.latitude = tr.stats.latitude - ymin
+
     if dem is None:
         _plot_geographic_context(ax=ax, utm=S.UTM, hires=hires)
         slice_plot_kwargs = dict(ax=ax, alpha=0.5, cmap='viridis',
@@ -136,8 +153,8 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
                               zorder=-1, linewidths=0.7)
         ax.clabel(cs, fontsize=9, fmt='%d', inline=True)  # Actually annotate
 
-        ax.set_xlabel('UTM easting (m)')
-        ax.set_ylabel('UTM northing (m)')
+        ax.set_xlabel('X [m]')
+        ax.set_ylabel('Y [m]')
 
         slice_plot_kwargs = dict(ax=ax, alpha=0.7, cmap='viridis',
                                  add_colorbar=False, add_labels=False,
@@ -179,9 +196,9 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     # Plot stack maximum
     if S.UTM:
         # UTM formatting
-        label = f'Stack max'
+        label = 'Stack max'
         # Change ticks to plain format for long utm coordinates
-        ax.ticklabel_format(style='plain', useOffset=False)
+        #ax.ticklabel_format(style='plain', useOffset=False)
     else:
         # Lat/lon formatting
         label = f'Stack max\n({y_max:.4f}, {x_max:.4f})'
