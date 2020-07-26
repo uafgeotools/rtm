@@ -207,7 +207,8 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
                     horizontalalignment='left', fontsize=10, color='white',
                     transform=plot_transform, zorder=scatter_zorder,
                     path_effects=[pe.Stroke(linewidth=2, foreground='black'),
-                                  pe.Normal()])
+                                  pe.Normal()],
+                    clip_on=True)
 
     ax.legend(h, [handle.get_label() for handle in h], loc='best',
               framealpha=1, borderpad=.3, handletextpad=.3)
