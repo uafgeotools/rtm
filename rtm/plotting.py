@@ -228,6 +228,10 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     if dem is not None:
         ax.set_aspect('equal')
 
+    # crop plot to show just the slice area
+    ax.set_xlim(slice.x.min(), slice.x.max())
+    ax.set_ylim(slice.y.min(), slice.y.max())
+
     ax_pos = ax.get_position()
     cloc = [ax_pos.x1+.02, ax_pos.y0, .02, ax_pos.height]
     cbaxes = fig.add_axes(cloc)
