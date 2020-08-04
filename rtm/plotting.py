@@ -113,14 +113,17 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     slice = S.sel(time=time_to_plot, method='nearest')
 
     #convert UTM grid/etc to x/y coordinates with (0,0) as origin
-    if S.UTM:
-        #update dataarrays to x/y coordinates
-        xmin = slice.x.data.min()
-        ymin = slice.y.data.min()
+    if S.UTM and dem is not None:
+
+        print('Converting to x/y grid')
+
+        #update dataarrays to x/y coordinates from dem
+        xmin = dem.x.data.min()
+        ymin = dem.y.data.min()
         slice = slice.assign_coords(x=(slice.x.data - xmin))
         slice = slice.assign_coords(y=(slice.y.data - ymin))
-        dem = dem.assign_coords(x=(dem.x.data - dem.x.data.min()))
-        dem = dem.assign_coords(y=(dem.y.data - dem.y.data.min()))
+        dem = dem.assign_coords(x=(dem.x.data - xmin))
+        dem = dem.assign_coords(y=(dem.y.data - ymin))
         lon_0 = lon_0 - xmin
         lat_0 = lat_0 - ymin
         x_max = x_max - xmin
