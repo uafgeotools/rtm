@@ -43,10 +43,10 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
             DEM from :class:`~rtm.grid.produce_dem` (default: `None`)
         plot_peak (bool): Plot the peak stack function over time as a subplot
             (default: `True`)
-        xy_grid (int): If not `None`, transforms UTM coordinates such that the
-            grid center is at (0, 0) — the plot extent is then given by
-            (-xy_grid, xy_grid) [meters] for easting and northing. Only valid
-            for projected grids
+        xy_grid (int, float, or None): If not `None`, transforms UTM
+            coordinates such that the grid center is at (0, 0) — the plot
+            extent is then given by (-xy_grid, xy_grid) [meters] for easting
+            and northing. Only valid for projected grids
         cont_int (int): Contour interval [m] for plots with DEM data
         annot_int (int): Annotated contour interval [m] for plots with DEM data
             (these contours are thicker and labeled)
@@ -176,7 +176,8 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
         plot_transform = ax.transData
 
         # Mask areas outside of DEM extent
-        dem_slice = dem.sel(x=slice.x, y=slice.y, method='nearest')  # Select subset of DEM that slice occupies
+        # Select subset of DEM that slice occupies
+        dem_slice = dem.sel(x=slice.x, y=slice.y, method='nearest')
         slice.data[np.isnan(dem_slice.data)] = np.nan
 
     if S.UTM:
@@ -236,7 +237,8 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     ax.legend(h, [handle.get_label() for handle in h], loc='best',
               framealpha=1, borderpad=.3, handletextpad=.3)
 
-    time_round = np.datetime64(slice.time.values + np.timedelta64(500, 'ms'), 's').astype(datetime)  # Nearest second
+    time_round = np.datetime64(slice.time.values + np.timedelta64(500, 'ms'),
+                               's').astype(datetime)  # Nearest second
     title = 'Time: {}'.format(time_round)
 
     if hasattr(S, 'celerity'):
