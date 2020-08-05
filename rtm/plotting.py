@@ -17,8 +17,8 @@ from . import RTMWarning
 
 
 def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
-                    hires=False, dem=None, plot_peak=True, cont_int=5,
-                    annot_int=50):
+                    hires=False, dem=None, plot_peak=True, xy_grid=None,
+                    cont_int=5, annot_int=50):
     """
     Plot a time slice through :math:`S` to produce a map-view plot. If time is
     not specified, then the slice corresponds to the maximum of :math:`S` in
@@ -44,6 +44,8 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
             DEM from :class:`~rtm.grid.produce_dem` (default: `None`)
         plot_peak (bool): Plot the peak stack function over time as a subplot
             (default: `True`)
+        xy_grid (int): Distance [m] to crop plot, measured from the grid center.
+            Best for smaller, UTM projections. (default: 'None')
         cont_int (int): Contour interval [m] for plots with DEM data
         annot_int (int): Annotated contour interval [m] for plots with DEM data
             (these contours are thicker and labeled)
@@ -113,17 +115,23 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     slice = S.sel(time=time_to_plot, method='nearest')
 
     #convert UTM grid/etc to x/y coordinates with (0,0) as origin
-    if S.UTM and dem is not None:
+    if xy_grid:
 
-        print('Converting to x/y grid')
+        print(f'Converting to x/y grid, cropping {xy_grid:d} m from center')
 
         #update dataarrays to x/y coordinates from dem
-        xmin = dem.x.data.min() + dem.x_radius
-        ymin = dem.y.data.min() + dem.y_radius
+        xmin = slice.x.data.min() + slice.x_radius
+        ymin = slice.y.data.min() + slice.y_radius
         slice = slice.assign_coords(x=(slice.x.data - xmin))
         slice = slice.assign_coords(y=(slice.y.data - ymin))
-        dem = dem.assign_coords(x=(dem.x.data - xmin))
-        dem = dem.assign_coords(y=(dem.y.data - ymin))
+
+        #in case DEM has different extent than slice
+        if dem is not None:
+            xmin_dem = dem.x.data.min() + dem.x_radius
+            ymin_dem = dem.y.data.min() + dem.y_radius
+            dem = dem.assign_coords(x=(dem.x.data - xmin_dem))
+            dem = dem.assign_coords(y=(dem.y.data - ymin_dem))
+
         lon_0 = lon_0 - xmin
         lat_0 = lat_0 - ymin
         x_max = x_max - xmin
@@ -232,9 +240,11 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     if dem is not None:
         ax.set_aspect('equal')
 
+
     # crop plot to show just the slice area
-    ax.set_xlim(slice.x.min(), slice.x.max())
-    ax.set_ylim(slice.y.min(), slice.y.max())
+    if xy_grid:
+        ax.set_xlim(-xy_grid, xy_grid)
+        ax.set_ylim(-xy_grid, xy_grid)
 
     ax_pos = ax.get_position()
     cloc = [ax_pos.x1+.02, ax_pos.y0, .02, ax_pos.height]
