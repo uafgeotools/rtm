@@ -10,7 +10,6 @@ import matplotlib.patheffects as pe
 from obspy.geodetics import gps2dist_azimuth
 from .stack import get_peak_coordinates
 import utm
-from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
 from datetime import datetime
 
 from . import RTMWarning
@@ -44,8 +43,10 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
             DEM from :class:`~rtm.grid.produce_dem` (default: `None`)
         plot_peak (bool): Plot the peak stack function over time as a subplot
             (default: `True`)
-        xy_grid (int): Distance [m] to crop plot, measured from the grid center.
-            Best for smaller, UTM projections. (default: 'None')
+        xy_grid (int): If not `None`, transforms UTM coordinates such that the
+            grid center is at (0, 0) — the plot extent is then given by
+            (-xy_grid, xy_grid) [meters] for easting and northing. Only valid
+            for projected grids
         cont_int (int): Contour interval [m] for plots with DEM data
         annot_int (int): Annotated contour interval [m] for plots with DEM data
             (these contours are thicker and labeled)
@@ -114,31 +115,35 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
 
     slice = S.sel(time=time_to_plot, method='nearest')
 
-    #convert UTM grid/etc to x/y coordinates with (0,0) as origin
+    # Convert UTM grid/etc to x/y coordinates with (0,0) as origin
     if xy_grid:
+
+        # Make sure this is a projected grid
+        if not S.UTM:
+            raise ValueError('xy_grid can only be used with projected grids!')
 
         print(f'Converting to x/y grid, cropping {xy_grid:d} m from center')
 
-        #update dataarrays to x/y coordinates from dem
-        xmin = slice.x.data.min() + slice.x_radius
-        ymin = slice.y.data.min() + slice.y_radius
-        slice = slice.assign_coords(x=(slice.x.data - xmin))
-        slice = slice.assign_coords(y=(slice.y.data - ymin))
+        # Update dataarrays to x/y coordinates from dem
+        x0 = slice.x.data.min() + slice.x_radius
+        y0 = slice.y.data.min() + slice.y_radius
+        slice = slice.assign_coords(x=(slice.x.data - x0))
+        slice = slice.assign_coords(y=(slice.y.data - y0))
 
-        #in case DEM has different extent than slice
+        # In case DEM has different extent than slice
         if dem is not None:
-            xmin_dem = dem.x.data.min() + dem.x_radius
-            ymin_dem = dem.y.data.min() + dem.y_radius
-            dem = dem.assign_coords(x=(dem.x.data - xmin_dem))
-            dem = dem.assign_coords(y=(dem.y.data - ymin_dem))
+            x0_dem = dem.x.data.min() + dem.x_radius
+            y0_dem = dem.y.data.min() + dem.y_radius
+            dem = dem.assign_coords(x=(dem.x.data - x0_dem))
+            dem = dem.assign_coords(y=(dem.y.data - y0_dem))
 
-        lon_0 = lon_0 - xmin
-        lat_0 = lat_0 - ymin
-        x_max = x_max - xmin
-        y_max = y_max - ymin
+        lon_0 = lon_0 - x0
+        lat_0 = lat_0 - y0
+        x_max = x_max - x0
+        y_max = y_max - y0
         for tr in st:
-            tr.stats.longitude = tr.stats.longitude - xmin
-            tr.stats.latitude = tr.stats.latitude - ymin
+            tr.stats.longitude = tr.stats.longitude - x0
+            tr.stats.latitude = tr.stats.latitude - y0
 
     if dem is None:
         _plot_geographic_context(ax=ax, utm=S.UTM, hires=hires)
@@ -164,9 +169,6 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
                               zorder=-1, linewidths=0.7)
         ax.clabel(cs, fontsize=9, fmt='%d', inline=True)  # Actually annotate
 
-        ax.set_xlabel('X [m]')
-        ax.set_ylabel('Y [m]')
-
         slice_plot_kwargs = dict(ax=ax, alpha=0.7, cmap='viridis',
                                  add_colorbar=False, add_labels=False,
                                  zorder=0)
@@ -180,6 +182,16 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     if S.UTM:
         # imshow works well here (no gridlines in translucent plot)
         sm = slice.plot.imshow(**slice_plot_kwargs)
+
+        # Label axes according to choice of xy_grid or not
+        if xy_grid:
+            ax.set_xlabel('X [m]')
+            ax.set_ylabel('Y [m]')
+        else:
+            ax.set_xlabel('UTM easting [m]')
+            ax.set_ylabel('UTM northing [m]')
+            ax.ticklabel_format(style='plain', useOffset=False)
+
     else:
         # imshow performs poorly for Albers equal-area projection - use
         # pcolormesh instead (gridlines will show in translucent plot)
@@ -240,8 +252,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     if dem is not None:
         ax.set_aspect('equal')
 
-
-    # crop plot to show just the slice area
+    # Crop plot to show just the slice area
     if xy_grid:
         ax.set_xlim(-xy_grid, xy_grid)
         ax.set_ylim(-xy_grid, xy_grid)
