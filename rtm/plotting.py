@@ -118,8 +118,8 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
         print('Converting to x/y grid')
 
         #update dataarrays to x/y coordinates from dem
-        xmin = dem.x.data.min()
-        ymin = dem.y.data.min()
+        xmin = dem.x.data.min() + dem.x_radius
+        ymin = dem.y.data.min() + dem.y_radius
         slice = slice.assign_coords(x=(slice.x.data - xmin))
         slice = slice.assign_coords(y=(slice.y.data - ymin))
         dem = dem.assign_coords(x=(dem.x.data - xmin))
