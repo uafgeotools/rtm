@@ -529,16 +529,23 @@ def _plot_geographic_context(ax, utm, hires=False):
     # coastlines
     else:
         if hires:
-            scale = '10m'
+            gshhs_scale = 'intermediate'
+            lake_scale = '10m'
         else:
-            scale = '50m'
-        land = cfeature.LAND.with_scale(scale)
-        ax.add_feature(land, facecolor=cfeature.COLORS['land'],
-                       edgecolor='black')
+            gshhs_scale = 'low'
+            lake_scale = '50m'
+
+        ax.add_feature(
+            cfeature.GSHHSFeature(scale=gshhs_scale),
+            facecolor=cfeature.COLORS['land'], zorder=0,
+        )
         ax.background_patch.set_facecolor(cfeature.COLORS['water'])
-        lakes = cfeature.LAKES.with_scale(scale)
-        ax.add_feature(lakes, facecolor=cfeature.COLORS['water'],
-                       edgecolor='black', zorder=0)
+        ax.add_feature(
+            cfeature.LAKES.with_scale(lake_scale),
+            facecolor=cfeature.COLORS['water'],
+            edgecolor='black',
+            zorder=0,
+        )
 
 
 # Subclass ConciseDateFormatter (modifies __init__() and set_axis() methods)
