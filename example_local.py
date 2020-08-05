@@ -82,7 +82,7 @@ fig_st = plot_st(st, filt=[FREQ_MIN, FREQ_MAX], equal_scale=False,
                  remove_response=True, label_waveforms=True)
 
 fig_slice = plot_time_slice(S, st_proc, label_stations=True, dem=dem,
-                            plot_peak=True)
+                            plot_peak=True, xy_grid=600)
 
 time_max, y_max, x_max, peaks, props = get_peak_coordinates(S, global_max=False,
                                                             height=3, min_time=2,

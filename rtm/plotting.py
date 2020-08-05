@@ -10,15 +10,14 @@ import matplotlib.patheffects as pe
 from obspy.geodetics import gps2dist_azimuth
 from .stack import get_peak_coordinates
 import utm
-from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
 from datetime import datetime
 
 from . import RTMWarning
 
 
 def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
-                    hires=False, dem=None, plot_peak=True, cont_int=5,
-                    annot_int=50):
+                    hires=False, dem=None, plot_peak=True, xy_grid=None,
+                    cont_int=5, annot_int=50):
     """
     Plot a time slice through :math:`S` to produce a map-view plot. If time is
     not specified, then the slice corresponds to the maximum of :math:`S` in
@@ -44,6 +43,10 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
             DEM from :class:`~rtm.grid.produce_dem` (default: `None`)
         plot_peak (bool): Plot the peak stack function over time as a subplot
             (default: `True`)
+        xy_grid (int, float, or None): If not `None`, transforms UTM
+            coordinates such that the grid center is at (0, 0) — the plot
+            extent is then given by (-xy_grid, xy_grid) [meters] for easting
+            and northing. Only valid for projected grids
         cont_int (int): Contour interval [m] for plots with DEM data
         annot_int (int): Annotated contour interval [m] for plots with DEM data
             (these contours are thicker and labeled)
@@ -112,6 +115,36 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
 
     slice = S.sel(time=time_to_plot, method='nearest')
 
+    # Convert UTM grid/etc to x/y coordinates with (0,0) as origin
+    if xy_grid:
+
+        # Make sure this is a projected grid
+        if not S.UTM:
+            raise ValueError('xy_grid can only be used with projected grids!')
+
+        print(f'Converting to x/y grid, cropping {xy_grid:d} m from center')
+
+        # Update dataarrays to x/y coordinates from dem
+        x0 = slice.x.data.min() + slice.x_radius
+        y0 = slice.y.data.min() + slice.y_radius
+        slice = slice.assign_coords(x=(slice.x.data - x0))
+        slice = slice.assign_coords(y=(slice.y.data - y0))
+
+        # In case DEM has different extent than slice
+        if dem is not None:
+            x0_dem = dem.x.data.min() + dem.x_radius
+            y0_dem = dem.y.data.min() + dem.y_radius
+            dem = dem.assign_coords(x=(dem.x.data - x0_dem))
+            dem = dem.assign_coords(y=(dem.y.data - y0_dem))
+
+        lon_0 = lon_0 - x0
+        lat_0 = lat_0 - y0
+        x_max = x_max - x0
+        y_max = y_max - y0
+        for tr in st:
+            tr.stats.longitude = tr.stats.longitude - x0
+            tr.stats.latitude = tr.stats.latitude - y0
+
     if dem is None:
         _plot_geographic_context(ax=ax, utm=S.UTM, hires=hires)
         slice_plot_kwargs = dict(ax=ax, alpha=0.5, cmap='viridis',
@@ -136,32 +169,30 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
                               zorder=-1, linewidths=0.7)
         ax.clabel(cs, fontsize=9, fmt='%d', inline=True)  # Actually annotate
 
-        ax.set_xlabel('UTM easting (m)')
-        ax.set_ylabel('UTM northing (m)')
-
         slice_plot_kwargs = dict(ax=ax, alpha=0.7, cmap='viridis',
                                  add_colorbar=False, add_labels=False,
                                  zorder=0)
 
-        # Add scalebar
-        SCALEBAR_INC = 100  # [m] Scalebar increment (will be multiple of this)
-        target_length = dem.x_radius / 4
-        bar_length = np.around(target_length / SCALEBAR_INC) * SCALEBAR_INC
-        bar_label = f'{bar_length:g} m'
-        scalebar = AnchoredSizeBar(ax.transData, bar_length, bar_label,
-                                   'lower left', pad=0.3, color='black',
-                                   frameon=True, size_vertical=1, borderpad=1)
-        ax.add_artist(scalebar)
-
         plot_transform = ax.transData
 
         # Mask areas outside of DEM extent
-        dem_slice = dem.sel(x=slice.x, y=slice.y, method='nearest')  # Select subset of DEM that slice occupies
+        # Select subset of DEM that slice occupies
+        dem_slice = dem.sel(x=slice.x, y=slice.y, method='nearest')
         slice.data[np.isnan(dem_slice.data)] = np.nan
 
     if S.UTM:
         # imshow works well here (no gridlines in translucent plot)
         sm = slice.plot.imshow(**slice_plot_kwargs)
+
+        # Label axes according to choice of xy_grid or not
+        if xy_grid:
+            ax.set_xlabel('X [m]')
+            ax.set_ylabel('Y [m]')
+        else:
+            ax.set_xlabel('UTM easting [m]')
+            ax.set_ylabel('UTM northing [m]')
+            ax.ticklabel_format(style='plain', useOffset=False)
+
     else:
         # imshow performs poorly for Albers equal-area projection - use
         # pcolormesh instead (gridlines will show in translucent plot)
@@ -178,10 +209,8 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
 
     # Plot stack maximum
     if S.UTM:
-        # UTM formatting
-        label = f'Stack max'
-        # Change ticks to plain format for long utm coordinates
-        ax.ticklabel_format(style='plain', useOffset=False)
+        # x/y formatting
+        label = 'Stack max'
     else:
         # Lat/lon formatting
         label = f'Stack max\n({y_max:.4f}, {x_max:.4f})'
@@ -202,12 +231,14 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
                     horizontalalignment='left', fontsize=10, color='white',
                     transform=plot_transform, zorder=scatter_zorder,
                     path_effects=[pe.Stroke(linewidth=2, foreground='black'),
-                                  pe.Normal()])
+                                  pe.Normal()],
+                    clip_on=True)
 
     ax.legend(h, [handle.get_label() for handle in h], loc='best',
               framealpha=1, borderpad=.3, handletextpad=.3)
 
-    time_round = np.datetime64(slice.time.values + np.timedelta64(500, 'ms'), 's').astype(datetime)  # Nearest second
+    time_round = np.datetime64(slice.time.values + np.timedelta64(500, 'ms'),
+                               's').astype(datetime)  # Nearest second
     title = 'Time: {}'.format(time_round)
 
     if hasattr(S, 'celerity'):
@@ -222,6 +253,11 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     # Another hack that can be removed once cartopy is improved
     if dem is not None:
         ax.set_aspect('equal')
+
+    # Crop plot to show just the slice area
+    if xy_grid:
+        ax.set_xlim(-xy_grid, xy_grid)
+        ax.set_ylim(-xy_grid, xy_grid)
 
     ax_pos = ax.get_position()
     cloc = [ax_pos.x1+.02, ax_pos.y0, .02, ax_pos.height]
@@ -495,16 +531,23 @@ def _plot_geographic_context(ax, utm, hires=False):
     # coastlines
     else:
         if hires:
-            scale = '10m'
+            gshhs_scale = 'intermediate'
+            lake_scale = '10m'
         else:
-            scale = '50m'
-        land = cfeature.LAND.with_scale(scale)
-        ax.add_feature(land, facecolor=cfeature.COLORS['land'],
-                       edgecolor='black')
+            gshhs_scale = 'low'
+            lake_scale = '50m'
+
+        ax.add_feature(
+            cfeature.GSHHSFeature(scale=gshhs_scale),
+            facecolor=cfeature.COLORS['land'], zorder=0,
+        )
         ax.background_patch.set_facecolor(cfeature.COLORS['water'])
-        lakes = cfeature.LAKES.with_scale(scale)
-        ax.add_feature(lakes, facecolor=cfeature.COLORS['water'],
-                       edgecolor='black', zorder=0)
+        ax.add_feature(
+            cfeature.LAKES.with_scale(lake_scale),
+            facecolor=cfeature.COLORS['water'],
+            edgecolor='black',
+            zorder=0,
+        )
 
 
 # Subclass ConciseDateFormatter (modifies __init__() and set_axis() methods)
