@@ -158,8 +158,6 @@ def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
         # Add a legend
         ax.legend(loc='best')
 
-        fig.canvas.draw()  # Needed to make fig.tight_layout() work
-        fig.tight_layout()
         fig.show()
 
         print('Done')
@@ -377,8 +375,6 @@ def produce_dem(grid, external_file=None, plot_output=True, output_file=False):
         ax.set_title('{}\nResampled to {} m spacing'.format(source_label,
                                                             dem.spacing))
 
-        fig.canvas.draw()
-        fig.tight_layout()
         fig.show()
 
         print('Done')
