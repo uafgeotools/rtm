@@ -525,7 +525,7 @@ def _plot_geographic_context(ax, utm, hires=False):
             zoom_level = 12
         else:
             zoom_level = 8
-        ax.add_image(Stamen(style='terrain-background'), zoom_level, zorder=-1)
+        ax.add_image(Stamen(style='terrain-background'), zoom_level)
 
     # Since unprojected grids have regional/global extent, just show the
     # coastlines
