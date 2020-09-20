@@ -516,7 +516,6 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
     # Create empty temporary data and stack arrays
     dtmp = np.zeros((nsta, npts_st))
     ny, nx = S.shape[1::]  # Don't count time dimension
-    stk = np.empty((nx, ny, len(times)))
 
     total_its = nx * ny
     counter = 0
@@ -538,17 +537,17 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
                     dtmp[k, :] = tr.data
 
             if stack_method == 'sum':
-                stk[i, j, :] = np.sum(dtmp, axis=0)
+                stk = np.sum(dtmp, axis=0)
 
             elif stack_method == 'product':
-                stk[i, j, :] = np.product(dtmp, axis=0)
+                stk= np.product(dtmp, axis=0)
 
             elif stack_method == 'semblance':
                 semb = []
                 for t in range(len(samples_stack)-1):
                     semb.append(calculate_semblance(
                         dtmp[:, samples_stack[t]:samples_stack[t+1]]))
-                stk[i, j, :] = np.array(semb)
+                stk = np.array(semb)
 
             else:
                 raise ValueError(f'Stack method \'{stack_method}\' not '
