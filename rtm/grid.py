@@ -554,7 +554,7 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
                                  'recognized. Method must be either '
                                  '\'sum\' or \'product\'.')
 
-            S.loc[dict(x=x, y=y)] = stk[i, j, :]
+            S.loc[dict(x=x, y=y)] = stk
 
             # Print grid search progress
             counter += 1
