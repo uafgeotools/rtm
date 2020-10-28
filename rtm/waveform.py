@@ -5,7 +5,7 @@ from scipy.fftpack import next_fast_len
 from collections import OrderedDict
 
 
-def process_waveforms(st, freqmin, freqmax, envelope=False,
+def process_waveforms(st, freqmin, freqmax, taper_length=None, envelope=False,
                       decimation_rate=None, smooth_win=None, agc_params=None,
                       normalize=False, plot_steps=False):
     """
@@ -23,6 +23,9 @@ def process_waveforms(st, freqmin, freqmax, envelope=False,
             filter
         freqmax (int or float): [Hz] Upper corner for zero-phase bandpass
             filter
+        taper_length (int or float): [s] Use a taper of this many seconds on each end of
+            the Stream (default: `None`, which uses a taper of 5% of the total Stream
+            length on each end)
         envelope (bool): Take envelope of waveforms (default: `False`)
         decimation_rate (int or float): [Hz] New sample rate to decimate to
             (via interpolation). If `None`, just interpolates to the lowest
@@ -51,7 +54,11 @@ def process_waveforms(st, freqmin, freqmax, envelope=False,
 
     print('Tapering...')
     st_t = st_d.copy()
-    st_t.taper(max_percentage=0.05)
+    if taper_length is not None:
+        taper_kwargs = dict(max_percentage=None, max_length=taper_length)
+    else:
+        taper_kwargs = dict(max_percentage=0.05)
+    st_t.taper(**taper_kwargs)
 
     print('Filtering...')
     st_f = st_t.copy()
