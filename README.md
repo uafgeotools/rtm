@@ -17,9 +17,9 @@ or atmospheric specifications.
 **References**
 
 Fee, D., Toney, L., Kim, K., Sanderson, R. W., Iezzi, A. M., Matoza, R. S., 
-De Angelis, S., Jolly, A. D., Lyons, J. J., Haney, M. M. (2021). Local 
+De Angelis, S., Jolly, A. D., Lyons, J. J., & Haney, M. M. (2021). Local 
 Explosion Detection and Infrasound Localization by Reverse Time Migration Using 
-3-D Finite-Difference Wave Propagation. _Frontiers in Earth Science_, 9, 44. 
+3-D Finite-Difference Wave Propagation. _Frontiers in Earth Science_, 9. 
 [https://doi.org/10.3389/feart.2021.620813](https://doi.org/10.3389/feart.2021.620813)
 
 Sanderson, R. W., Matoza, R. S., Fee, D., Haney, M. M., & Lyons, J. J. (2020).
