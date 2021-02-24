@@ -5,15 +5,22 @@ rtm
 
 _rtm_ is a Python package for locating infrasound sources using reverse time
 migration (RTM). Infrasound (or seismic) waveform data are back-projected over
-a grid of trial source locations. Based upon previous work by Sanderson et al.
-(2020) and Walker et al. (2010), this implementation is flexible and
-applicable to a wide variety of network geometries and sizes. Realistic travel
-times can be incorporated from numerical modeling or atmospheric
-specifications.
+a grid of trial source locations. This implementation and some examples are 
+detailed in Fee et al. (2021), and we ask that if you use this code you cite 
+that paper. The code is based upon previous work by Sanderson et al. (2020) and
+Walker et al. (2010) and is applicable to a wide variety of network geometries 
+and sizes. Realistic travel times can be incorporated from numerical modeling 
+or atmospheric specifications.
 
 ![](example_local_slice_master.png)
 
 **References**
+
+Fee, D., Toney, L., Kim, K., Sanderson, R. W., Iezzi, A. M., Matoza, R. S., 
+De Angelis, S., Jolly, A. D., Lyons, J. J., Haney, M. M. (2021). Local 
+Explosion Detection and Infrasound Localization by Reverse Time Migration Using 
+3-D Finite-Difference Wave Propagation. _Frontiers in Earth Science_, 9, 44. 
+[https://doi.org/10.3389/feart.2021.620813](https://doi.org/10.3389/feart.2021.620813)
 
 Sanderson, R. W., Matoza, R. S., Fee, D., Haney, M. M., & Lyons, J. J. (2020).
 Remote detection and location of explosive volcanism in Alaska with the
