@@ -304,7 +304,7 @@ def plot_record_section(st, origin_time, source_location, plot_celerity=None,
     fig = plt.figure(figsize=(12, 8))
 
     st_edit.plot(fig=fig, type='section', orientation='horizontal',
-                 fillcolors=('black', 'black'))
+                 fillcolors=('black', 'black'), linewidth=0)
 
     ax = fig.axes[0]
 
