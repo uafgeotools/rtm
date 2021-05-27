@@ -5,7 +5,6 @@ import matplotlib.transforms as transforms
 import matplotlib.dates as mdates
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
-from cartopy.io.img_tiles import Stamen
 import matplotlib.patheffects as pe
 from obspy.geodetics import gps2dist_azimuth
 from .stack import get_peak_coordinates
@@ -36,9 +35,8 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
             :math:`\max(S)` is used (default: `None`)
         label_stations (bool): Toggle labeling stations with network and
             station codes (default: `True`)
-        hires (bool): If `True`, use higher-resolution background
-            image/coastlines, which looks better but can be slow (default:
-            `False`)
+        hires (bool): If `True`, use higher-resolution coastlines, which looks better
+            but can be slow (default: `False`)
         dem (:class:`~xarray.DataArray`): Overlay time slice on a user-supplied
             DEM from :class:`~rtm.grid.produce_dem` (default: `None`)
         plot_peak (bool): Plot the peak stack function over time as a subplot
@@ -68,10 +66,9 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     # Gather coordinates of grid center
     lon_0, lat_0 = S.grid_center
 
-    if dem is not None:
+    if S.UTM:
 
-        # Note that the below is a hacky way to use matplotlib instead of
-        # cartopy and should be edited once cartopy labeling is functional
+        # Don't use cartopy for UTM
         proj = None
         transform = None
         plot_transform = None
@@ -80,11 +77,6 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
         for tr in st:
             tr.stats.longitude, tr.stats.latitude, _, _ = utm.from_latlon(
                 tr.stats.latitude, tr.stats.longitude)
-
-    elif S.UTM:
-        proj = ccrs.UTM(**S.UTM)
-        transform = proj
-        plot_transform = ccrs.PlateCarree()
     else:
         # This is a good projection to use since it preserves area
         proj = ccrs.AlbersEqualArea(central_longitude=lon_0,
@@ -146,9 +138,13 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
             tr.stats.latitude = tr.stats.latitude - y0
 
     if dem is None:
-        _plot_geographic_context(ax=ax, utm=S.UTM, hires=hires)
-        slice_plot_kwargs = dict(ax=ax, alpha=0.5, cmap='viridis',
-                                 add_colorbar=False, transform=transform)
+        if not S.UTM:
+            _plot_geographic_context(ax=ax, hires=hires)
+            alpha = 0.5
+        else:
+            alpha = 1  # Can plot slice as opaque for UTM plots w/o DEM, since nothing beneath slice
+        slice_plot_kwargs = dict(ax=ax, alpha=alpha, cmap='viridis',
+                                 add_colorbar=False, add_labels=False)
     else:
         # Rounding to nearest cont_int
         all_levels = np.arange(np.ceil(dem.min().data / cont_int),
@@ -170,10 +166,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
         ax.clabel(cs, fontsize=9, fmt='%d', inline=True)  # Actually annotate
 
         slice_plot_kwargs = dict(ax=ax, alpha=0.7, cmap='viridis',
-                                 add_colorbar=False, add_labels=False,
-                                 zorder=0)
-
-        plot_transform = ax.transData
+                                 add_colorbar=False, add_labels=False)
 
         # Mask areas outside of DEM extent
         # Select subset of DEM that slice occupies
@@ -182,7 +175,9 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
 
     if S.UTM:
         # imshow works well here (no gridlines in translucent plot)
-        sm = slice.plot.imshow(**slice_plot_kwargs)
+        sm = slice.plot.imshow(zorder=0, **slice_plot_kwargs)
+
+        plot_transform = ax.transData
 
         # Label axes according to choice of xy_grid or not
         if xy_grid:
@@ -196,7 +191,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     else:
         # imshow performs poorly for Albers equal-area projection - use
         # pcolormesh instead (gridlines will show in translucent plot)
-        sm = slice.plot.pcolormesh(**slice_plot_kwargs)
+        sm = slice.plot.pcolormesh(transform=transform, **slice_plot_kwargs)
 
     # Initialize list of handles for legend
     h = [None, None, None]
@@ -250,8 +245,8 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
 
     ax.set_title(title, pad=20)
 
-    # Another hack that can be removed once cartopy is improved
-    if dem is not None:
+    # Show x- and y-axes w/ same scale if this is a Cartesian plot
+    if S.UTM:
         ax.set_aspect('equal')
 
     # Crop plot to show just the slice area
@@ -506,48 +501,36 @@ def plot_stack_peak(S, plot_max=False, ax=None):
     return fig
 
 
-def _plot_geographic_context(ax, utm, hires=False):
+def _plot_geographic_context(ax, hires=False):
     """
-    Plot geographic basemap information on a map axis. Plots a background image
-    for UTM-projected plots and simple coastlines for unprojected plots.
+    Plot geographic basemap information on a map axis. Plots simple coastlines for
+    unprojected plots.
 
     Args:
         ax (:class:`~cartopy.mpl.geoaxes.GeoAxes`): Existing axis to plot into
-        utm (bool): Flag specifying if the axis is projected to UTM or not
-        hires (bool): If `True`, use higher-resolution images/coastlines
-            (default: `False`)
+        hires (bool): If `True`, use higher-resolution coastlines (default: `False`)
     """
-
-    # Since projected grids cover less area and may not include coastlines,
-    # use a background image to provide geographical context (can be slow)
-    if utm:
-        if hires:
-            zoom_level = 12
-        else:
-            zoom_level = 8
-        ax.add_image(Stamen(style='terrain-background'), zoom_level)
 
     # Since unprojected grids have regional/global extent, just show the
     # coastlines
+    if hires:
+        gshhs_scale = 'intermediate'
+        lake_scale = '10m'
     else:
-        if hires:
-            gshhs_scale = 'intermediate'
-            lake_scale = '10m'
-        else:
-            gshhs_scale = 'low'
-            lake_scale = '50m'
+        gshhs_scale = 'low'
+        lake_scale = '50m'
 
-        ax.add_feature(
-            cfeature.GSHHSFeature(scale=gshhs_scale),
-            facecolor=cfeature.COLORS['land'], zorder=0,
-        )
-        ax.background_patch.set_facecolor(cfeature.COLORS['water'])
-        ax.add_feature(
-            cfeature.LAKES.with_scale(lake_scale),
-            facecolor=cfeature.COLORS['water'],
-            edgecolor='black',
-            zorder=0,
-        )
+    ax.add_feature(
+        cfeature.GSHHSFeature(scale=gshhs_scale),
+        facecolor=cfeature.COLORS['land'], zorder=0,
+    )
+    ax.background_patch.set_facecolor(cfeature.COLORS['water'])
+    ax.add_feature(
+        cfeature.LAKES.with_scale(lake_scale),
+        facecolor=cfeature.COLORS['water'],
+        edgecolor='black',
+        zorder=0,
+    )
 
 
 # Subclass ConciseDateFormatter (modifies __init__() and set_axis() methods)
