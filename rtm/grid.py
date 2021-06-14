@@ -144,7 +144,8 @@ def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
         fig, ax = plt.subplots(figsize=(10, 10),
                                subplot_kw=dict(projection=proj))
 
-        _plot_geographic_context(ax=ax, utm=projected)
+        if not projected:
+            _plot_geographic_context(ax=ax)
 
         # Note that trial source locations are at the CENTER of each plotted
         # grid box
