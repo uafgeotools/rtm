@@ -512,7 +512,7 @@ def _plot_geographic_context(ax, hires=False):
     """
 
     # Since unprojected grids have regional/global extent, just show the
-    # coastlines
+    # coastlines and borders
     if hires:
         gshhs_scale = 'intermediate'
         lake_scale = '10m'
@@ -531,6 +531,16 @@ def _plot_geographic_context(ax, hires=False):
         edgecolor='black',
         zorder=0,
     )
+    
+    # Add states and provinces borders
+    states_provinces = cfeature.NaturalEarthFeature(
+        category='cultural',
+        name='admin_1_states_provinces_lines',
+        scale='50m',
+        facecolor='none')
+
+    ax.add_feature(states_provinces, edgecolor='gray')
+    
 
 
 # Subclass ConciseDateFormatter (modifies __init__() and set_axis() methods)
