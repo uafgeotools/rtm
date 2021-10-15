@@ -538,9 +538,12 @@ def _plot_geographic_context(ax, hires=False):
         name='admin_1_states_provinces_lines',
         scale='50m',
         facecolor='none')
-
     ax.add_feature(states_provinces, edgecolor='gray')
     
+    # Add gridlines and labels
+    ax.gridlines(draw_labels=["x", "y", "left", "bottom"], linewidth=1, 
+                      color='gray', alpha=0.5, linestyle='--')
+
 
 
 # Subclass ConciseDateFormatter (modifies __init__() and set_axis() methods)
