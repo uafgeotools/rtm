@@ -539,7 +539,7 @@ def _plot_geographic_context(ax, hires=False):
         scale='50m',
         facecolor='none')
     ax.add_feature(states_provinces, edgecolor='gray')
-    
+    ax.add_feature(cfeature.BORDERS, edgecolor='gray')
     # Add gridlines and labels
     ax.gridlines(draw_labels=["x", "y", "left", "bottom"], linewidth=1, 
                       color='gray', alpha=0.5, linestyle='--')
