@@ -38,7 +38,7 @@ TIME_BUFFER = 3*60*60  # [s] Manually defined buffer time
 
 # Bulk waveform gather
 st = gather_waveforms_bulk(FBX_LON, FBX_LAT, MAX_RADIUS, STARTTIME, ENDTIME,
-                           INFRASOUND_CHANNELS, time_buffer=TIME_BUFFER,
+                           INFRASOUND_CHANNELS, location='--,0?,EP', time_buffer=TIME_BUFFER,
                            remove_response=True)
 
 # Add in AVO's Sand Point infrasound array
