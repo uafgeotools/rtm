@@ -22,7 +22,7 @@ gdal.UseExceptions()  # Allows for more Pythonic errors from GDAL
 MIN_CELERITY = 220  # [m/s] Used for travel time buffer calculation
 
 OUTPUT_DIR = 'rtm_dem'  # Name of directory to place rtm_dem_*.tif files into
-                        # (created in same dir as where function is called)
+# (created in same dir as where function is called)
 
 TMP_TIFF = 'rtm_dem_tmp.tif'  # Filename to use for temporary I/O
 
@@ -32,9 +32,9 @@ TEMPLATE = 'rtm_dem_{:.4f}_{:.4f}_{}x_{}y_{}m.tif'
 NODATA = -9999  # Nodata value to use for output rasters
 
 RESAMPLE_ALG = 'cubicspline'  # Algorithm to use for resampling
-                              # See https://gdal.org/programs/gdalwarp.html#cmdoption-gdalwarp-r
-                              # Good options are 'bilinear', 'cubic',
-                              # 'cubicspline', and 'lanczos'
+# See https://gdal.org/programs/gdalwarp.html#cmdoption-gdalwarp-r
+# Good options are 'bilinear', 'cubic',
+# 'cubicspline', and 'lanczos'
 
 # Define some conversion factors
 KM2M = 1000     # [m/km]
@@ -306,10 +306,10 @@ def produce_dem(grid, external_file=None, plot_output=True, output_file=False):
     # Resample input raster, whether it be from an external file or SRTM
     ds = gdal.Warp(output, input_raster, dstSRS=dest_srs, format=format,
                    dstNodata=NODATA,
-                   outputBounds=(grid.x.min() - grid.spacing/2,
-                                 grid.y.min() - grid.spacing/2,
-                                 grid.x.max() + grid.spacing/2,
-                                 grid.y.max() + grid.spacing/2),
+                   outputBounds=(grid.x.min() - grid.spacing / 2,
+                                 grid.y.min() - grid.spacing / 2,
+                                 grid.x.max() + grid.spacing / 2,
+                                 grid.y.max() + grid.spacing / 2),
                    xRes=grid.spacing, yRes=grid.spacing,
                    resampleAlg=RESAMPLE_ALG, copyMetadata=False,
                    )
@@ -459,11 +459,11 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
                              f'\'{stack_method}\'.')
 
         times = np.arange(processed_st[0].stats.starttime,
-                          processed_st[0].stats.endtime, window * (1-overlap))
+                          processed_st[0].stats.endtime, window * (1 - overlap))
 
         # Define number of samples per window and increment
         winlen_samp = window * processed_st[0].stats.sampling_rate
-        samp_inc = (1-overlap) * winlen_samp
+        samp_inc = (1 - overlap) * winlen_samp
 
         # Sample pointer for window-based stack
         samples_stack = np.arange(0, npts_st, samp_inc)
@@ -537,13 +537,13 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
                 stk = np.sum(dtmp, axis=0)
 
             elif stack_method == 'product':
-                stk= np.product(dtmp, axis=0)
+                stk = np.product(dtmp, axis=0)
 
             elif stack_method == 'semblance':
                 semb = []
-                for t in range(len(samples_stack)-1):
+                for t in range(len(samples_stack) - 1):
                     semb.append(calculate_semblance(
-                        dtmp[:, samples_stack[t]:samples_stack[t+1]]))
+                        dtmp[:, samples_stack[t]:samples_stack[t + 1]]))
                 stk = np.array(semb)
 
             else:
@@ -559,9 +559,9 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
 
     # Remap for specified start and end times if provided
     if starttime:
-        S = S.where((S.time >= np.datetime64(starttime)), drop=True)
+        S = S[(S.time >= np.datetime64(starttime))]
     if endtime:
-        S = S.where((S.time <= np.datetime64(endtime)), drop=True)
+        S = S[(S.time <= np.datetime64(endtime))]
 
     toc = time.time()
     print(f'Done (elapsed time = {toc-tic:.1f} s)')
@@ -609,7 +609,7 @@ def calculate_time_buffer(grid, max_station_dist):
     # Maximum distance a signal would have to travel is the longest distance
     # from the grid center to a station, PLUS the longest distance from the
     # grid center to a grid corner
-    max_propagation_dist = max_station_dist*KM2M + grid_diagonal  # [m]
+    max_propagation_dist = max_station_dist * KM2M + grid_diagonal  # [m]
 
     # Calculate maximum travel time
     time_buffer = max_propagation_dist / MIN_CELERITY  # [s]
