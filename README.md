@@ -45,7 +45,7 @@ We recommend you install this package into a new
 The environment must contain all of the packages listed in the
 [Dependencies](#dependencies) section. For ease of installation, we've provided
 an
-[`environment.yml`](https://github.com/uafgeotools/rtm/blob/master/environment.yml)
+[`environment.yml`](https://github.com/uafgeotools/rtm/blob/add-binder/environment.yml)
 file which specifies all of these dependencies as well as instructions for
 installing _rtm_ itself. To install _rtm_ in this manner, execute the following
 commands:
@@ -101,10 +101,10 @@ Then, you may access the package's functions from the Python interpreter with
 from waveform_collection import gather_waveforms
 from rtm import define_grid
 ```
-and so on. For usage examples, see
-[`example_regional.py`](https://github.com/uafgeotools/rtm/blob/master/example_regional.py)
-or
-[`example_local.py`](https://github.com/uafgeotools/rtm/blob/master/example_local.py).
+and so on. For usage examples, see the two notebooks
+[`example_local.ipynb`](https://github.com/uafgeotools/rtm/blob/add-binder/example_local.ipynb)
+and
+[`example_regional.ipynb`](https://github.com/uafgeotools/rtm/blob/add-binder/example_regional.ipynb).
 
 Authors
 -------
