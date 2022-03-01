@@ -2,7 +2,7 @@ rtm
 ===
 
 [![](https://readthedocs.org/projects/uaf-rtm/badge/?version=master)](https://uaf-rtm.readthedocs.io/en/master/)
-[![Launch Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/uafgeotools/rtm/HEAD)
+[![Launch Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/uafgeotools/rtm/add-binder)
 
 _rtm_ is a Python package for locating infrasound sources using reverse time
 migration (RTM). Infrasound (or seismic) waveform data are back-projected over
