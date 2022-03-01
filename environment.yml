@@ -13,4 +13,4 @@ dependencies:
   - xarray
   - pip:
     - git+https://github.com/uafgeotools/waveform_collection.git
-    - -e .
+    - --editable .
