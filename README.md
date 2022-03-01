@@ -52,7 +52,7 @@ commands:
 ```
 git clone https://github.com/uafgeotools/rtm.git
 cd rtm
-conda env create -f environment.yml
+conda env create
 ```
 This creates a new conda environment named `rtm` and installs _rtm_ and all of
 its dependencies there.
