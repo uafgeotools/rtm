@@ -258,7 +258,10 @@ def produce_dem(grid, external_file=None, plot_output=True, output_file=False):
         subprocess.run(args)
 
         # Remove extra nodata metadata file
-        os.remove(TMP_TIFF + '.aux.xml')
+        try:
+            os.remove(TMP_TIFF + '.aux.xml')
+        except OSError:
+            pass
 
         # Remove gmt.history if one was created (depends on global GMT setting)
         try:
