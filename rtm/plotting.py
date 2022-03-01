@@ -531,7 +531,7 @@ def _plot_geographic_context(ax, hires=False):
         edgecolor='black',
         zorder=0,
     )
-    
+
     # Add states and provinces borders
     states_provinces = cfeature.NaturalEarthFeature(
         category='cultural',
@@ -541,7 +541,7 @@ def _plot_geographic_context(ax, hires=False):
     ax.add_feature(states_provinces, edgecolor='gray')
     ax.add_feature(cfeature.BORDERS, edgecolor='gray')
     # Add gridlines and labels
-    ax.gridlines(draw_labels=["x", "y", "left", "bottom"], linewidth=1, 
+    ax.gridlines(draw_labels=["x", "y", "left", "bottom"], linewidth=1,
                       color='gray', alpha=0.5, linestyle='--')
 
 
