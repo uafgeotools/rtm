@@ -25,3 +25,6 @@ dist/
 # Documentation things
 doc/_build/
 doc/api/
+
+# Jupyter stuff
+/.ipynb_checkpoints/
