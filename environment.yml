@@ -7,7 +7,6 @@ dependencies:
   - gdal
   - ipython
   - jupyterlab
-  - numpy<1.22  # TEMPORARY
   - obspy
   - pip
   - utm
