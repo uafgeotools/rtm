@@ -2,7 +2,7 @@ rtm
 ===
 
 [![](https://readthedocs.org/projects/uaf-rtm/badge/?version=master)](https://uaf-rtm.readthedocs.io/en/master/)
-[![](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/uafgeotools/rtm/regional-example)
+[![](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/uafgeotools/rtm/HEAD)
 
 _rtm_ is a Python package for locating infrasound sources using reverse time
 migration (RTM). Infrasound (or seismic) waveform data are back-projected over
@@ -45,7 +45,7 @@ We recommend you install this package into a new
 The environment must contain all of the packages listed in the
 [Dependencies](#dependencies) section. For ease of installation, we've provided
 an
-[`environment.yml`](https://github.com/uafgeotools/rtm/blob/regional-example/environment.yml)
+[`environment.yml`](https://github.com/uafgeotools/rtm/blob/master/environment.yml)
 file which specifies all of these dependencies as well as instructions for
 installing _rtm_ itself. To install _rtm_ in this manner, execute the following
 commands:
@@ -102,9 +102,9 @@ from waveform_collection import gather_waveforms
 from rtm import define_grid
 ```
 and so on. For usage examples, see the two notebooks
-[`example_local.ipynb`](https://github.com/uafgeotools/rtm/blob/regional-example/example_local.ipynb)
+[`example_local.ipynb`](https://github.com/uafgeotools/rtm/blob/master/example_local.ipynb)
 and
-[`example_regional.ipynb`](https://github.com/uafgeotools/rtm/blob/regional-example/example_regional.ipynb).
+[`example_regional.ipynb`](https://github.com/uafgeotools/rtm/blob/master/example_regional.ipynb).
 
 Authors
 -------
