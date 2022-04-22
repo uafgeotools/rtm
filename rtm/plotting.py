@@ -72,11 +72,12 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
         proj = None
         transform = None
         plot_transform = None
-        lon_0, lat_0, _, _ = utm.from_latlon(S.grid_center[1], S.grid_center[0])
-        x_max, y_max, _, _ = utm.from_latlon(y_max, x_max)
+        lon_0, lat_0, _, _ = utm.from_latlon(S.grid_center[1], S.grid_center[0], force_zone_number=S.UTM['zone'])
+        x_max, y_max, _, _ = utm.from_latlon(y_max, x_max, force_zone_number=S.UTM['zone'])
         for tr in st:
             tr.stats.longitude, tr.stats.latitude, _, _ = utm.from_latlon(
-                tr.stats.latitude, tr.stats.longitude)
+                tr.stats.latitude, tr.stats.longitude, force_zone_number=S.UTM['zone']
+            )
     else:
         # This is a good projection to use since it preserves area
         proj = ccrs.AlbersEqualArea(central_longitude=lon_0,
