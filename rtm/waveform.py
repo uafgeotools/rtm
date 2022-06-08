@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from scipy.signal import hilbert, windows, convolve
 from scipy.fftpack import next_fast_len
 from collections import OrderedDict
@@ -149,7 +150,7 @@ def process_waveforms(st, freqmin, freqmax, taper_length=None, envelope=False,
     return st_out
 
 
-def _agc(st, win_sec, method='gismo'):
+def _agc(st, win_sec, method='gismo', method_exec='old'):
     """
     Apply automatic gain correction (AGC) to a collection of waveforms stored
     in an ObsPy Stream object. This function is designed to be used as part of
@@ -197,11 +198,29 @@ def _agc(st, win_sec, method='gismo'):
 
             win_samp = int(tr.stats.sampling_rate * win_sec)
 
-            scale = np.zeros(tr.count() - 2 * win_samp)
-            for i in range(-1 * win_samp, win_samp + 1):
-                scale = scale + np.abs(tr.data[win_samp + i:
-                                               win_samp + i + scale.size])
-
+            if method_exec == 'old':
+                scale = np.zeros(tr.count() - 2 * win_samp)
+                for i in range(-1 * win_samp, win_samp + 1):
+                    scale = scale + np.abs(
+                        tr.data[win_samp + i : win_samp + i + scale.size])
+            elif method_exec == 'new':
+                # Quicker version of above code (?)
+                # slower:
+                # scales = np.zeros((tr.count() - 2 * win_samp, 2 * win_samp + 3))
+                # for ns, i in enumerate(range(-1 * win_samp, win_samp + 1)):
+                #     scales[:, ns] = np.abs(tr.data[
+                #         win_samp + i:win_samp + i + scale.size])
+                # scale = np.sum(scales, 1)
+                n_width = 2 * win_samp + 1
+                # faster!
+                # scale = scipy.convolve(
+                #     tr.data, np.ones(n_width), mode='valid') / n_width
+                # even faster!
+                # scale = np.convolve(np.abs(tr.data), np.ones(n_width), 'valid') / n_width
+                # fastest!
+                scale = np.array(pd.DataFrame(np.abs(tr.data)).rolling(
+                    n_width, min_periods=n_width, center=True).mean())
+                scale = np.transpose(scale[~np.isnan(scale)])
             scale = scale / scale.mean()  # Using max() here may better
                                           # preserve inter-trace amplitudes
 
@@ -223,11 +242,17 @@ def _agc(st, win_sec, method='gismo'):
             half_win_samp = int(tr.stats.sampling_rate * win_sec / 2)
 
             scale = []
-            for i in range(half_win_samp, tr.count() - half_win_samp):
-                # The window is centered on index i
-                scale_max = np.abs(tr.data[i - half_win_samp:
-                                           i + half_win_samp]).max()
-                scale.append(scale_max)
+            if method_exec == 'old':
+                for i in range(half_win_samp, tr.count() - half_win_samp):
+                    # The window is centered on index i
+                    scale_max = np.abs(tr.data[i - half_win_samp:
+                                            i + half_win_samp]).max()
+                    scale.append(scale_max)
+            elif method_exec == 'new':
+                n_width = 2 * half_win_samp + 1
+                scale = np.array(pd.DataFrame(np.abs(tr.data)).rolling(
+                    n_width, min_periods=n_width, center=True).max())
+                scale = np.transpose(scale[~np.isnan(scale)])
 
             # Fill out the ends of scale with its first/last values
             scale = np.hstack((np.ones(half_win_samp) * scale[0],
