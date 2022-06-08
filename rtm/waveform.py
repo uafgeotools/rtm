@@ -241,15 +241,15 @@ def _agc(st, win_sec, method='gismo', method_exec='old'):
 
             half_win_samp = int(tr.stats.sampling_rate * win_sec / 2)
 
-            scale = []
             if method_exec == 'old':
+                scale = []
                 for i in range(half_win_samp, tr.count() - half_win_samp):
                     # The window is centered on index i
                     scale_max = np.abs(tr.data[i - half_win_samp:
                                             i + half_win_samp]).max()
                     scale.append(scale_max)
             elif method_exec == 'new':
-                n_width = 2 * half_win_samp + 1
+                n_width = 2 * half_win_samp
                 scale = np.array(pd.DataFrame(np.abs(tr.data)).rolling(
                     n_width, min_periods=n_width, center=True).max())
                 scale = np.transpose(scale[~np.isnan(scale)])
