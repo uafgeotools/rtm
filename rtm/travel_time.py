@@ -84,7 +84,7 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
     for i, sta in enumerate(station):
         try:
             staloc[i] = LOCAL_INFRA_COORDS[sta]
-            stautm[i] = utm.from_latlon(staloc[i][0], staloc[i][1])  # TODO: force_zone_number?
+            stautm[i] = utm.from_latlon(staloc[i][0], staloc[i][1], force_zone_number=dem.UTM['zone'])
             # find station x/y grid point closest to utm x/y
             staxyz_g[i] = [np.abs(dem.x.values-stautm[i][0]).argmin(),
                            np.abs(dem.y.values-stautm[i][1]).argmin(), staloc[i][2]]
