@@ -71,7 +71,7 @@ _uafgeotools_ repositories:
 Python packages:
 
 * [cartopy](https://scitools.org.uk/cartopy/docs/latest/)
-* [ObsPy](http://docs.obspy.org/)
+* [ObsPy](https://docs.obspy.org/)
 * [rioxarray](https://corteva.github.io/rioxarray/stable/)
 
 ...and their dependencies, which you don't really have to be concerned about if
