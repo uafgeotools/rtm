@@ -72,7 +72,7 @@ Python packages:
 
 * [cartopy](https://scitools.org.uk/cartopy/docs/latest/)
 * [GDAL](https://gdal.org/)
-* [ObsPy](http://docs.obspy.org/)
+* [ObsPy](https://docs.obspy.org/)
 * [utm](https://github.com/Turbo87/utm)
 * [xarray](http://xarray.pydata.org/en/stable/)
 
