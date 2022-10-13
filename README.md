@@ -71,19 +71,16 @@ _uafgeotools_ repositories:
 Python packages:
 
 * [cartopy](https://scitools.org.uk/cartopy/docs/latest/)
-* [GDAL](https://gdal.org/)
 * [ObsPy](http://docs.obspy.org/)
-* [utm](https://github.com/Turbo87/utm)
-* [xarray](http://xarray.pydata.org/en/stable/)
+* [rioxarray](https://corteva.github.io/rioxarray/stable/)
 
 ...and their dependencies, which you don't really have to be concerned about if
 you're using conda!
 
 Optional (for automatic DEM downloading):
 
-* [GMT 6](https://docs.generic-mapping-tools.org/latest/) (install by following
-  the
-  [official GMT install instructions](https://github.com/GenericMappingTools/gmt/blob/master/INSTALL.md/))
+* [PyGMT](https://www.pygmt.org/latest/) (install via `conda install --channel 
+  conda-forge pygmt`)
 
 Usage
 -----
