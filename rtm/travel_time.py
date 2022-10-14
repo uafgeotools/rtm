@@ -11,6 +11,7 @@ import numpy as np
 import xarray as xr
 from obspy.geodetics import gps2dist_azimuth
 from pyproj import CRS, Transformer
+from tqdm import tqdm
 
 from . import RTMWarning
 
@@ -398,11 +399,9 @@ def celerity_travel_time(grid, st, celerity=343, dem=None):
     print(f'CALCULATING TRAVEL TIMES USING CELERITY = {celerity:g} M/S')
     print('-------------------------------------------------')
 
-    total_its = travel_times.size
-    counter = 0
     tic = time.time()
 
-    for i, x in enumerate(grid.x.values):
+    for i, x in enumerate(tqdm(grid.x.values, ncols=80)):
         for j, y in enumerate(grid.y.values):
             for k, tr in enumerate(st):
 
@@ -429,10 +428,6 @@ def celerity_travel_time(grid, st, celerity=343, dem=None):
                 # Store travel time for this station and source grid point
                 # in seconds
                 travel_times.data[k, j, i] = distance / celerity
-
-                # Print progress
-                counter += 1
-                print('{:.1f}%'.format((counter / total_its) * 100), end='\r')
 
     toc = time.time()
     print(f'Done (elapsed time = {toc-tic:.1f} s)')

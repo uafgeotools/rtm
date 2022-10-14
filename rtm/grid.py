@@ -11,6 +11,7 @@ from cartopy.io.srtm import add_shading
 from obspy.geodetics import gps2dist_azimuth
 from pyproj import CRS, Transformer
 from rasterio.enums import Resampling
+from tqdm import tqdm
 
 from . import RTMWarning, _estimate_utm_crs
 from .plotting import _plot_geographic_context
@@ -477,11 +478,9 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
     dtmp = np.zeros((nsta, npts_st))
     ny, nx = S.shape[1::]  # Don't count time dimension
 
-    total_its = nx * ny
-    counter = 0
     tic = time.time()
 
-    for i, x in enumerate(S.x.values):
+    for i, x in enumerate(tqdm(S.x.values, ncols=80)):
         for j, y in enumerate(S.y.values):
             for k, tr in enumerate(st):
 
@@ -515,10 +514,6 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
                                  '\'sum\' or \'product\'.')
 
             S.loc[dict(x=x, y=y)] = stk
-
-            # Print grid search progress
-            counter += 1
-            print('{:.1f}%'.format((counter / total_its) * 100), end='\r')
 
     # Remap for specified start and end times if provided
     if starttime:

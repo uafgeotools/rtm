@@ -10,6 +10,7 @@ dependencies:
   - pip
 #  - pygmt  # OPTIONAL
   - rioxarray
+  - tqdm
   - pip:
     - git+https://github.com/uafgeotools/waveform_collection.git
     - --editable .
