@@ -15,6 +15,7 @@ from .travel_time import celerity_travel_time, fdtd_travel_time
 from .plotting import _plot_geographic_context
 from .stack import calculate_semblance
 from . import RTMWarning
+from tqdm import tqdm
 
 
 gdal.UseExceptions()  # Allows for more Pythonic errors from GDAL
@@ -517,11 +518,9 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
     dtmp = np.zeros((nsta, npts_st))
     ny, nx = S.shape[1::]  # Don't count time dimension
 
-    total_its = nx * ny
-    counter = 0
     tic = time.time()
 
-    for i, x in enumerate(S.x.values):
+    for i, x in enumerate(tqdm(S.x.values, ncols=80)):
         for j, y in enumerate(S.y.values):
             for k, tr in enumerate(st):
 
@@ -555,10 +554,6 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
                                  '\'sum\' or \'product\'.')
 
             S.loc[dict(x=x, y=y)] = stk
-
-            # Print grid search progress
-            counter += 1
-            print('{:.1f}%'.format((counter / total_its) * 100), end='\r')
 
     # Remap for specified start and end times if provided
     if starttime:

@@ -9,6 +9,7 @@ dependencies:
   - jupyterlab
   - obspy
   - pip
+  - tqdm
   - utm
   - xarray
   - pip:
