@@ -75,12 +75,12 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
         plot_transform = None
 
         # Define target coordinate reference system using grid metadata
-        dem_crs = CRS(
+        dem_crs = CRS(CRS(
             proj='utm',
             datum='WGS84',
             zone=S.UTM['zone'],
             south=S.UTM['southern_hemisphere'],
-        )
+        ).to_epsg())
         proj = Transformer.from_crs(dem_crs.geodetic_crs, dem_crs)
 
         # Convert various locations from (latitude, longitude) to UTM

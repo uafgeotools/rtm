@@ -203,12 +203,12 @@ def produce_dem(grid, external_file=None, plot_output=True, output_file=False):
     print('--------------')
 
     # Define target coordinate reference system using grid metadata
-    dst_crs = CRS(
+    dst_crs = CRS(CRS(
         proj='utm',
         datum='WGS84',
         zone=grid.UTM['zone'],
         south=grid.UTM['southern_hemisphere'],
-    )
+    ).to_epsg())
 
     # If an external DEM file was not supplied, use SRTM data
     if not external_file:
@@ -599,12 +599,12 @@ def _project_station_to_utm(tr, grid):
     grid_zone_number = grid.UTM['zone']
 
     # Define target coordinate reference system using grid metadata
-    grid_crs = CRS(
+    grid_crs = CRS(CRS(
         proj='utm',
         datum='WGS84',
         zone=grid_zone_number,
         south=grid.UTM['southern_hemisphere'],
-    )
+    ).to_epsg())
     proj = Transformer.from_crs(grid_crs.geodetic_crs, grid_crs)
 
     station_utm = proj.transform(tr.stats.latitude, tr.stats.longitude)

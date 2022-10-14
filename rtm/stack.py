@@ -113,12 +113,12 @@ def get_peak_coordinates(S, global_max=True, height=None, min_time=None,
             print('Unprojecting coordinates from UTM to (latitude, longitude).')
 
             # Define target coordinate reference system using grid metadata
-            grid_crs = CRS(
+            grid_crs = CRS(CRS(
                 proj='utm',
                 datum='WGS84',
                 zone=S.UTM['zone'],
                 south=S.UTM['southern_hemisphere'],
-            )
+            ).to_epsg())
             proj = Transformer.from_crs(grid_crs, grid_crs.geodetic_crs)
 
             for i in range(0, npeaks):

@@ -81,12 +81,12 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
     # get station lat/lon and utm coordinates
 
     # Define target coordinate reference system using grid metadata
-    dem_crs = CRS(
+    dem_crs = CRS(CRS(
         proj='utm',
         datum='WGS84',
         zone=dem.UTM['zone'],
         south=dem.UTM['southern_hemisphere'],
-    )
+    ).to_epsg())
     proj = Transformer.from_crs(dem_crs.geodetic_crs, dem_crs)
 
     staloc = {}   # lat,lon,z
