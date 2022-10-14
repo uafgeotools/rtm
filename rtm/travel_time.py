@@ -1,15 +1,17 @@
-import os
-import json
-import utm
-import numpy as np
-import matplotlib.pyplot as plt
-from obspy.geodetics import gps2dist_azimuth
-import re
 import glob
-import time
+import json
+import os
 import pickle
-import xarray as xr
+import re
+import time
 import warnings
+
+import matplotlib.pyplot as plt
+import numpy as np
+import xarray as xr
+from obspy.geodetics import gps2dist_azimuth
+from pyproj import CRS, Transformer
+
 from . import RTMWarning
 
 
@@ -77,6 +79,16 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
         LOCAL_INFRA_COORDS = json.load(f)
 
     # get station lat/lon and utm coordinates
+
+    # Define target coordinate reference system using grid metadata
+    dem_crs = CRS(
+        proj='utm',
+        datum='WGS84',
+        zone=dem.UTM['zone'],
+        south=dem.UTM['southern_hemisphere'],
+    )
+    proj = Transformer.from_crs(dem_crs.geodetic_crs, dem_crs)
+
     staloc = {}   # lat,lon,z
     stautm = {}   # utmx, utmy, utmzone
     staxyz_g = {}   # x,y,z in FDTD grid
@@ -84,7 +96,7 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
     for i, sta in enumerate(station):
         try:
             staloc[i] = LOCAL_INFRA_COORDS[sta]
-            stautm[i] = utm.from_latlon(staloc[i][0], staloc[i][1], force_zone_number=dem.UTM['zone'])
+            stautm[i] = proj.transform(staloc[i][0], staloc[i][1])
             # find station x/y grid point closest to utm x/y
             staxyz_g[i] = [np.abs(dem.x.values-stautm[i][0]).argmin(),
                            np.abs(dem.y.values-stautm[i][1]).argmin(), staloc[i][2]]

@@ -1,9 +1,11 @@
 import warnings
+
+import numpy as np
 from obspy import UTCDateTime
 from obspy.core import Stream
-import numpy as np
-import utm
+from pyproj import CRS, Transformer
 from scipy.signal import find_peaks
+
 from . import RTMWarning
 
 
@@ -109,10 +111,18 @@ def get_peak_coordinates(S, global_max=True, height=None, min_time=None,
         # If the grid is projected
         if S.UTM:
             print('Unprojecting coordinates from UTM to (latitude, longitude).')
+
+            # Define target coordinate reference system using grid metadata
+            grid_crs = CRS(
+                proj='utm',
+                datum='WGS84',
+                zone=S.UTM['zone'],
+                south=S.UTM['southern_hemisphere'],
+            )
+            proj = Transformer.from_crs(grid_crs, grid_crs.geodetic_crs)
+
             for i in range(0, npeaks):
-                y_max[i], x_max[i] = utm.to_latlon(x_max[i], y_max[i],
-                                                   zone_number=S.UTM['zone'],
-                                                   northern=not S.UTM['southern_hemisphere'])
+                y_max[i], x_max[i] = proj.transform(x_max[i], y_max[i])
 
         # If the grid is already in lat/lon
         else:

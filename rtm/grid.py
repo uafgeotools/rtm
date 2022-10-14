@@ -6,14 +6,13 @@ from pathlib import Path
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 import numpy as np
-import utm
 import xarray as xr
 from cartopy.io.srtm import add_shading
 from obspy.geodetics import gps2dist_azimuth
-from pyproj import CRS
+from pyproj import CRS, Transformer
 from rasterio.enums import Resampling
 
-from . import RTMWarning
+from . import RTMWarning, _estimate_utm_crs
 from .plotting import _plot_geographic_context
 from .stack import calculate_semblance
 from .travel_time import celerity_travel_time, fdtd_travel_time
@@ -65,7 +64,10 @@ def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
 
     # Make coordinate vectors
     if projected:
-        x_0, y_0, zone_number, _ = utm.from_latlon(lat_0, lon_0)
+        utm_crs = _estimate_utm_crs(lat_0, lon_0)
+        proj = Transformer.from_crs(utm_crs.geodetic_crs, utm_crs)
+        x_0, y_0 = proj.transform(lat_0, lon_0)
+        zone_number = int(utm_crs.utm_zone[:-1])
     else:
         x_0, y_0, = lon_0, lat_0
     # Using np.linspace() in favor of np.arange() due to precision advantages
@@ -87,17 +89,17 @@ def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
         warnings.warn('(x_0, y_0) is not located in grid. Check for numerical '
                       'precision problems (i.e., rounding error).', RTMWarning)
     if projected:
-        # Create list of grid corners
+        # Create list of grid corners in UTM zone of grid origin
         corners = dict(SW=(x.min(), y.min()),
                        NW=(x.min(), y.max()),
                        NE=(x.max(), y.max()),
                        SE=(x.max(), y.min()))
         for label, corner in corners.items():
             # "Un-project" back to latitude/longitude
-            lat, lon = utm.to_latlon(*corner, zone_number, northern=lat_0 >= 0,
-                                     strict=False)
+            lat, lon = proj.transform(*corner, direction='INVERSE')
+
             # "Re-project" to UTM
-            _, _, new_zone_number, _ = utm.from_latlon(lat, lon)
+            new_zone_number = int(_estimate_utm_crs(lat, lon).utm_zone[:-1])
             if new_zone_number != zone_number:
                 warnings.warn(f'{label} grid corner locates to UTM zone '
                               f'{new_zone_number} instead of origin UTM zone '
@@ -200,6 +202,14 @@ def produce_dem(grid, external_file=None, plot_output=True, output_file=False):
     print('PROCESSING DEM')
     print('--------------')
 
+    # Define target coordinate reference system using grid metadata
+    dst_crs = CRS(
+        proj='utm',
+        datum='WGS84',
+        zone=grid.UTM['zone'],
+        south=grid.UTM['southern_hemisphere'],
+    )
+
     # If an external DEM file was not supplied, use SRTM data
     if not external_file:
 
@@ -222,10 +232,9 @@ def produce_dem(grid, external_file=None, plot_output=True, output_file=False):
         # Convert to lat/lon
         lats = []
         lons = []
+        proj = Transformer.from_crs(dst_crs, dst_crs.geodetic_crs)
         for corner in corners_utm:
-            lat, lon = utm.to_latlon(*corner,
-                                     zone_number=grid.UTM['zone'],
-                                     northern=not grid.UTM['southern_hemisphere'])
+            lat, lon = proj.transform(*corner)
             lats.append(lat)
             lons.append(lon)
 
@@ -256,16 +265,8 @@ def produce_dem(grid, external_file=None, plot_output=True, output_file=False):
 
         dem = xr.open_dataarray(dem_file)
 
-    # Clean DEM before going further
+    # Clean DEM before going further, and write CRS info
     dem = dem.squeeze(drop=True).rename('elevation')
-
-    # Define target coordinate reference system using grid metadata
-    dst_crs = CRS(
-        proj='utm',
-        datum='WGS84',
-        zone=grid.UTM['zone'],
-        south=grid.UTM['southern_hemisphere'],
-    )
     grid_crs = grid.copy().rio.write_crs(dst_crs)
 
     # Project DEM to UTM, further relabeling
@@ -596,13 +597,22 @@ def _project_station_to_utm(tr, grid):
     """
 
     grid_zone_number = grid.UTM['zone']
-    *station_utm, _, _ = utm.from_latlon(tr.stats.latitude,
-                                         tr.stats.longitude,
-                                         force_zone_number=grid_zone_number)
+
+    # Define target coordinate reference system using grid metadata
+    grid_crs = CRS(
+        proj='utm',
+        datum='WGS84',
+        zone=grid_zone_number,
+        south=grid.UTM['southern_hemisphere'],
+    )
+    proj = Transformer.from_crs(grid_crs.geodetic_crs, grid_crs)
+
+    station_utm = proj.transform(tr.stats.latitude, tr.stats.longitude)
 
     # Check if station is outside of grid UTM zone
-    _, _, station_zone_number, _ = utm.from_latlon(tr.stats.latitude,
-                                                   tr.stats.longitude)
+    station_zone_number = int(_estimate_utm_crs(tr.stats.latitude, tr.stats.longitude).utm_zone[:-1])
+
+
     if station_zone_number != grid_zone_number:
         warnings.warn(f'{tr.id} locates to UTM zone {station_zone_number} '
                       f'instead of grid UTM zone {grid_zone_number}. Consider '

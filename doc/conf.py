@@ -30,9 +30,7 @@ autodoc_mock_imports = ['numpy',
                         'matplotlib',
                         'xarray',
                         'cartopy',
-                        'osgeo',
                         'obspy',
-                        'utm',
                         'scipy',
                         'mpl_toolkits'
                         ]
