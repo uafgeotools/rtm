@@ -9,11 +9,11 @@ import numpy as np
 import xarray as xr
 from cartopy.io.srtm import add_shading
 from obspy.geodetics import gps2dist_azimuth
-from pyproj import CRS, Transformer
+from pyproj import Transformer
 from rasterio.enums import Resampling
 from tqdm import tqdm
 
-from . import RTMWarning, _estimate_utm_crs
+from . import RTMWarning, _estimate_utm_crs, _proj_from_grid
 from .plotting import _plot_geographic_context
 from .stack import calculate_semblance
 from .travel_time import celerity_travel_time, fdtd_travel_time
@@ -127,17 +127,17 @@ def define_grid(lon_0, lat_0, x_radius, y_radius, spacing, projected=False,
     if plot_preview:
         print('Generating grid preview plot...')
         if projected:
-            proj = ccrs.UTM(**grid_out.UTM)
-            transform = proj
+            projection = ccrs.UTM(**grid_out.UTM)
+            transform = projection
         else:
             # This is a good projection to use since it preserves area
-            proj = ccrs.AlbersEqualArea(central_longitude=lon_0,
+            projection = ccrs.AlbersEqualArea(central_longitude=lon_0,
                                         central_latitude=lat_0,
                                         standard_parallels=(y.min(), y.max()))
             transform = ccrs.PlateCarree()
 
         fig, ax = plt.subplots(figsize=(10, 10),
-                               subplot_kw=dict(projection=proj))
+                               subplot_kw=dict(projection=projection))
 
         if not projected:
             _plot_geographic_context(ax=ax)
@@ -203,13 +203,8 @@ def produce_dem(grid, external_file=None, plot_output=True, output_file=False):
     print('PROCESSING DEM')
     print('--------------')
 
-    # Define target coordinate reference system using grid metadata
-    dst_crs = CRS(CRS(
-        proj='utm',
-        datum='WGS84',
-        zone=grid.UTM['zone'],
-        south=grid.UTM['southern_hemisphere'],
-    ).to_epsg())
+    # Define transform to convert (lat, lon) points to a grid's UTM projection
+    proj = _proj_from_grid(grid)
 
     # If an external DEM file was not supplied, use SRTM data
     if not external_file:
@@ -233,9 +228,8 @@ def produce_dem(grid, external_file=None, plot_output=True, output_file=False):
         # Convert to lat/lon
         lats = []
         lons = []
-        proj = Transformer.from_crs(dst_crs, dst_crs.geodetic_crs)
         for corner in corners_utm:
-            lat, lon = proj.transform(*corner)
+            lat, lon = proj.transform(*corner, direction='INVERSE')
             lats.append(lat)
             lons.append(lon)
 
@@ -268,7 +262,7 @@ def produce_dem(grid, external_file=None, plot_output=True, output_file=False):
 
     # Clean DEM before going further, and write CRS info
     dem = dem.squeeze(drop=True).rename('elevation')
-    grid_crs = grid.copy().rio.write_crs(dst_crs)
+    grid_crs = grid.copy().rio.write_crs(proj.source_crs)
 
     # Project DEM to UTM, further relabeling
     dem_utm = dem.rio.reproject_match(grid_crs, nodata=NODATA, resampling=Resampling.cubic_spline)
@@ -304,10 +298,10 @@ def produce_dem(grid, external_file=None, plot_output=True, output_file=False):
 
         print('Generating DEM hillshade plot...')
 
-        proj = ccrs.UTM(**dem_grid.UTM)
+        projection = ccrs.UTM(**dem_grid.UTM)
 
         fig, ax = plt.subplots(figsize=(10, 10),
-                               subplot_kw=dict(projection=proj))
+                               subplot_kw=dict(projection=projection))
 
         # Create hillshade
         shaded_dem = add_shading(dem_grid, azimuth=135, altitude=45)
@@ -316,11 +310,11 @@ def produce_dem(grid, external_file=None, plot_output=True, output_file=False):
         grid_shaded = grid.copy()
         grid_shaded.data = shaded_dem
         grid_shaded.plot.imshow(ax=ax, cmap='Greys_r', center=False,
-                                add_colorbar=False, transform=proj)
+                                add_colorbar=False, transform=projection)
 
         # Add translucent DEM
         im = dem_grid.plot.imshow(ax=ax, cmap='magma', alpha=0.5, vmin=0,
-                             add_colorbar=False, transform=proj)
+                             add_colorbar=False, transform=projection)
         cbar = fig.colorbar(im, label='Elevation (m)')
         cbar.solids.set_alpha(1)
 
@@ -591,22 +585,13 @@ def _project_station_to_utm(tr, grid):
         List of [`utm_x`, `utm_y`] coordinates for station associated with `tr`
     """
 
-    grid_zone_number = grid.UTM['zone']
-
-    # Define target coordinate reference system using grid metadata
-    grid_crs = CRS(CRS(
-        proj='utm',
-        datum='WGS84',
-        zone=grid_zone_number,
-        south=grid.UTM['southern_hemisphere'],
-    ).to_epsg())
-    proj = Transformer.from_crs(grid_crs.geodetic_crs, grid_crs)
-
+    # Perform conversion to UTM
+    proj = _proj_from_grid(grid)
     station_utm = proj.transform(tr.stats.latitude, tr.stats.longitude)
 
     # Check if station is outside of grid UTM zone
     station_zone_number = int(_estimate_utm_crs(tr.stats.latitude, tr.stats.longitude).utm_zone[:-1])
-
+    grid_zone_number = grid.UTM['zone']
 
     if station_zone_number != grid_zone_number:
         warnings.warn(f'{tr.id} locates to UTM zone {station_zone_number} '

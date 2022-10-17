@@ -9,9 +9,8 @@ import matplotlib.pyplot as plt
 import matplotlib.transforms as transforms
 import numpy as np
 from obspy.geodetics import gps2dist_azimuth
-from pyproj import CRS, Transformer
 
-from . import RTMWarning
+from . import RTMWarning, _proj_from_grid
 from .stack import get_peak_coordinates
 
 
@@ -74,16 +73,8 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
         transform = None
         plot_transform = None
 
-        # Define target coordinate reference system using grid metadata
-        dem_crs = CRS(CRS(
-            proj='utm',
-            datum='WGS84',
-            zone=S.UTM['zone'],
-            south=S.UTM['southern_hemisphere'],
-        ).to_epsg())
-        proj = Transformer.from_crs(dem_crs.geodetic_crs, dem_crs)
-
         # Convert various locations from (latitude, longitude) to UTM
+        proj = _proj_from_grid(S)
         lon_0, lat_0 = proj.transform(S.grid_center[1], S.grid_center[0])
         x_max, y_max = proj.transform(y_max, x_max)
         for tr in st:
