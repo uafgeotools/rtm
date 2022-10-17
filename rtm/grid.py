@@ -260,9 +260,9 @@ def produce_dem(grid, external_file=None, plot_output=True, output_file=False):
 
         dem = xr.open_dataarray(dem_file)
 
-    # Clean DEM before going further, and write CRS info
+    # Clean DEM before going further, and write UTM CRS info
     dem = dem.squeeze(drop=True).rename('elevation')
-    grid_crs = grid.copy().rio.write_crs(proj.source_crs)
+    grid_crs = grid.copy().rio.write_crs(proj.target_crs)
 
     # Project DEM to UTM, further relabeling
     dem_utm = dem.rio.reproject_match(grid_crs, nodata=NODATA, resampling=Resampling.cubic_spline)
