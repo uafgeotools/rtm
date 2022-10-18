@@ -29,11 +29,11 @@ master_doc = 'index'
 autodoc_mock_imports = ['numpy',
                         'matplotlib',
                         'xarray',
+                        'rioxarray',
                         'cartopy',
-                        'osgeo',
                         'obspy',
-                        'utm',
                         'scipy',
+                        'tqdm',
                         'mpl_toolkits'
                         ]
 

@@ -1,17 +1,17 @@
 import warnings
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.transforms as transforms
-import matplotlib.dates as mdates
-import cartopy.crs as ccrs
-import cartopy.feature as cfeature
-import matplotlib.patheffects as pe
-from obspy.geodetics import gps2dist_azimuth
-from .stack import get_peak_coordinates
-import utm
 from datetime import datetime
 
-from . import RTMWarning
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature
+import matplotlib.dates as mdates
+import matplotlib.patheffects as pe
+import matplotlib.pyplot as plt
+import matplotlib.transforms as transforms
+import numpy as np
+from obspy.geodetics import gps2dist_azimuth
+
+from . import RTMWarning, _proj_from_grid
+from .stack import get_peak_coordinates
 
 
 def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
@@ -69,18 +69,21 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     if S.UTM:
 
         # Don't use cartopy for UTM
-        proj = None
+        projection = None
         transform = None
         plot_transform = None
-        lon_0, lat_0, _, _ = utm.from_latlon(S.grid_center[1], S.grid_center[0], force_zone_number=S.UTM['zone'])
-        x_max, y_max, _, _ = utm.from_latlon(y_max, x_max, force_zone_number=S.UTM['zone'])
+
+        # Convert various locations from (latitude, longitude) to UTM
+        proj = _proj_from_grid(S)
+        lon_0, lat_0 = proj.transform(S.grid_center[1], S.grid_center[0])
+        x_max, y_max = proj.transform(y_max, x_max)
         for tr in st:
-            tr.stats.longitude, tr.stats.latitude, _, _ = utm.from_latlon(
-                tr.stats.latitude, tr.stats.longitude, force_zone_number=S.UTM['zone']
+            tr.stats.longitude, tr.stats.latitude = proj.transform(
+                tr.stats.latitude, tr.stats.longitude
             )
     else:
         # This is a good projection to use since it preserves area
-        proj = ccrs.AlbersEqualArea(central_longitude=lon_0,
+        projection = ccrs.AlbersEqualArea(central_longitude=lon_0,
                                     central_latitude=lat_0,
                                     standard_parallels=(S.y.values.min(),
                                                         S.y.values.max()))
@@ -90,7 +93,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     if plot_peak:
         fig, (ax, ax1) = plt.subplots(figsize=(8, 12), nrows=2,
                                       gridspec_kw={'height_ratios': [3, 1]},
-                                      subplot_kw=dict(projection=proj))
+                                      subplot_kw=dict(projection=projection))
 
         #axes kluge so the second one can have a different projection
         ax1.remove()
@@ -98,7 +101,7 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
 
     else:
         fig, ax = plt.subplots(figsize=(8, 8),
-                               subplot_kw=dict(projection=proj))
+                               subplot_kw=dict(projection=projection))
 
     # In either case, we convert from UTCDateTime to np.datetime64
     if time_slice:

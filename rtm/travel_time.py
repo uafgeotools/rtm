@@ -1,16 +1,18 @@
-import os
-import json
-import utm
-import numpy as np
-import matplotlib.pyplot as plt
-from obspy.geodetics import gps2dist_azimuth
-import re
 import glob
-import time
+import json
+import os
 import pickle
-import xarray as xr
+import re
+import time
 import warnings
-from . import RTMWarning
+
+import matplotlib.pyplot as plt
+import numpy as np
+import xarray as xr
+from obspy.geodetics import gps2dist_azimuth
+from tqdm import tqdm
+
+from . import RTMWarning, _proj_from_grid
 
 
 def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
@@ -77,6 +79,7 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
         LOCAL_INFRA_COORDS = json.load(f)
 
     # get station lat/lon and utm coordinates
+    proj = _proj_from_grid(dem)
     staloc = {}   # lat,lon,z
     stautm = {}   # utmx, utmy, utmzone
     staxyz_g = {}   # x,y,z in FDTD grid
@@ -84,7 +87,7 @@ def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
     for i, sta in enumerate(station):
         try:
             staloc[i] = LOCAL_INFRA_COORDS[sta]
-            stautm[i] = utm.from_latlon(staloc[i][0], staloc[i][1], force_zone_number=dem.UTM['zone'])
+            stautm[i] = proj.transform(staloc[i][0], staloc[i][1])
             # find station x/y grid point closest to utm x/y
             staxyz_g[i] = [np.abs(dem.x.values-stautm[i][0]).argmin(),
                            np.abs(dem.y.values-stautm[i][1]).argmin(), staloc[i][2]]
@@ -386,11 +389,9 @@ def celerity_travel_time(grid, st, celerity=343, dem=None):
     print(f'CALCULATING TRAVEL TIMES USING CELERITY = {celerity:g} M/S')
     print('-------------------------------------------------')
 
-    total_its = travel_times.size
-    counter = 0
     tic = time.time()
 
-    for i, x in enumerate(grid.x.values):
+    for i, x in enumerate(tqdm(grid.x.values, ncols=80)):
         for j, y in enumerate(grid.y.values):
             for k, tr in enumerate(st):
 
@@ -417,10 +418,6 @@ def celerity_travel_time(grid, st, celerity=343, dem=None):
                 # Store travel time for this station and source grid point
                 # in seconds
                 travel_times.data[k, j, i] = distance / celerity
-
-                # Print progress
-                counter += 1
-                print('{:.1f}%'.format((counter / total_its) * 100), end='\r')
 
     toc = time.time()
     print(f'Done (elapsed time = {toc-tic:.1f} s)')
