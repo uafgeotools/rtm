@@ -11,9 +11,8 @@ from cartopy.io.srtm import add_shading
 from obspy.geodetics import gps2dist_azimuth
 from pyproj import Transformer
 from rasterio.enums import Resampling
-from tqdm import tqdm
 
-from . import RTMWarning, _estimate_utm_crs, _proj_from_grid
+from . import RTMWarning, _estimate_utm_crs, _proj_from_grid, _grid_progress_bar
 from .plotting import _plot_geographic_context
 from .stack import calculate_semblance
 from .travel_time import celerity_travel_time, fdtd_travel_time
@@ -470,11 +469,11 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
 
     # Create empty temporary data and stack arrays
     dtmp = np.zeros((nsta, npts_st))
-    ny, nx = S.shape[1::]  # Don't count time dimension
 
     tic = time.time()
 
-    for i, x in enumerate(tqdm(S.x.values, ncols=80)):
+    bar = _grid_progress_bar(grid)
+    for i, x in enumerate(S.x.values):
         for j, y in enumerate(S.y.values):
             for k, tr in enumerate(st):
 
@@ -508,6 +507,8 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
                                  '\'sum\' or \'product\'.')
 
             S.loc[dict(x=x, y=y)] = stk
+
+            bar.update()
 
     # Remap for specified start and end times if provided
     if starttime:
