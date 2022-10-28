@@ -524,30 +524,32 @@ def _plot_geographic_context(ax, hires=False):
         gshhs_scale = 'low'
         lake_scale = '50m'
 
+    # Add ocean, land, lakes
+    ax.add_feature(cfeature.OCEAN)
     ax.add_feature(
         cfeature.GSHHSFeature(scale=gshhs_scale),
-        facecolor=cfeature.COLORS['land'], zorder=0,
+        facecolor=cfeature.COLORS['land'],
+        edgecolor='black',
     )
-    ax.background_patch.set_facecolor(cfeature.COLORS['water'])
     ax.add_feature(
         cfeature.LAKES.with_scale(lake_scale),
         facecolor=cfeature.COLORS['water'],
         edgecolor='black',
-        zorder=0,
     )
 
-    # Add states and provinces borders
+    # Add country, state, and province borders
     states_provinces = cfeature.NaturalEarthFeature(
         category='cultural',
         name='admin_1_states_provinces_lines',
         scale='50m',
-        facecolor='none')
+        facecolor='none',
+    )
     ax.add_feature(states_provinces, edgecolor='gray')
     ax.add_feature(cfeature.BORDERS, edgecolor='gray')
+
     # Add gridlines and labels
     ax.gridlines(draw_labels=["x", "y", "left", "bottom"], linewidth=1,
                       color='gray', alpha=0.5, linestyle='--')
-
 
 
 # Subclass ConciseDateFormatter (modifies __init__() and set_axis() methods)
