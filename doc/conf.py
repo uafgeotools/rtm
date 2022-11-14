@@ -34,7 +34,9 @@ autodoc_mock_imports = ['numpy',
                         'obspy',
                         'scipy',
                         'tqdm',
-                        'mpl_toolkits'
+                        'mpl_toolkits',
+                        'pyproj',
+                        'rasterio'
                         ]
 
 apidoc_module_dir = '../rtm'
