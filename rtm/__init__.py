@@ -30,9 +30,19 @@ del warnings
 # DEFINE HELPER FUNCTIONS
 # -----------------------------------------------------------------------------
 
+from tqdm import tqdm
 from pyproj import CRS, Transformer
 from pyproj.aoi import AreaOfInterest
 from pyproj.database import query_utm_crs_info
+
+# Make a nicely-formatted bar for grid searches
+def _grid_progress_bar(grid):
+    bar = tqdm(
+        total=grid.size,
+        bar_format='{percentage:3.0f}% |{bar}| {n_fmt}/{total_fmt} grid points ',
+        ncols=80,
+    )
+    return bar
 
 # Find UTM CRS of a (lat, lon) point (see https://gis.stackexchange.com/a/423614)
 def _estimate_utm_crs(lat, lon, datum_name='WGS 84'):

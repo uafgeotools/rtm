@@ -10,9 +10,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import xarray as xr
 from obspy.geodetics import gps2dist_azimuth
-from tqdm import tqdm
 
-from . import RTMWarning, _proj_from_grid
+from . import RTMWarning, _proj_from_grid, _grid_progress_bar
 
 
 def prepare_fdtd_run(FDTD_DIR, FILENAME_ROOT, station, dem, H_MAX, TEMP, MAX_T,
@@ -391,7 +390,8 @@ def celerity_travel_time(grid, st, celerity=343, dem=None):
 
     tic = time.time()
 
-    for i, x in enumerate(tqdm(grid.x.values, ncols=80)):
+    bar = _grid_progress_bar(grid)
+    for i, x in enumerate(grid.x.values):
         for j, y in enumerate(grid.y.values):
             for k, tr in enumerate(st):
 
@@ -418,6 +418,8 @@ def celerity_travel_time(grid, st, celerity=343, dem=None):
                 # Store travel time for this station and source grid point
                 # in seconds
                 travel_times.data[k, j, i] = distance / celerity
+
+            bar.update()
 
     toc = time.time()
     print(f'Done (elapsed time = {toc-tic:.1f} s)')
