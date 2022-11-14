@@ -29,7 +29,7 @@ def get_peak_coordinates(S, global_max=True, height=None, min_time=None,
             :math:`S` [s] (default: `None`). Only used if `global_max=False`.
         prominence (int or float): Minimum peak prominence. Represents the
             vertical distance between the peak and its lowest contour line.
-            Only used if global_max=False`.
+            Only used if `global_max=False`.
         unproject (bool): If `True` and if `S` is a projected grid, unprojects
             the UTM coordinates to (latitude, longitude) (default: `False`)
 
