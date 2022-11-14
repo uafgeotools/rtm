@@ -106,8 +106,8 @@ def get_peak_coordinates(S, global_max=True, height=None, min_time=None,
             print(f'Found {npeaks} peaks in stack for height > {height:.1f}, '
                 f'min_time > {min_time:.1f} s, and prominence > {prominence}.')
         else:
-            print(f'Found {npeaks} peaks in stack for height > {height:.1f}, '
-                f'and min_time > {min_time:.1f} s.')
+            print(f'Found {npeaks} peaks in stack for height > {height:.1f} and '
+                f'min_time > {min_time:.1f} s.')
 
         time_max = [UTCDateTime(S['time'][i].values.astype(str)) for i in peaks]
         x_max = [S[i].where(S[i] == S[i].max(),
