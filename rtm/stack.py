@@ -9,7 +9,7 @@ from . import RTMWarning, _proj_from_grid
 
 
 def get_peak_coordinates(S, global_max=True, height=None, min_time=None,
-                         unproject=False):
+                         prominence=None, unproject=False):
     """
     Find the values of the coordinates corresponding to the maxima (peaks) in
     a stack function :math:`S`. Function will return all peaks above the
@@ -27,6 +27,9 @@ def get_peak_coordinates(S, global_max=True, height=None, min_time=None,
             `global_max=False`.
         min_time (int or float): Minimum time (distance) between peaks in
             :math:`S` [s] (default: `None`). Only used if `global_max=False`.
+        prominence (int or float): Minimum peak prominence. Represents the
+            vertical distance between the peak and its lowest contour line.
+            Only used if `global_max=False`.
         unproject (bool): If `True` and if `S` is a projected grid, unprojects
             the UTM coordinates to (latitude, longitude) (default: `False`)
 
@@ -94,11 +97,17 @@ def get_peak_coordinates(S, global_max=True, height=None, min_time=None,
         peak_dt = (S.time.data[1] - S.time.data[0]) / np.timedelta64(1, 's')
 
         # Find all peaks based on set thresholds
-        peaks, props = find_peaks(s_peak, height, distance=min_time/peak_dt)
+        peaks, props = find_peaks(s_peak, height, distance=min_time/peak_dt,
+                                  prominence=prominence)
 
         npeaks = len(peaks)
-        print(f'Found {npeaks} peaks in stack for height > {height:.1f} and '
-              f'min_time > {min_time:.1f} s.')
+        
+        if prominence: 
+            print(f'Found {npeaks} peaks in stack for height > {height:.1f}, '
+                f'min_time > {min_time:.1f} s, and prominence > {prominence}.')
+        else:
+            print(f'Found {npeaks} peaks in stack for height > {height:.1f} and '
+                f'min_time > {min_time:.1f} s.')
 
         time_max = [UTCDateTime(S['time'][i].values.astype(str)) for i in peaks]
         x_max = [S[i].where(S[i] == S[i].max(),
