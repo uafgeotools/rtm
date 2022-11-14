@@ -90,7 +90,7 @@ def get_peak_coordinates(S, global_max=True, height=None, min_time=None,
     else:
 
         if (height is None) or (min_time is None) or (prominence is None):
-            raise ValueError('height, min_time, and prominence must be supplied'
+            raise ValueError('height, min_time, and prominence must be supplied '
                              'for peak detection when global_max=False!')
 
         # [s] Time sampling interval of S
