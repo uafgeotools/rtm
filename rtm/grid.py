@@ -9,7 +9,7 @@ import numpy as np
 import xarray as xr
 from cartopy.io.srtm import add_shading
 from obspy.geodetics import gps2dist_azimuth
-from pyproj import Transformer
+from pyproj import CRS, Transformer
 from rasterio.enums import Resampling
 
 from . import RTMWarning, _estimate_utm_crs, _proj_from_grid, _grid_progress_bar
@@ -261,7 +261,11 @@ def produce_dem(grid, external_file=None, plot_output=True, output_file=False):
 
     # Clean DEM before going further, and write UTM CRS info
     dem = dem.squeeze(drop=True).rename('elevation')
-    grid_crs = grid.copy().rio.write_crs(proj.target_crs)
+    try:
+        proj_target_crs = proj.target_crs
+    except AttributeError:  # No target_crs property for pyproj < 3.3.0!
+        proj_target_crs = CRS(proj.to_proj4().split(' +step ')[-1])
+    grid_crs = grid.copy().rio.write_crs(proj_target_crs)
 
     # Project DEM to UTM, further relabeling
     dem_utm = dem.rio.reproject_match(grid_crs, nodata=NODATA, resampling=Resampling.cubic_spline)
