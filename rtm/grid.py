@@ -15,7 +15,7 @@ from rasterio.enums import Resampling
 from . import RTMWarning, _estimate_utm_crs, _proj_from_grid, _grid_progress_bar
 from .plotting import _plot_geographic_context
 from .stack import calculate_semblance
-from .travel_time import celerity_travel_time, fdtd_travel_time
+from .travel_time import celerity_travel_time, fdtd_travel_time, infresnel_travel_time
 
 MIN_CELERITY = 220  # [m/s] Used for travel time buffer calculation
 
@@ -359,7 +359,7 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
         grid (:class:`~xarray.DataArray`): Grid to use; output of
             :func:`define_grid`
         time_method (str): Method to use for calculating travel times. One of
-            `'celerity'` or `'fdtd'`
+            `'celerity'`, `'fdtd'`, or `'infresnel'`
 
                 * `'celerity'` A single celerity is assumed for
                   propagation. Distances are either 2-D or 3-D (if a DEM
@@ -369,6 +369,9 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
                   finite-difference time-domain algorithm which accounts
                   for wave interactions with topography. Only valid for
                   UTM grids
+
+                * `'infresnel'` Travel times are calculated using the shortest
+                  diffracted path over topography and a single celerity
 
         starttime (:class:`~obspy.core.utcdatetime.UTCDateTime`): Start time
             for grid search (default: `None`, which translates to
@@ -395,8 +398,9 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
             stacking (default: `0.5`). Must be between 0 and 1, inclusive.
 
         **time_kwargs: Keyword arguments to be passed on to
-            :func:`~rtm.travel_time.celerity_travel_time` or
-            :func:`~rtm.travel_time.fdtd_travel_time` functions. For details,
+            :func:`~rtm.travel_time.celerity_travel_time`,
+            `~rtm.travel_time.fdtd_travel_time`, or
+            :func:`~rtm.travel_time.infresnel_travel_time` functions. For details,
             see the docstrings of those functions.
 
     Returns:
@@ -405,8 +409,8 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
     """
 
     # Check that the requested method works with the provided grid
-    if time_method == 'fdtd' and not grid.UTM:
-        raise NotImplementedError('The FDTD method is not implemented for '
+    if time_method in ['fdtd', 'infresnel'] and not grid.UTM:
+        raise NotImplementedError('The FDTD and infresnel methods are not implemented for '
                                   'unprojected (regional) grids.')
 
     # Get data dimensions
@@ -454,10 +458,14 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
         S.attrs['celerity'] = time_kwargs['celerity']
     elif time_method == 'fdtd':
         travel_times = fdtd_travel_time(grid, processed_st, **time_kwargs)
+    elif time_method == 'infresnel':
+        travel_times = infresnel_travel_time(grid, processed_st, **time_kwargs)
+        # Store celerity in S attributes
+        S.attrs['celerity'] = time_kwargs['celerity']
     else:
         raise ValueError(f'Travel time calculation method \'{time_method}\' '
-                         'not recognized. Method must be either \'celerity\' '
-                         'or \'fdtd\'.')
+                         'not recognized. Method must be either \'celerity\', '
+                         '\'fdtd\', or \'infresnel\'.')
 
     print('----------------------')
     print('PERFORMING GRID SEARCH')
