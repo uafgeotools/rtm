@@ -358,9 +358,9 @@ def infresnel_travel_time(grid, st, celerity=343, dem_file=None):
     # Expand the grid to a 3-D array of (station, y, x)
     travel_times = grid.expand_dims(station=[tr.id for tr in st]).copy()
 
-    print('-------------------------------------------------')
+    print('----------------------------------------------------------------')
     print(f'CALCULATING TRAVEL TIMES USING INFRESNEL WITH CELERITY = {celerity:g} M/S')
-    print('-------------------------------------------------')
+    print('----------------------------------------------------------------')
 
     # Convert "receiver" UTM coordinates (from `grid`) to lat/lon grid
     proj = _proj_from_grid(grid)
@@ -370,6 +370,9 @@ def infresnel_travel_time(grid, st, celerity=343, dem_file=None):
 
     # Call calculate_paths() for each station
     for i, tr in enumerate(st):
+
+        print(f'\n({i + 1}/{st.count()}) Station {tr.id}\n')
+
         ds_list, dem = calculate_paths(
             src_lat=tr.stats.latitude,
             src_lon=tr.stats.longitude,
