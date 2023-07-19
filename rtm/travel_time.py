@@ -326,6 +326,72 @@ def fdtd_travel_time(grid, st, FILENAME_ROOT, FDTD_DIR=None):
     return fdtd_interp
 
 
+def infresnel_travel_time(grid, st, celerity=343, dem_file=None):
+    """
+    Compute travel times by calculating the shortest diffracted path over topography,
+    then dividing by a single celerity value.
+
+    Args:
+        grid (:class:`~xarray.DataArray`): Grid to use; output of
+            :func:`~rtm.grid.define_grid`
+        st (:class:`~obspy.core.stream.Stream`): Stream containing coordinates
+            for each station
+        celerity (int or float): [m/s] Single celerity to use for travel time
+            removal (default: `343`)
+        dem_file (str or None): Path to DEM file (see
+            :func:`infresnel.infresnel.calculate_paths`)
+
+    Returns:
+        :class:`~xarray.DataArray`: 3-D array with dimensions
+        :math:`(\\text{station}, y, x)` containing travel times from each
+        station to each :math:`(x, y)` point in seconds
+    """
+
+    # Check that infresnel is installed
+    try:
+        from infresnel import calculate_paths
+    except ImportError as error:
+        raise ImportError(
+            'infresnel not found. Please install via\n\npip install git+https://github.com/liamtoney/infresnel.git\n\nand try again.'
+        ) from error
+
+    # Expand the grid to a 3-D array of (station, y, x)
+    travel_times = grid.expand_dims(station=[tr.id for tr in st]).copy()
+
+    print('-------------------------------------------------')
+    print(f'CALCULATING TRAVEL TIMES USING INFRESNEL WITH CELERITY = {celerity:g} M/S')
+    print('-------------------------------------------------')
+
+    # Convert "receiver" UTM coordinates (from `grid`) to lat/lon grid
+    proj = _proj_from_grid(grid)
+    rec_lat, rec_lon = proj.transform(*np.meshgrid(grid.x.values, grid.y.values), direction='INVERSE')
+
+    tic = time.time()
+
+    # Call calculate_paths() for each station
+    for i, tr in enumerate(st):
+        ds_list, dem = calculate_paths(
+            src_lat=tr.stats.latitude,
+            src_lon=tr.stats.longitude,
+            rec_lat=rec_lat.flatten(),
+            rec_lon=rec_lon.flatten(),
+            dem_file=dem_file,
+            full_output=True,
+        )
+
+        # Shortest diffracted path length distance in meters
+        distance = np.reshape([ds.diffracted_path.length for ds in ds_list], rec_lat.shape)
+
+        # Store travel time for this station and source grid point, in seconds
+        travel_times.data[i, :, :] = distance / celerity
+
+    toc = time.time()
+
+    print(f'Done (elapsed time = {toc-tic:.0f} s)')
+
+    return travel_times
+
+
 def celerity_travel_time(grid, st, celerity=343, dem=None):
     """
     Compute travel times by dividing by a single celerity value. For projected
