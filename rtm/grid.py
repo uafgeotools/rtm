@@ -269,6 +269,7 @@ def produce_dem(grid, external_file=None, plot_output=True, output_file=False):
 
     # Project DEM to UTM, further relabeling
     dem_utm = dem.rio.reproject_match(grid_crs, nodata=NODATA, resampling=Resampling.cubic_spline)
+    dem_utm.rio.write_nodata(NODATA, inplace=True, encoded=True)
     units = dict(units='m')
     dem_utm.attrs = units
     warnings.warn('Elevation units are assumed to be in meters!', RTMWarning)
