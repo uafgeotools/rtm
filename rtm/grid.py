@@ -437,7 +437,7 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
         # Add final window to account for potential uneven number of samples
         if samples_stack[-1] < npts_st - 1:
             samples_stack = np.hstack((samples_stack, npts_st))
-        samples_stack = samples_stack.astype(np.int, copy=False)
+        samples_stack = samples_stack.astype(int, copy=False)
 
     else:
         # sample by sample-based stack
