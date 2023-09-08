@@ -11,7 +11,7 @@ detailed in Fee et al. (2021), and we ask that if you use this code you cite
 that paper. The code is based upon previous work by Sanderson et al. (2020) and
 Walker et al. (2010) and is applicable to a wide variety of network geometries
 and sizes. Realistic travel times can be incorporated from path length difference
-modeling over topography.
+or full-waveform numerical modeling over topography.
 
 ![](example_local_slice_master.png)
 
