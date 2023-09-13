@@ -15,7 +15,7 @@ import colorcet
 import matplotlib
 from rtm import _proj_from_grid
 
-SCENARIO = 'shishaldin'  # One of 'yasur', 'sakurajima', or 'shishaldin'
+SCENARIO = 'yasur'  # One of 'yasur', 'sakurajima', or 'shishaldin'
 
 # Load in the celerities (from Table 1 in Fee et al. (2021))
 celerities = load_json_file('test_data/celerities.json')
@@ -70,7 +70,7 @@ assert set(tt_fdtd.station.values) == set([tr.id for tr in st])
 
 #%% Option 1 — run infresnel!
 
-sta_ind = 1  # Pick a station
+sta_ind = 5  # Pick a station
 tt_infresnel = infresnel_travel_time(grid, Stream(st[sta_ind]), celerity=celerity, dem_file=dem_file)
 if False:
     del tt_infresnel.attrs['UTM']
@@ -78,7 +78,7 @@ if False:
 
 #%% Option 2 — load from existing file
 
-sta_ind = 1  # Pick a station
+sta_ind = 5  # Pick a station
 tt_infresnel = xr.open_dataarray(scenario_dir / f'{SCENARIO}_infresnel.nc')
 
 #%% Plot
@@ -86,9 +86,9 @@ tt_infresnel = xr.open_dataarray(scenario_dir / f'{SCENARIO}_infresnel.nc')
 # -------------------------
 # Universal plotting params
 # -------------------------
-BIN_LIMITS = (-0.5, 3.5)  # [s] For histogram
-CLIM = (0, 0.7)  # [s] For colormap
-CMAP = plt.get_cmap('cet_fire_r')
+BIN_LIMITS = (-0.08, 0.08)  # [s] For histogram
+CLIM = (-0.08, 0.08)  # [s] For colormap
+CMAP = plt.get_cmap('coolwarm')
 # -------------------------
 
 # Some definitions
