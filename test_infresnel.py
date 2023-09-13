@@ -81,65 +81,75 @@ if False:
 sta_ind = 5  # Pick a station
 tt_infresnel = xr.open_dataarray(scenario_dir / f'{SCENARIO}_infresnel.nc')
 
-#%% Plot
+#%% Plot TT diffs
 
 # -------------------------
 # Universal plotting params
 # -------------------------
-BIN_LIMITS = (-0.08, 0.08)  # [s] For histogram
-CLIM = (-0.08, 0.08)  # [s] For colormap
+TT_LIMITS = (-0.08, 0.08)  # [s]
 CMAP = plt.get_cmap('coolwarm')
 # -------------------------
 
 # Some definitions
 diff = tt_fdtd[sta_ind] - tt_infresnel[0]  # [s]
-diff_label = 'Travel time difference (s), $infraFDTD - infresnel$'
 sta_x, sta_y = _proj_from_grid(grid).transform(
     st[sta_ind].stats.latitude, st[sta_ind].stats.longitude
 )
 
-# Histogram
-fig, ax = plt.subplots()
-_, bins, patches = ax.hist(diff.values.flatten(), bins=500, range=BIN_LIMITS)
-norm = plt.Normalize(*CLIM)
+# Set up axes
+fig, (ax_hist, cax, ax_map) = plt.subplots(
+    nrows=3, gridspec_kw=dict(height_ratios=[0.2, 0.03, 1]), figsize=(6, 6)
+)
+
+# Plot travel time difference map
+im = diff.plot.imshow(
+    vmin=TT_LIMITS[0], vmax=TT_LIMITS[1], cmap=CMAP, ax=ax_map, add_colorbar=False, add_labels=False
+)
+ax_map.set_aspect('equal')
+ax_map.tick_params(top=True, right=True, which='both')
+ax_map.set_xlabel(f'UTM zone {dem_crs.utm_zone} easting (m)')
+ax_map.set_ylabel(f'UTM zone {dem_crs.utm_zone} northing (m)')
+ax_map.ticklabel_format(style='plain')
+ax_map.scatter(sta_x, sta_y, color='black')
+sta_label = 3 * ' ' + '.'.join(str(diff.station.values).split('.')[:2])
+ax_map.text(sta_x, sta_y, sta_label, va='center', weight='bold')
+
+# Plot colorbar
+fig.colorbar(im, cax=cax, orientation='horizontal')
+cax.set_xlabel('Travel time difference (s), $infraFDTD - infresnel$')
+
+# Plot histogram
+ax_hist.sharex(cax)
+_, bins, patches = ax_hist.hist(diff.values.flatten(), bins=500, range=TT_LIMITS)
+norm = plt.Normalize(*TT_LIMITS)
 bin_centers = 0.5 * (bins[:-1] + bins[1:])
 for bin_center, patch in zip(bin_centers, patches):
     patch.set_facecolor(CMAP(norm(bin_center)))
-ax.set_xlabel(diff_label)
-ax.set_ylabel('Counts')
-ax.set_xlim(BIN_LIMITS)
-fig.show()
+ax_hist.axis('off')
 
-# Map
-fig, ax_diff = plt.subplots()
-diff.plot.imshow(
-    vmin=CLIM[0], vmax=CLIM[1], cmap=CMAP, ax=ax_diff, cbar_kwargs=dict(label=diff_label)
-)
-ax_diff.set_aspect('equal')
-ax_diff.set_xlabel('UTM easting (m)')
-ax_diff.set_ylabel('UTM northing (m)')
-ax_diff.ticklabel_format(style='plain')
-ax_diff.scatter(sta_x, sta_y, color='black')
+# Final tweaks and show figure
 fig.tight_layout()
+fig.subplots_adjust(hspace=0)  # Seems to work as I want it to?
 fig.show()
 
-# DEM
-fig, ax = plt.subplots()
+#%% Plot DEM
+
+fig, ax = plt.subplots(figsize=(6, 5))
 hs = dem.copy()
 hs.data = matplotlib.colors.LightSource().hillshade(
     dem.data,
     dx=abs(dem.x.diff('x').mean().values),
     dy=abs(dem.y.diff('y').mean().values),
 )
-hs.plot.imshow(cmap='cet_gray', ax=ax)
+hs.plot.imshow(cmap='cet_gray', ax=ax, add_colorbar=False, add_labels=False)
 ax.set_aspect('equal')
-ax.set_xlim(ax_diff.get_xlim())
-ax.set_ylim(ax_diff.get_ylim())
-ax.set_xlabel('UTM easting (m)')
-ax.set_ylabel('UTM northing (m)')
+ax.set_xlim(ax_map.get_xlim())
+ax.set_ylim(ax_map.get_ylim())
+ax.tick_params(top=True, right=True, which='both')
+ax.set_xlabel(f'UTM zone {dem_crs.utm_zone} easting (m)')
+ax.set_ylabel(f'UTM zone {dem_crs.utm_zone} northing (m)')
 ax.ticklabel_format(style='plain')
-ax.set_title('DEM hillshade')
 ax.scatter(sta_x, sta_y, color='black')
+ax.text(sta_x, sta_y, sta_label, va='center', weight='bold')
 fig.tight_layout()
-fig.axes[-1].remove()  # Remove cbar without changing the size of the map
 fig.show()
