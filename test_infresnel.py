@@ -81,20 +81,25 @@ if False:
 sta_ind = 5  # Pick a station
 tt_infresnel = xr.open_dataarray(scenario_dir / f'{SCENARIO}_infresnel.nc')
 
-#%% Plot TT diffs
+#%% Plot
 
-# -------------------------
+# --------------------------------------------------------------------------------------
 # Universal plotting params
-# -------------------------
+# --------------------------------------------------------------------------------------
 TT_LIMITS = (-0.08, 0.08)  # [s]
-CMAP = plt.get_cmap('coolwarm')
-# -------------------------
+DEM_UNDERLAY = True  # Whether to plot the DEM underlay or make separate figure for DEM
+# --------------------------------------------------------------------------------------
 
 # Some definitions
+if DEM_UNDERLAY:
+    cmap = plt.get_cmap('cet_CET_D11')  # Isoluminant colormap, since we have varying brightness of hillshade!
+else:
+    cmap = plt.get_cmap('cet_coolwarm')  # A more aggressive diverging colormap
 diff = tt_fdtd[sta_ind] - tt_infresnel[0]  # [s]
 sta_x, sta_y = _proj_from_grid(grid).transform(
     st[sta_ind].stats.latitude, st[sta_ind].stats.longitude
 )
+alpha = 0.9 if DEM_UNDERLAY else 1  # Travel times must be translucent if underlying DEM
 
 # Set up axes
 fig, (ax_hist, cax, ax_map) = plt.subplots(
@@ -103,7 +108,7 @@ fig, (ax_hist, cax, ax_map) = plt.subplots(
 
 # Plot travel time difference map
 im = diff.plot.imshow(
-    vmin=TT_LIMITS[0], vmax=TT_LIMITS[1], cmap=CMAP, ax=ax_map, add_colorbar=False, add_labels=False
+    vmin=TT_LIMITS[0], vmax=TT_LIMITS[1], cmap=cmap, ax=ax_map, add_colorbar=False, add_labels=False, alpha=alpha, zorder=1
 )
 ax_map.set_aspect('equal')
 ax_map.tick_params(top=True, right=True, which='both')
@@ -124,32 +129,42 @@ _, bins, patches = ax_hist.hist(diff.values.flatten(), bins=500, range=TT_LIMITS
 norm = plt.Normalize(*TT_LIMITS)
 bin_centers = 0.5 * (bins[:-1] + bins[1:])
 for bin_center, patch in zip(bin_centers, patches):
-    patch.set_facecolor(CMAP(norm(bin_center)))
+    patch.set_facecolor(cmap(norm(bin_center)))
+    patch.set_alpha(alpha)
 ax_hist.axis('off')
 
-# Final tweaks and show figure
+# Final tweaks before adding DEM
 fig.tight_layout()
 fig.subplots_adjust(hspace=0)  # Seems to work as I want it to?
-fig.show()
 
-#%% Plot DEM
-
-fig, ax = plt.subplots(figsize=(6, 5))
+# Plot DEM
 hs = dem.copy()
 hs.data = matplotlib.colors.LightSource().hillshade(
     dem.data,
     dx=abs(dem.x.diff('x').mean().values),
     dy=abs(dem.y.diff('y').mean().values),
 )
-hs.plot.imshow(cmap='cet_gray', ax=ax, add_colorbar=False, add_labels=False)
-ax.set_aspect('equal')
-ax.set_xlim(ax_map.get_xlim())
-ax.set_ylim(ax_map.get_ylim())
-ax.tick_params(top=True, right=True, which='both')
-ax.set_xlabel(f'UTM zone {dem_crs.utm_zone} easting (m)')
-ax.set_ylabel(f'UTM zone {dem_crs.utm_zone} northing (m)')
-ax.ticklabel_format(style='plain')
-ax.scatter(sta_x, sta_y, color='black')
-ax.text(sta_x, sta_y, sta_label, va='center', weight='bold')
-fig.tight_layout()
-fig.show()
+if DEM_UNDERLAY:
+    # Plot into existing axes
+    xlim = ax_map.get_xlim()
+    ylim = ax_map.get_ylim()
+    hs.plot.imshow(cmap='cet_gray', ax=ax_map, add_colorbar=False, add_labels=False, zorder=-1)
+    ax_map.set_aspect('equal')
+    ax_map.set_xlim(xlim)
+    ax_map.set_ylim(ylim)
+    fig.show()
+else:
+    # Make new figure
+    fig, ax = plt.subplots(figsize=(6, 5))
+    hs.plot.imshow(cmap='cet_gray', ax=ax, add_colorbar=False, add_labels=False)
+    ax.set_aspect('equal')
+    ax.set_xlim(ax_map.get_xlim())
+    ax.set_ylim(ax_map.get_ylim())
+    ax.tick_params(top=True, right=True, which='both')
+    ax.set_xlabel(f'UTM zone {dem_crs.utm_zone} easting (m)')
+    ax.set_ylabel(f'UTM zone {dem_crs.utm_zone} northing (m)')
+    ax.ticklabel_format(style='plain')
+    ax.scatter(sta_x, sta_y, color='black')
+    ax.text(sta_x, sta_y, sta_label, va='center', weight='bold')
+    fig.tight_layout()
+    fig.show()
