@@ -68,13 +68,18 @@ for tr_id in tt_fdtd.station.values:
 # KEY CHECK
 assert set(tt_fdtd.station.values) == set([tr.id for tr in st])
 
-#%% Run infresnel!
+#%% Option 1 — run infresnel!
 
 sta_ind = 1  # Pick a station
 tt_infresnel = infresnel_travel_time(grid, Stream(st[sta_ind]), celerity=celerity, dem_file=dem_file)
 if False:
     del tt_infresnel.attrs['UTM']
     tt_infresnel.to_netcdf(scenario_dir / f'{SCENARIO}_infresnel.nc')
+
+#%% Option 2 — load from existing file
+
+sta_ind = 1  # Pick a station
+tt_infresnel = xr.open_dataarray(scenario_dir / f'{SCENARIO}_infresnel.nc')
 
 #%% Plot
 
