@@ -373,20 +373,16 @@ def infresnel_travel_time(grid, st, celerity=343, dem_file=None):
 
         print(f'\n({i + 1}/{st.count()}) Station {tr.id}\n')
 
-        ds_list, dem = calculate_paths(
+        diff_path_lens = calculate_paths(
             src_lat=tr.stats.latitude,
             src_lon=tr.stats.longitude,
             rec_lat=rec_lat.flatten(),
             rec_lon=rec_lon.flatten(),
             dem_file=dem_file,
-            full_output=True,
-        )
-
-        # Shortest diffracted path length distance in meters
-        distance = np.reshape([ds.diffracted_path.length for ds in ds_list], rec_lat.shape)
+        )[1]
 
         # Store travel time for this station and source grid point, in seconds
-        travel_times.data[i, :, :] = distance / celerity
+        travel_times.data[i, :, :] = np.reshape(diff_path_lens, rec_lat.shape) / celerity
 
     toc = time.time()
 
