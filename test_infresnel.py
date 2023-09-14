@@ -27,7 +27,7 @@ client = Client('iris')
 celerity = celerities[SCENARIO]
 scenario_dir = Path('test_data') / SCENARIO
 dem_file = sorted(scenario_dir.glob('*.tif'))[0]  # Only 1 of these in each folder
-fdtd_file = sorted(scenario_dir.glob('*.nc'))[0]  # "                            "
+fdtd_file = sorted(scenario_dir.glob('*_rtm_DH*.nc'))[0]
 
 # Load in DEM (just to get the CRS?) — this works because ALL DEMs are in UTM!!!!!!!
 dem = xr.open_dataarray(dem_file).squeeze()
