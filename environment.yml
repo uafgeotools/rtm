@@ -8,7 +8,7 @@ dependencies:
   - jupyterlab
   - obspy
   - pip
-#  - pygmt  # OPTIONAL
+#  - pygmt  # OPTIONAL (needed for infresnel)
   - rioxarray
   - tqdm
   - pip:
