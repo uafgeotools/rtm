@@ -356,6 +356,7 @@ def infresnel_travel_time(grid, st, celerity=343, stored_result=None, dem_file=N
 
     # Expand the grid to a 3-D array of (station, y, x)
     diff_path_lens = grid.expand_dims(station=[tr.id for tr in st]).copy()
+    diff_path_lens = diff_path_lens.assign_attrs(dem_file=dem_file)
 
     # Check for a stored result
     if stored_result is not None:
@@ -372,6 +373,7 @@ def infresnel_travel_time(grid, st, celerity=343, stored_result=None, dem_file=N
                 assert coord_da.name == coord_loaded_da.name, 'Coordinate names differ!'
                 assert (coord_da.data == coord_loaded_da.data).all(), f'Coordinate data differ for {coord_da.name}!'
             assert diff_path_lens.attrs == diff_path_lens_loaded.attrs, 'Attributes differ!'
+            assert diff_path_lens.dem_file == diff_path_lens_loaded.dem_file, 'DEM files differ!'
             print('----------------------------------------------------------------')
             print(f'LOADING TRAVEL TIMES FROM {result_filepath} WITH CELERITY = {celerity:g} M/S')
             print('----------------------------------------------------------------')
