@@ -529,6 +529,10 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
     if endtime:
         S = S[(S.time <= np.datetime64(endtime))]
 
+    # Mask by any NaN values in travel_times
+    mask = np.broadcast_to(travel_times.isnull().all(axis=0).values, S.shape)
+    S.data[mask] = np.nan
+
     toc = time.time()
     print(f'Done (elapsed time = {toc-tic:.1f} s)')
 
