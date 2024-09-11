@@ -365,6 +365,7 @@ def infresnel_travel_time(grid, st, celerity=343, stored_result=None, dem_file=N
             diff_path_lens_loaded = diff_path_lens_loaded.assign_attrs(UTM=grid.UTM)  # Add back in (can't be stored)
             diff_path_lens_loaded.attrs['grid_center'] = tuple(diff_path_lens_loaded.grid_center)
             # Various checks to ensure that what we're loading in makes sense
+            assert diff_path_lens.shape == diff_path_lens_loaded.shape, 'Shapes differ!'
             for coord_da, coord_loaded_da in zip(
                 diff_path_lens.coords.values(), diff_path_lens_loaded.coords.values()
             ):
