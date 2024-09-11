@@ -327,7 +327,7 @@ def fdtd_travel_time(grid, st, FILENAME_ROOT, FDTD_DIR=None):
     return fdtd_interp
 
 
-def infresnel_travel_time(grid, st, celerity=343, stored_result=None, dem_file=None):
+def infresnel_travel_time(grid, st, celerity=343, stored_result=None, dem_file=None, n_jobs=1):
     """
     Compute travel times by calculating the shortest diffracted path over topography,
     then dividing by a single celerity value. Can use a previously calculated result (or
@@ -345,6 +345,8 @@ def infresnel_travel_time(grid, st, celerity=343, stored_result=None, dem_file=N
             not store the result
         dem_file (str or None): Path to DEM file (see
             :func:`infresnel.infresnel.calculate_paths`)
+        n_jobs (int): Number of parallel jobs to run, passed on to
+            :func:`infresnel.infresnel.calculate_paths`
 
     Returns:
         :class:`~xarray.DataArray`: 3-D array with dimensions
@@ -407,6 +409,7 @@ def infresnel_travel_time(grid, st, celerity=343, stored_result=None, dem_file=N
             rec_lat=rec_lat.flatten(),
             rec_lon=rec_lon.flatten(),
             dem_file=dem_file,
+            n_jobs=n_jobs,
         )[1]
 
         # Store diffracted path lengths [m] for this station
