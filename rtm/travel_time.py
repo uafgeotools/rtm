@@ -365,6 +365,11 @@ def infresnel_travel_time(grid, st, celerity=343, stored_result=None, dem_file=N
             diff_path_lens_loaded = xr.open_dataarray(result_filepath)  # Load the stored result
             diff_path_lens_loaded = diff_path_lens_loaded.assign_attrs(UTM=grid.UTM)  # Add back in (can't be stored)
             diff_path_lens_loaded.attrs['grid_center'] = tuple(diff_path_lens_loaded.grid_center)
+            # Subset the loaded result to match the input `st` — this is necessary if
+            # the NetCDF file was created using a full network but RTM is being run on a
+            # subset of that network (e.g., if there's a station outage; see
+            # https://github.com/uafgeotools/rtm/pull/85#issuecomment-2352055340)
+            diff_path_lens_loaded = diff_path_lens_loaded.sel(station=[tr.id for tr in st])
             # Various checks to ensure that what we're loading in makes sense
             assert diff_path_lens.shape == diff_path_lens_loaded.shape, 'Shapes differ!'
             for coord_da, coord_loaded_da in zip(
