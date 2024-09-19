@@ -354,6 +354,9 @@ def infresnel_travel_time(grid, st, celerity=343, stored_result=None, dem_file=N
         station to each :math:`(x, y)` point in seconds
     """
 
+    # Ensure that `dem_file` is a string rather than a Path object
+    dem_file = str(dem_file)
+
     # Expand the grid to a 3-D array of (station, y, x)
     diff_path_lens = grid.expand_dims(station=[tr.id for tr in st]).copy()
     diff_path_lens = diff_path_lens.assign_attrs(dem_file=dem_file)
