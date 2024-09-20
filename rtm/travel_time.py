@@ -346,7 +346,8 @@ def infresnel_travel_time(grid, st, celerity=343, stored_result=None, dem_file=N
         dem_file (str or None): Path to DEM file (see
             :func:`infresnel.infresnel.calculate_paths`)
         n_jobs (int): Number of parallel jobs to run, passed on to
-            :func:`infresnel.infresnel.calculate_paths`
+            :func:`infresnel.infresnel.calculate_paths`. A value of -2 will result in all 
+            CPUs but one being used.
 
     Returns:
         :class:`~xarray.DataArray`: 3-D array with dimensions
