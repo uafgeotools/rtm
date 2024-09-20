@@ -5,6 +5,7 @@ import pickle
 import re
 import time
 import warnings
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -324,6 +325,119 @@ def fdtd_travel_time(grid, st, FILENAME_ROOT, FDTD_DIR=None):
     fdtd_interp.attrs = grid.attrs
 
     return fdtd_interp
+
+
+def infresnel_travel_time(grid, st, celerity=343, stored_result=None, dem_file=None, n_jobs=1):
+    """
+    Compute travel times by calculating the shortest diffracted path over topography,
+    then dividing by a single celerity value. Can use a previously calculated result (or
+    store the newly calculated result) via the `stored_result` argument.
+
+    Args:
+        grid (:class:`~xarray.DataArray`): Grid to use; output of
+            :func:`~rtm.grid.define_grid`
+        st (:class:`~obspy.core.stream.Stream`): Stream containing coordinates
+            for each station
+        celerity (int or float): [m/s] Single celerity to use for travel time
+            removal (default: `343`)
+        stored_result (str or None): Path to a stored NetCDF (.nc) result file to either
+            load (if file exists) or write to (if file doesn't exist). If `None`, does
+            not store the result
+        dem_file (str or None): Path to DEM file (see
+            :func:`infresnel.infresnel.calculate_paths`)
+        n_jobs (int): Number of parallel jobs to run, passed on to
+            :func:`infresnel.infresnel.calculate_paths`. A value of -2 will result in all 
+            CPUs but one being used.
+
+    Returns:
+        :class:`~xarray.DataArray`: 3-D array with dimensions
+        :math:`(\\text{station}, y, x)` containing travel times from each
+        station to each :math:`(x, y)` point in seconds
+    """
+
+    # Ensure that `dem_file` is a string rather than a Path object
+    dem_file = str(dem_file)
+
+    # Expand the grid to a 3-D array of (station, y, x)
+    diff_path_lens = grid.expand_dims(station=[tr.id for tr in st]).copy()
+    diff_path_lens = diff_path_lens.assign_attrs(dem_file=dem_file)
+
+    # Check for a stored result
+    if stored_result is not None:
+        result_filepath = Path(stored_result)
+        if result_filepath.is_file():
+            diff_path_lens_loaded = xr.open_dataarray(result_filepath)  # Load the stored result
+            diff_path_lens_loaded = diff_path_lens_loaded.assign_attrs(UTM=grid.UTM)  # Add back in (can't be stored)
+            diff_path_lens_loaded.attrs['grid_center'] = tuple(diff_path_lens_loaded.grid_center)
+            # Subset the loaded result to match the input `st` — this is necessary if
+            # the NetCDF file was created using a full network but RTM is being run on a
+            # subset of that network (e.g., if there's a station outage; see
+            # https://github.com/uafgeotools/rtm/pull/85#issuecomment-2352055340)
+            diff_path_lens_loaded = diff_path_lens_loaded.sel(station=[tr.id for tr in st])
+            # Various checks to ensure that what we're loading in makes sense
+            assert diff_path_lens.shape == diff_path_lens_loaded.shape, 'Shapes differ!'
+            for coord_da, coord_loaded_da in zip(
+                diff_path_lens.coords.values(), diff_path_lens_loaded.coords.values()
+            ):
+                assert coord_da.name == coord_loaded_da.name, 'Coordinate names differ!'
+                assert (coord_da.data == coord_loaded_da.data).all(), f'Coordinate data differ for {coord_da.name}!'
+            assert diff_path_lens.attrs == diff_path_lens_loaded.attrs, 'Attributes differ!'
+            assert diff_path_lens.dem_file == diff_path_lens_loaded.dem_file, 'DEM files differ!'
+            print('----------------------------------------------------------------')
+            print(f'LOADING TRAVEL TIMES FROM {result_filepath} WITH CELERITY = {celerity:g} M/S')
+            print('----------------------------------------------------------------')
+            return diff_path_lens_loaded / celerity
+        else:
+            store = True  # Store the result
+    else:
+        store = False  # Don't store the result
+
+    # Check that infresnel is installed
+    try:
+        from infresnel import calculate_paths
+    except ImportError as error:
+        raise ImportError(
+            'infresnel not found. Please install via\n\npip install git+https://github.com/liamtoney/infresnel.git\n\nand try again.'
+        ) from error
+
+    print('----------------------------------------------------------------')
+    print(f'CALCULATING TRAVEL TIMES USING INFRESNEL WITH CELERITY = {celerity:g} M/S')
+    print('----------------------------------------------------------------')
+
+    # Convert "receiver" UTM coordinates (from `grid`) to lat/lon grid
+    proj = _proj_from_grid(grid)
+    rec_lat, rec_lon = proj.transform(*np.meshgrid(grid.x.values, grid.y.values), direction='INVERSE')
+
+    tic = time.time()
+
+    # Call calculate_paths() for each station
+    for i, tr in enumerate(st):
+
+        print(f'\n({i + 1}/{st.count()}) Station {tr.id}\n')
+
+        _diff_path_lens = calculate_paths(
+            src_lat=tr.stats.latitude,
+            src_lon=tr.stats.longitude,
+            rec_lat=rec_lat.flatten(),
+            rec_lon=rec_lon.flatten(),
+            dem_file=dem_file,
+            n_jobs=n_jobs,
+        )[1]
+
+        # Store diffracted path lengths [m] for this station
+        diff_path_lens.data[i, :, :] = np.reshape(_diff_path_lens, rec_lat.shape)
+
+    toc = time.time()
+
+    print(f'Done (elapsed time = {toc-tic:.0f} s)')
+
+    # Save the result if `stored_result` was not None
+    if store:
+        del diff_path_lens.attrs['UTM']  # Can't store UTM attribute in NetCDF
+        diff_path_lens.to_netcdf(result_filepath)
+        print(f'Diffracted path lengths saved to {result_filepath}')
+
+    return diff_path_lens / celerity
 
 
 def celerity_travel_time(grid, st, celerity=343, dem=None):

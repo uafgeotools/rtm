@@ -22,6 +22,9 @@ dist/
 # GeoTIFF files
 **/*.tif
 
+# All NetCDF files
+*.nc
+
 # Documentation things
 doc/_build/
 doc/api/

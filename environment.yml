@@ -8,9 +8,10 @@ dependencies:
   - jupyterlab
   - obspy
   - pip
-#  - pygmt  # OPTIONAL
+#  - pygmt  # OPTIONAL (needed for infresnel)
   - rioxarray
   - tqdm
   - pip:
     - git+https://github.com/uafgeotools/waveform_collection.git
+#    - git+https://github.com/liamtoney/infresnel.git  # OPTIONAL
     - --editable .

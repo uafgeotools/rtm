@@ -10,8 +10,8 @@ a grid of trial source locations. This implementation and some examples are
 detailed in Fee et al. (2021), and we ask that if you use this code you cite
 that paper. The code is based upon previous work by Sanderson et al. (2020) and
 Walker et al. (2010) and is applicable to a wide variety of network geometries
-and sizes. Realistic travel times can be incorporated from numerical modeling
-or atmospheric specifications.
+and sizes. Realistic travel times can be incorporated from path length difference
+or full-waveform numerical modeling over topography.
 
 ![](example_local_slice_master.png)
 
@@ -77,10 +77,12 @@ Python packages:
 ...and their dependencies, which you don't really have to be concerned about if
 you're using conda!
 
-Optional (for automatic DEM downloading):
+Optional dependencies:
 
 * [PyGMT](https://www.pygmt.org/latest/) (install via `conda install --channel 
-  conda-forge pygmt`)
+  conda-forge pygmt`) — For automatic DEM downloading
+* [*infresnel*](https://infresnel.readthedocs.io/en/latest/) (install via `pip install
+  git+https://github.com/liamtoney/infresnel.git`) — For path length difference modeling
 
 Usage
 -----
