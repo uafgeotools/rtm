@@ -1,7 +1,6 @@
 name: rtm
 channels:
   - conda-forge
-  - defaults
 dependencies:
   - cartopy
   - ipython
