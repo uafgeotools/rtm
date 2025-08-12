@@ -505,7 +505,7 @@ def grid_search(processed_st, grid, time_method, starttime=None, endtime=None,
                 stk = np.sum(dtmp, axis=0)
 
             elif stack_method == 'product':
-                stk = np.product(dtmp, axis=0)
+                stk = np.prod(dtmp, axis=0)
 
             elif stack_method == 'semblance':
                 semb = []
