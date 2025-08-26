@@ -360,7 +360,7 @@ def plot_record_section(st, origin_time, source_location, plot_celerity=None,
         if plot_celerity == 'range':
             mapper = plt.cm.ScalarMappable(cmap=cmap)
             mapper.set_array(celerity_list)
-            cbar = fig.colorbar(mapper, label='Celerity (m/s)', pad=pad,
+            cbar = fig.colorbar(mapper, ax=ax, label='Celerity (m/s)', pad=pad,
                                 aspect=30)
             cbar.ax.minorticks_on()
 
