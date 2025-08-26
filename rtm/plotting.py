@@ -17,7 +17,7 @@ from .stack import get_peak_coordinates
 def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
                     hires=False, dem=None, plot_peak=True, xy_grid=None,
                     cont_int=5, annot_int=50):
-    """
+    r"""
     Plot a time slice through :math:`S` to produce a map-view plot. If time is
     not specified, then the slice corresponds to the maximum of :math:`S` in
     the time direction. Can also plot the peak of the stack function over
