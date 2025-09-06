@@ -457,12 +457,17 @@ def plot_st(st, filt, equal_scale=False, remove_response=False,
     return fig
 
 
-def plot_stack_peak(S, plot_max=False, ax=None):
+def plot_stack_peak(S, global_max=True, plot_max=False, ax=None):
     """
-    Plot the stack function (at the spatial stack max) as a function of time.
+    Plot the stack function time series. Two options are supported: (1) the global
+    maximum at each time step (default) or (2) the stack function (at the spatial stack
+    max) over time.
 
     Args:
         S: :class:`~xarray.DataArray` containing the stack function :math:`S`
+        global_max (bool): If `True`, plots global spatial stack maximum at each time
+            step. If `False`, plots the stack function (at the spatial stack max)
+            over time (default: `True`)
         plot_max (bool): Plot maximum value with red circle (default: `False`)
         ax (:class:`~matplotlib.axes.Axes`): Pre-existing axes to plot into
 
@@ -470,7 +475,13 @@ def plot_stack_peak(S, plot_max=False, ax=None):
         :class:`~matplotlib.figure.Figure`: Output figure
     """
 
-    s_peak = S.max(axis=(1, 2)).data
+    if global_max:
+        # Global spatial stack maximum at each time step
+        s_peak = S.max(axis=(1, 2)).data
+    else:
+        # Stack function (at the spatial stack max) as a function of time
+        _, y_max, x_max, _, _ = get_peak_coordinates(S)
+        s_peak = S.sel(x=x_max, y=y_max).data
 
     if not ax:
         fig, ax = plt.subplots(figsize=(8, 4))
