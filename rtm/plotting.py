@@ -17,7 +17,7 @@ from .stack import get_peak_coordinates
 def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
                     hires=False, dem=None, plot_peak=True, xy_grid=None,
                     cont_int=5, annot_int=50):
-    """
+    r"""
     Plot a time slice through :math:`S` to produce a map-view plot. If time is
     not specified, then the slice corresponds to the maximum of :math:`S` in
     the time direction. Can also plot the peak of the stack function over
@@ -39,8 +39,10 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
             but can be slow (default: `False`)
         dem (:class:`~xarray.DataArray`): Overlay time slice on a user-supplied
             DEM from :class:`~rtm.grid.produce_dem` (default: `None`)
-        plot_peak (bool): Plot the peak stack function over time as a subplot
-            (default: `True`)
+        plot_peak (bool or str): If `True`, plots the global stack maximum at each time
+            step as a subplot. If 'spatial_stack_max', plots the stack function (at the
+            spatial stack max) over time instead. If `False`, does not make stack peak
+            plot (default: `True`)
         xy_grid (int, float, or None): If not `None`, transforms UTM
             coordinates such that the grid center is at (0, 0) — the plot
             extent is then given by (-xy_grid, xy_grid) [meters] for easting
@@ -265,7 +267,8 @@ def plot_time_slice(S, processed_st, time_slice=None, label_stations=True,
     cbar.solids.set_alpha(1)
 
     if plot_peak:
-        plot_stack_peak(S, plot_max=True, ax=ax1)
+        spatial_stack_max = plot_peak == 'spatial_stack_max'
+        plot_stack_peak(S, spatial_stack_max=spatial_stack_max, plot_max=True, ax=ax1)
 
     fig.show()
 
@@ -360,7 +363,7 @@ def plot_record_section(st, origin_time, source_location, plot_celerity=None,
         if plot_celerity == 'range':
             mapper = plt.cm.ScalarMappable(cmap=cmap)
             mapper.set_array(celerity_list)
-            cbar = fig.colorbar(mapper, label='Celerity (m/s)', pad=pad,
+            cbar = fig.colorbar(mapper, ax=ax, label='Celerity (m/s)', pad=pad,
                                 aspect=30)
             cbar.ax.minorticks_on()
 
@@ -457,12 +460,17 @@ def plot_st(st, filt, equal_scale=False, remove_response=False,
     return fig
 
 
-def plot_stack_peak(S, plot_max=False, ax=None):
+def plot_stack_peak(S, spatial_stack_max=False, plot_max=False, ax=None):
     """
-    Plot the stack function (at the spatial stack max) as a function of time.
+    Plot the stack function time series. Two options are supported: (1) the global
+    maximum at each time step (default) or (2) the stack function (at the spatial stack
+    max) over time.
 
     Args:
         S: :class:`~xarray.DataArray` containing the stack function :math:`S`
+        spatial_stack_max (bool): If `True`, plots the stack function (at the spatial
+            stack max) over time. If `False`, plots the global spatial stack maximum at
+            each time step (default: `False`)
         plot_max (bool): Plot maximum value with red circle (default: `False`)
         ax (:class:`~matplotlib.axes.Axes`): Pre-existing axes to plot into
 
@@ -470,7 +478,13 @@ def plot_stack_peak(S, plot_max=False, ax=None):
         :class:`~matplotlib.figure.Figure`: Output figure
     """
 
-    s_peak = S.max(axis=(1, 2)).data
+    if spatial_stack_max:
+        # Stack function (at the spatial stack max) as a function of time
+        _, y_max, x_max, _, _ = get_peak_coordinates(S)
+        s_peak = S.sel(x=x_max, y=y_max).data
+    else:
+        # Global spatial stack maximum at each time step
+        s_peak = S.max(axis=(1, 2)).data
 
     if not ax:
         fig, ax = plt.subplots(figsize=(8, 4))
