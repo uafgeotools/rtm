@@ -376,11 +376,9 @@ def infresnel_travel_time(grid, st, celerity=343, stored_result=None, dem_file=N
             diff_path_lens_loaded = diff_path_lens_loaded.sel(station=[tr.id for tr in st])
             # Various checks to ensure that what we're loading in makes sense
             assert diff_path_lens.shape == diff_path_lens_loaded.shape, 'Shapes differ!'
-            for coord_da, coord_loaded_da in zip(
-                diff_path_lens.coords.values(), diff_path_lens_loaded.coords.values()
-            ):
-                assert coord_da.name == coord_loaded_da.name, 'Coordinate names differ!'
-                assert (coord_da.data == coord_loaded_da.data).all(), f'Coordinate data differ for {coord_da.name}!'
+            assert set(diff_path_lens.coords) == set(diff_path_lens_loaded.coords), 'Coordinate names differ!'
+            for name in diff_path_lens.coords:
+                assert (diff_path_lens.coords[name].data == diff_path_lens_loaded.coords[name].data).all(), f'Coordinate data differ for {name}!'
             assert diff_path_lens.attrs == diff_path_lens_loaded.attrs, 'Attributes differ!'
             assert diff_path_lens.dem_file == diff_path_lens_loaded.dem_file, 'DEM files differ!'
             print('----------------------------------------------------------------')
